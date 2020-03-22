@@ -1,0 +1,40 @@
+require 'zemu'
+
+desc "Build the application."
+task :build do
+    system "vasmz80_oldstyle -Fbin os.asm -o os.bin"
+    system "z80dasm -lat -g0 os.bin > os.diss"
+end
+
+task :run => :build do
+    conf = Zemu::Config.new do
+        name "zemu_os"
+
+        clock_speed 8_000_000
+
+        add_memory (Zemu::Config::ROM.new do
+            name "rom"
+            address 0x0000
+            size    0x8000
+            
+            contents from_binary("os.bin")[0..0x7fff]
+        end)
+
+        add_memory (Zemu::Config::RAM.new do
+            name "ram"
+            address 0x8000
+            size    0x7FFF
+        end)
+
+        add_io (Zemu::Config::SerialPort.new do
+            name "serial"
+            in_port 0x00
+            out_port 0x00
+            ready_port 0x01
+        end)
+    end
+
+    puts "Starting emulator..."
+
+    Zemu.start_interactive(conf)
+end
