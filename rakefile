@@ -29,7 +29,11 @@ class Timer32 < Zemu::Config::IOPort
                 position += 1
             end
 
-            str += "else if (port == #{control_port}) io_#{name}_running = value;\n"
+            str += "else if (port == #{control_port})\n"
+            str += "{\n"
+            str += "    io_#{name}_running = value;\n"
+            str += "    io_#{name}_count = io_#{name}_period;\n"
+            str += "}\n"
 
             str
         end
