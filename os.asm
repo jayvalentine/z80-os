@@ -19,6 +19,45 @@ handler_nmi:
     ld      A, $01
     out     (14), A
 
+    ; Get the pointer for the currently-running task.
+    ld      HL, (os_running_task)
+
+    ; Move the stack pointer into BC. This is the only way.
+    ld      (os_store_sp), SP
+    ld      BC, (os_store_sp)
+
+    ; Store the stack pointer for the current task and move
+    ; HL onto the stack pointer for the next task.
+    ld      (HL), C
+    inc     HL
+    ld      (HL), B
+    inc     HL
+
+    ; Loop back to the beginning if we've hit the end.
+    ld      A, H
+    cp      (os_tasks_end & $ff00) >> 8
+    jp      nz, handler_nmi_skip
+    ld      A, L
+    cp      os_tasks_end & $00ff
+    jp      nz, handler_nmi_skip
+
+    ld      HL, os_tasks
+
+handler_nmi_skip:
+
+    ; Store a pointer for this task.
+    ld      (os_running_task), HL
+
+    ; Now load the SP for this task into BC.
+    ld      C, (HL)
+    inc     HL
+    ld      B, (HL)
+
+    ; Move into HL, then into SP.
+    ld      L, C
+    ld      H, B
+    ld      SP, HL
+
     pop     DE
     pop     HL
     pop     BC
@@ -26,7 +65,7 @@ handler_nmi:
     
     retn
 
-    org $0100
+    org $0200
 main:
     ; Timer initialization.
     ; 1s interval - 400,000 cycles @ 400KHz.
@@ -51,8 +90,32 @@ main:
     ld      DE, task_B_run
     ldir
 
+    ; Set up B's stack, as it is not the running task.
+    ld      SP, $afff
+
+    ; Entry point is bottom on the stack.
+    ld      HL, task_B_run
+    push    HL
+
+    ; We need to give register initialization values.
+    ; There's no requirement that they be properly initialized,
+    ; so let's use some known value.
+    ld      HL, $a5a5
+
+    push    HL          ; DE
+    push    HL          ; HL
+    push    HL          ; BC
+    push    HL          ; AF
+
+    ; Store the stack pointer.
+    ld      (os_tasks + 2), SP
+
     ; Initialize SP to point to A's stack.
-    ld      SP, $8fff
+    ld      SP, $9fff
+
+    ; Initialize the current-task pointer to point to A.
+    ld      HL, os_tasks
+    ld      (os_running_task), HL
 
     ; Start the timer.
     ld      A, $01
@@ -82,7 +145,7 @@ task_B:
     call    print
 
     ; Sleep for 2 seconds.
-    ld      HL, $07d0
+    ld      HL, $01f4
     call    sleep
     
     jp      task_B
@@ -147,10 +210,20 @@ print:
 
     ret
 
+; OS memory.
     org     $8000
+os_store_sp:
+    blk     2
+os_running_task:
+    blk     2
+os_tasks:
+    blk     4
+os_tasks_end:
+
+    org     $9000
 task_A_run:
 TASK_A_RUN set task_A_run
 
-    org     $9000
+    org     $a000
 task_B_run:
 TASK_B_RUN set task_B_run
