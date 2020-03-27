@@ -67,6 +67,9 @@ handler_nmi_skip:
 
     org $0200
 main:
+    ; OS stack initialization.
+    ld      SP, $8fff
+
     ; Timer initialization.
     ; 1s interval - 400,000 cycles @ 400KHz.
     ; Timer value needs to be 0x00061a80.
@@ -79,80 +82,198 @@ main:
     ld      A, $00
     out     (13), A
 
+    ; Initialize the OS variables that need initializing.
+    ld      A, 0
+    ld      B, 16
+    ld      HL, os_tasks
+
+    call    memset
+
     ; Load the tasks into RAM.
     ld      BC, task_A_end - task_A
     ld      HL, task_A
-    ld      DE, task_A_run
-    ldir
+    call    spawn
 
     ld      BC, task_B_end - task_B
     ld      HL, task_B
-    ld      DE, task_B_run
-    ldir
-
-    ; Set up B's stack, as it is not the running task.
-    ld      SP, $afff
-
-    ; Entry point is bottom on the stack.
-    ld      HL, task_B_run
-    push    HL
-
-    ; We need to give register initialization values.
-    ; There's no requirement that they be properly initialized,
-    ; so let's use some known value.
-    ld      HL, $a5a5
-
-    push    HL          ; DE
-    push    HL          ; HL
-    push    HL          ; BC
-    push    HL          ; AF
-
-    ; Store the stack pointer.
-    ld      (os_tasks + 2), SP
-
-    ; Initialize SP to point to A's stack.
-    ld      SP, $9fff
-
-    ; Initialize the current-task pointer to point to A.
-    ld      HL, os_tasks
-    ld      (os_running_task), HL
+    call    spawn
 
     ; Start the timer.
     ld      A, $01
     out     (14), A
 
     ; Start executing task A.
-    jp      task_A_run
+    ld      HL, os_tasks
+    call    exec
 
-task_A:
-    ld      HL, task_A_string
-    ld      B, 3
-    call    print
+; Set a region of memory to a given value.
+;
+; Parameters:
+;   A - value to set
+;   B - byte count
+;   HL - pointer to memory region
+memset:
+    ld      (HL), A
+    inc     HL
+    djnz    memset
 
-    ; Sleep for 2 seconds.
-    ld      HL, $07d0
-    call    sleep
+    ret
 
-    jp      task_A
+; Spawn a process using the given image.
+;
+; Parameters:
+;   HL - pointer to the image.
+;   BC - size of the image.
+spawn:
+    ; Get a pointer to the next available memory region.
+    call    os_next_task_memory
 
-task_A_string:
-    text    "ABC"
-task_A_end:
+    ; Mark this region as used.
+    ld      A, $ff
+    ld      (DE), A
+    inc     DE
 
-task_B:
-    ld      HL, task_B_string
-    ld      B, 3
-    call    print
+    ; Save DE - we'll need it again later.
+    push    DE
 
-    ; Sleep for 2 seconds.
-    ld      HL, $01f4
-    call    sleep
-    
-    jp      task_B
+    ; DE now holds the memory region.
+    ; Load the process into RAM.
+    ldir
 
-task_B_string:
-    text    "xyz"
-task_B_end:
+    ; Now set up the stack.
+
+    ; Restore the pointer to the entry point into HL,
+    ; then save it again.
+    pop     HL
+    push    HL
+
+    ; Get the initialization value of SP.
+    ld      DE, $0fff
+    add     HL, DE
+
+    ; Restore entry point.
+    pop     DE
+
+    ; Save OS stack pointer into BC.
+    ld      (os_store_sp), SP
+    ld      BC, (os_store_sp)
+
+    ; Initialize the process stack:
+    ; ENTRY
+    ; AF
+    ; BC
+    ; HL
+    ; DE    <- SP
+
+    ; Save onto stack.
+    ld      SP, HL
+    push    DE
+
+    ; Set up registers.
+    ld      HL, 0
+    push    HL
+    push    HL
+    push    HL
+    push    HL
+
+    ; Store the stack pointer in the relevant task entry.
+    ld      (os_store_sp), SP
+    ld      DE, (os_store_sp)
+
+    ld      (os_store_sp), BC
+    ld      SP, (os_store_sp)
+
+    ; Get a pointer to the next task entry.
+    call    os_next_task_entry
+
+    ; Next entry is now in HL.
+    ld      (HL), E
+    inc     HL
+    ld      (HL), D
+
+    ; We've initialized the process, now return.
+    ret
+
+exec:
+    inc     SP
+    inc     SP
+
+    ld      (os_running_task), HL
+
+    ld      E, (HL)
+    inc     HL
+    ld      D, (HL)
+
+    ld      L, E
+    ld      H, D
+    ld      SP, HL
+
+    pop     DE
+    pop     HL
+    pop     BC
+    pop     AF
+
+    ret
+
+; Get the next free memory section that can hold a process image.
+;
+; Parameters: None
+;
+; Returns: A pointer to the region, in DE.
+os_next_task_memory:
+    push    HL
+    push    BC
+
+    ld      HL, $9000
+    ld      BC, $1000
+
+    ld      A, (HL)
+    cp      $00
+
+    jp      z, os_next_task_memory_done
+
+    add     HL, BC
+
+os_next_task_memory_done:
+    ; Move the pointer into DE.
+    push    HL
+    pop     DE
+
+    pop     BC
+    pop     HL
+
+    ret
+
+; Get the next process entry available.
+;
+; Parameters: None
+;
+; Returns: A pointer to the entry, in HL.
+os_next_task_entry:
+    ld      HL, os_tasks
+
+os_next_task_entry_loop:
+    ld      A, (HL)
+    cp      0
+    jp      nz, os_next_task_entry_next_1
+
+    inc     HL
+
+    ld      A, (HL)
+    cp      0
+    jp      nz, os_next_task_entry_next_2
+
+    ; At this point we've found a null pointer.
+    ; Decrement HL and return.
+    dec     HL
+    ret
+
+os_next_task_entry_next_1:
+    inc     HL
+os_next_task_entry_next_2:
+    inc     HL
+
+    jp      os_next_task_entry_loop
 
 ; Waits for a given amount of time (in milliseconds)
 ;
@@ -209,6 +330,38 @@ print:
     out     (0), A
 
     ret
+
+; Task images.
+
+task_A:
+    ld      HL, task_A_string
+    ld      B, 3
+    call    print
+
+    ; Sleep for 2 seconds.
+    ld      HL, $07d0
+    call    sleep
+
+    jp      task_A
+
+task_A_string:
+    text    "ABC"
+task_A_end:
+
+task_B:
+    ld      HL, task_B_string
+    ld      B, 3
+    call    print
+
+    ; Sleep for 2 seconds.
+    ld      HL, $01f4
+    call    sleep
+    
+    jp      task_B
+
+task_B_string:
+    text    "xyz"
+task_B_end:
 
 ; OS memory.
     org     $8000
