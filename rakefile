@@ -71,7 +71,7 @@ task :run => :build do
     conf = Zemu::Config.new do
         name "zemu_os"
 
-        clock_speed 8_000_000
+        clock_speed 400_000
 
         add_memory (Zemu::Config::ROM.new do
             name "rom"
