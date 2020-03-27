@@ -15,11 +15,6 @@ handler_nmi:
     push    HL
     push    DE
 
-    ld      HL, prompt
-    ld      B, 6
-
-    call    print
-
     ; Restart the timer.
     ld      A, $01
     out     (14), A
@@ -33,9 +28,6 @@ handler_nmi:
 
     org $0100
 main:
-    ; Register initialization
-    ld      SP, $ffff
-
     ; Timer initialization.
     ; 1s interval - 400,000 cycles @ 400KHz.
     ; Timer value needs to be 0x00061a80.
@@ -48,9 +40,26 @@ main:
     ld      A, $00
     out     (13), A
 
+    ; Load the tasks into RAM.
+    ld      BC, task_A_end - task_A
+    ld      HL, task_A
+    ld      DE, task_A_run
+    ldir
+
+    ld      BC, task_B_end - task_B
+    ld      HL, task_B
+    ld      DE, task_B_run
+    ldir
+
+    ; Initialize SP to point to A's stack.
+    ld      SP, $8fff
+
     ; Start the timer.
     ld      A, $01
     out     (14), A
+
+    ; Start executing task A.
+    jp      task_A_run
 
 task_A:
     ld      HL, task_A_string
@@ -65,17 +74,22 @@ task_A:
 
 task_A_string:
     text    "ABC"
+task_A_end:
 
 task_B:
     ld      HL, task_B_string
     ld      B, 3
     call    print
 
+    ; Sleep for 2 seconds.
+    ld      HL, $07d0
+    call    sleep
     
     jp      task_B
 
 task_B_string:
     text    "xyz"
+task_B_end:
 
 ; Waits for a given amount of time (in milliseconds)
 ;
@@ -133,5 +147,10 @@ print:
 
     ret
 
-prompt:
-    text    "Z80-OS"
+    org     $8000
+task_A_run:
+TASK_A_RUN set task_A_run
+
+    org     $9000
+task_B_run:
+TASK_B_RUN set task_B_run
