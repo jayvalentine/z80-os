@@ -121,6 +121,28 @@ memset:
 
     ret
 
+; Prints a text string, followed by a newline.
+;
+; Parameters:
+;   HL - pointer to the string
+;   B  - string length
+print:
+    ; Print a character, increment to the next one.
+    ld      A, (HL)
+    inc     HL
+    out     (0), A
+
+    ; Loop until all characters have been printed.
+    djnz    print
+
+    ; Print a newline.
+    ld      A, $0a
+    out     (0), A
+    ld      A, $0d
+    out     (0), A
+
+    ret
+
 ; OS-specific functions.
 
 ; Spawn a process using the given image.
@@ -288,14 +310,14 @@ os_next_task_entry_next_2:
 ;
 ; Parameters:
 ;   HL - the time to wait in milliseconds.
-sleep:
+os_sleep:
     ; Push BC as we're going to trash B.
     push    BC
     ; 1 millisecond is 400 cycles, at 400KHz.
 
     ; We want to construct an inner loop that runs for 1 millisecond.
     ; Then we just execute that inner loop for as many times as HL.
-sleep_outer:
+os_sleep_outer:
     ; A DJNZ takes ~13 cycles to execute.
     ; So, our inner loop wants to execute roughly 400/13 times.
     ;
@@ -304,40 +326,18 @@ sleep_outer:
 
     ld      B, 29
 
-sleep_inner:
-    djnz    sleep_inner
+os_sleep_inner:
+    djnz    os_sleep_inner
 
     ; Decrement HL. Is it 0?
     dec     HL
     ld      A, H
     or      A, L
-    jp      nz, sleep_outer
+    jp      nz, os_sleep_outer
 
-sleep_done:
+os_sleep_done:
     ; Pop BC and return.
     pop     BC
-    ret
-
-; Prints a text string, followed by a newline.
-;
-; Parameters:
-;   HL - pointer to the string
-;   B  - string length
-print:
-    ; Print a character, increment to the next one.
-    ld      A, (HL)
-    inc     HL
-    out     (0), A
-
-    ; Loop until all characters have been printed.
-    djnz    print
-
-    ; Print a newline.
-    ld      A, $0a
-    out     (0), A
-    ld      A, $0d
-    out     (0), A
-
     ret
 
 ; Task images.
@@ -349,7 +349,7 @@ task_A:
 
     ; Sleep for 2 seconds.
     ld      HL, $07d0
-    call    sleep
+    call    os_sleep
 
     jp      task_A
 
@@ -364,7 +364,7 @@ task_B:
 
     ; Sleep for 2 seconds.
     ld      HL, $01f4
-    call    sleep
+    call    os_sleep
     
     jp      task_B
 
