@@ -89,6 +89,14 @@ main:
 
     call    memset
 
+    ; Load the OS process.
+    ld      BC, os_process_end - os_process
+    ld      HL, os_process
+    call    os_spawn
+
+    ; Save the pointer to the OS process as we'll need it later.
+    push    HL
+
     ; Load the tasks into RAM.
     ld      BC, task_A_end - task_A
     ld      HL, task_A
@@ -102,8 +110,8 @@ main:
     ld      A, $01
     out     (14), A
 
-    ; Start executing task A.
-    ld      HL, os_tasks
+    ; Start executing the OS process.
+    pop     HL
     call    os_exec
 
 ; C stdlib-style helper functions, e.g. memset, strcmp, etc.
@@ -121,7 +129,7 @@ memset:
 
     ret
 
-; Prints a text string, followed by a newline.
+; Prints a text string.
 ;
 ; Parameters:
 ;   HL - pointer to the string
@@ -134,13 +142,6 @@ print:
 
     ; Loop until all characters have been printed.
     djnz    print
-
-    ; Print a newline.
-    ld      A, $0a
-    out     (0), A
-    ld      A, $0d
-    out     (0), A
-
     ret
 
 ; OS-specific functions.
@@ -206,6 +207,7 @@ os_spawn:
     ld      (os_store_sp), SP
     ld      DE, (os_store_sp)
 
+    ; Restore the system stack pointer.
     ld      (os_store_sp), BC
     ld      SP, (os_store_sp)
 
@@ -217,7 +219,11 @@ os_spawn:
     inc     HL
     ld      (HL), D
 
+    ; Reset HL to point to the task entry.
+    dec     HL
+
     ; We've initialized the process, now return.
+    ; A pointer to the new entry is in HL.
     ret
 
 ; Begin executing the given process.
@@ -258,12 +264,16 @@ os_next_task_memory:
     ld      HL, $9000
     ld      BC, $0800
 
+os_next_task_memory_loop:
+
     ld      A, (HL)
     cp      $00
 
     jp      z, os_next_task_memory_done
 
     add     HL, BC
+
+    jp      os_next_task_memory_loop
 
 os_next_task_memory_done:
     ; Move the pointer into DE.
@@ -340,6 +350,35 @@ os_sleep_done:
     pop     BC
     ret
 
+; OS task. Handles the user input and other system stuff.
+os_process:
+    ld      HL, os_process_welcome
+    ld      B, os_process_welcome_end - os_process_welcome
+
+    call    print
+
+os_process_loop:
+    ld      HL, os_process_prompt
+    ld      B, os_process_prompt_end - os_process_prompt
+
+    call    print
+    ld      HL, $1000
+    call    os_sleep
+
+    jp      os_process_loop
+os_process_end:
+
+os_process_welcome:
+    text    "Welcome to Z80-OS, v0.1!"
+    byte    $0a, $0d                        ; Can't seem to use escape characters, sad times :'(
+    text    "Copyright 2020 Jay Valentine."
+    byte    $0a, $0d
+os_process_welcome_end:
+
+os_process_prompt:
+    text    "Z80-OS> "
+os_process_prompt_end:
+
 ; Task images.
 
 task_A:
@@ -379,13 +418,5 @@ os_store_sp:
 os_running_task:
     blk     2
 os_tasks:
-    blk     4
+    blk     6
 os_tasks_end:
-
-    org     $9000
-task_A_run:
-TASK_A_RUN set task_A_run
-
-    org     $a000
-task_B_run:
-TASK_B_RUN set task_B_run
