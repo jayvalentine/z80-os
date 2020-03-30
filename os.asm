@@ -33,6 +33,8 @@ handler_nmi:
     ld      (HL), B
     inc     HL
 
+    ; Find the next non-NULL entry.
+handler_nmi_while_null:
     ; Loop back to the beginning if we've hit the end.
     ld      A, H
     cp      (os_tasks_end & $ff00) >> 8
@@ -44,7 +46,19 @@ handler_nmi:
     ld      HL, os_tasks
 
 handler_nmi_skip:
+    ; Move on to the next if this entry is NULL (0).
+    ld      A, (HL)
+    inc     HL
+    or      (HL)
+    jp      nz, handler_nmi_not_null
 
+    inc     HL
+
+    jp      handler_nmi_while_null
+
+handler_nmi_not_null:
+    dec     HL
+    
     ; Store a pointer for this task.
     ld      (os_running_task), HL
 
@@ -84,7 +98,7 @@ main:
 
     ; Initialize the OS variables that need initializing.
     ld      A, 0
-    ld      B, 16
+    ld      B, os_tasks_end - os_tasks
     ld      HL, os_tasks
 
     call    memset
@@ -418,5 +432,5 @@ os_store_sp:
 os_running_task:
     blk     2
 os_tasks:
-    blk     6
+    blk     16
 os_tasks_end:
