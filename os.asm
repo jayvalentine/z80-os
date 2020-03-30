@@ -92,11 +92,11 @@ main:
     ; Load the tasks into RAM.
     ld      BC, task_A_end - task_A
     ld      HL, task_A
-    call    spawn
+    call    os_spawn
 
     ld      BC, task_B_end - task_B
     ld      HL, task_B
-    call    spawn
+    call    os_spawn
 
     ; Start the timer.
     ld      A, $01
@@ -104,7 +104,9 @@ main:
 
     ; Start executing task A.
     ld      HL, os_tasks
-    call    exec
+    call    os_exec
+
+; C stdlib-style helper functions, e.g. memset, strcmp, etc.
 
 ; Set a region of memory to a given value.
 ;
@@ -119,12 +121,14 @@ memset:
 
     ret
 
+; OS-specific functions.
+
 ; Spawn a process using the given image.
 ;
 ; Parameters:
 ;   HL - pointer to the image.
 ;   BC - size of the image.
-spawn:
+os_spawn:
     ; Get a pointer to the next available memory region.
     call    os_next_task_memory
 
@@ -194,7 +198,12 @@ spawn:
     ; We've initialized the process, now return.
     ret
 
-exec:
+; Begin executing the given process.
+; The process must not already be running.
+;
+; Parameters:
+;   HL - pointer to the process to be executed.
+os_exec:
     inc     SP
     inc     SP
 
