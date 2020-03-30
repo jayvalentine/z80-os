@@ -133,7 +133,7 @@ os_spawn:
     call    os_next_task_memory
 
     ; Mark this region as used.
-    ld      A, $ff
+    ld      A, $01
     ld      (DE), A
     inc     DE
 
@@ -152,7 +152,7 @@ os_spawn:
     push    HL
 
     ; Get the initialization value of SP.
-    ld      DE, $0fff
+    ld      DE, $07fe
     add     HL, DE
 
     ; Restore entry point.
@@ -234,7 +234,7 @@ os_next_task_memory:
     push    BC
 
     ld      HL, $9000
-    ld      BC, $1000
+    ld      BC, $0800
 
     ld      A, (HL)
     cp      $00
