@@ -1,3 +1,5 @@
+require 'fileutils'
+
 load '../z80-libraries/tasks.rake'
 
 namespace 'build' do
@@ -9,12 +11,25 @@ namespace 'build' do
         cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
         cmd += "--no-crt "
-        cmd += "-o bootsector.bin "
+        cmd += "-o bootsector_temp.bin "
         cmd += "boot/bootsector.asm"
 
         success = system(cmd)
 
         if success
+            # Pad to 512 bytes.
+            bin = File.read("bootsector_temp.bin", mode: "rb")
+            abort("Boot sector too large: size is #{bin.size}") if bin.size > 512
+            File.open("bootsector.bin", "wb") do |f|
+                bin.bytes.each do |b|
+                    f.putc b
+                end
+
+                (512-bin.size).times do
+                    f.putc 0
+                end
+            end
+
             system("z88dk-dis -o 0x8000 bootsector.bin > bootsector.diss")
         end
     end
