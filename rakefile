@@ -1,107 +1,21 @@
-require 'zemu'
+load '../z80-libraries/tasks.rake'
 
-# Non-Maskable Interrupt Timer (32-bit)
-#
-# Represents a 32-bit timer device, the period of which can be controlled
-# by the CPU through four IO ports. The timer generates an NMI once this
-# period has expired. The timer can be reset via a control port.
-class Timer32 < Zemu::Config::IOPort
-    def initialize
-        super
+namespace 'build' do
+    desc "Build boot sector image"
+    task 'boot' do
+        cmd = "zcc "
+        cmd += "+#{CONFIG} -compiler-sccz80 "
+        cmd += "-O2 -SO2 "
+        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
+        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
+        cmd += "--no-crt "
+        cmd += "-o bootsector.bin "
+        cmd += "boot/bootsector.asm"
 
-        when_setup do
-            "zuint32 io_#{name}_count;\n" +
-            "zuint32 io_#{name}_period;\n" +
-            "zuint8 io_#{name}_running = 0;\n"
-        end
+        success = system(cmd)
 
-        when_read do
-        end
-
-        when_write do
-            str = ""
-
-            str += "if (port == #{count_ports[0]}) io_#{name}_period |= (zuint32) value;\n"
-
-            position = 1
-            count_ports[1..3].each do |port|
-                str += "else if (port == #{port}) io_#{name}_period |= (((zuint32) value) << #{8 * position});\n"
-                position += 1
-            end
-
-            str += "else if (port == #{control_port})\n"
-            str += "{\n"
-            str += "    io_#{name}_running = value;\n"
-            str += "    io_#{name}_count = io_#{name}_period;\n"
-            str += "}\n"
-
-            str
-        end
-
-        when_clock do
-            "if (io_#{name}_running)\n" +
-            "{\n" +
-            "    if (io_#{name}_count > 0)\n" +
-            "    {\n" +
-            "        io_#{name}_count--;\n" +
-            "    }\n" +
-            "    else\n" +
-            "    {\n" +
-            "        io_#{name}_running = 0;\n" +
-            "        zemu_io_nmi(instance);\n" +
-            "    }\n" +
-            "}\n"
+        if success
+            system("z88dk-dis -o 0x8000 bootsector.bin > bootsector.diss")
         end
     end
-
-    # Valid parameters for a Timer, along with those defined in
-    # [Zemu::Config::IOPort].
-    def params
-        super + %w(count_ports control_port)
-    end
-end
-
-desc "Build the application."
-task :build do
-    system "vasmz80_oldstyle -Fbin os.asm -o os.bin"
-    system "z80dasm -lat -g0 os.bin > os.diss"
-end
-
-task :run => :build do
-    conf = Zemu::Config.new do
-        name "zemu_os"
-
-        clock_speed 400_000
-
-        add_memory (Zemu::Config::ROM.new do
-            name "rom"
-            address 0x0000
-            size    0x8000
-            
-            contents from_binary("os.bin")[0..0x7fff]
-        end)
-
-        add_memory (Zemu::Config::RAM.new do
-            name "ram"
-            address 0x8000
-            size    0x7FFF
-        end)
-
-        add_io (Zemu::Config::SerialPort.new do
-            name "serial"
-            in_port 0x00
-            out_port 0x00
-            ready_port 0x01
-        end)
-
-        add_io (Timer32.new do
-            name "timer32"
-            count_ports [10, 11, 12, 13]
-            control_port 14 
-        end)
-    end
-
-    puts "Starting emulator..."
-
-    Zemu.start_interactive(conf)
 end

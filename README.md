@@ -1,2 +1,3 @@
 # z80-os
-A multitasking operating system for the humble Z80.
+
+An operating system for the humble Z80.
