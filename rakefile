@@ -33,4 +33,53 @@ namespace 'build' do
             system("z88dk-dis -o 0x8000 bootsector.bin > bootsector.diss")
         end
     end
+
+    desc "Build kernel image"
+    task 'kernel' do
+        cmd = "zcc "
+        cmd += "+#{CONFIG} -compiler-sccz80 "
+        cmd += "-O2 -SO2 "
+        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
+        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
+        cmd += "-Cl\"-r0x8200\" "
+        cmd += "-crt0 kernel/reset.asm "
+        cmd += "-lstdlib "
+        cmd += "-m "
+        cmd += "-o kernel_temp.bin "
+        cmd += "kernel/main.c"
+
+        success = system(cmd)
+
+        if success
+            # Pad to 512*15 bytes.
+
+            bin = File.read("kernel_temp.bin", mode: "rb")
+            abort("Kernel image too large: size is #{bin.size}") if bin.size > (512*15)
+
+            File.open("kernel.bin", "wb") do |f|
+                bin.bytes.each do |b|
+                    f.putc b
+                end
+
+                ((512*15)-bin.size).times do
+                    f.putc 0
+                end
+            end
+
+            system("z88dk-dis -o 0x8200 kernel.bin > kernel.diss")
+
+            File.open("kernel.bin", "rb") do |f|
+                15.times do |i|
+                    File.open("kernel_#{i+1}.bin", "wb") do |f_out|
+                        512.times do
+                            f_out.putc f.getc
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    desc "Build all"
+    task "all" => ["kernel", "boot"]
 end
