@@ -61,6 +61,7 @@ _boot_load_done:
     call    $8000+_print-_bootsector
 
     call    $8200
+    ret
 
 _print:
     ld      A, (DE)
