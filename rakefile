@@ -42,7 +42,7 @@ namespace 'build' do
     task 'loader' => ['lib:stdlib'] do
         cmd = "zcc "
         cmd += "+#{CONFIG} -compiler-sccz80 "
-        cmd += "-O2 -SO2 "
+        cmd += "-O3 -SO3 "
         cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
         cmd += "-Cl\"-r0x8200\" "
@@ -56,11 +56,10 @@ namespace 'build' do
         success = system(cmd)
 
         if success
-            # Pad to 512*3 bytes.
-            num_sectors = 7
+            num_sectors = 9
 
             bin = File.read("loader_temp.bin", mode: "rb")
-            abort("Loader image too large: size is #{bin.size}") if bin.size > (512*num_sectors)
+            abort("Loader image too large: size is #{bin.size} (#{512 * num_sectors} expected)") if bin.size > (512*num_sectors)
 
             File.open("loader.bin", "wb") do |f|
                 bin.bytes.each do |b|

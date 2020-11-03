@@ -4,9 +4,9 @@
 #include "file.h"
 
 char input[256];
+char * argv[256];
 
 size_t argc;
-char * argv[256];
 char * cmd;
 
 void load_error(const char * msg)
@@ -37,7 +37,13 @@ void main(void)
 
     if (error == NOERROR)
     {
-        
+        /* Read and print some file contents. */
+        char buf[11];
+        file_read(buf, &file, 10);
+        buf[10] = '\0';
+
+        puts("Done.\n\r");
+        printf("File contents: %s\n\r", buf);
     }
     else if (error == FILENOTFOUND)
     {

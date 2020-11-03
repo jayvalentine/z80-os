@@ -4,6 +4,8 @@
 #include "file.h"
 #include "disk_drivers.h"
 
+#define CLUSTER_EOF 0xffff
+
 /* Information about the disk. Needed for filesystem interaction. */
 struct DiskInfo_T
 {
@@ -13,7 +15,9 @@ struct DiskInfo_T
     ulong data_region;
 
     /* Other info. */
+    uint bytes_per_sector;
     ubyte sectors_per_cluster;
+    uint bytes_per_cluster;
     ulong num_sectors;
 } disk_info;
 
@@ -50,7 +54,9 @@ FileError_T filesystem_init()
     read_sector(temp_sector, 0);
 
     /* General disk info. */
+    disk_info.bytes_per_sector = get_uint(temp_sector, 0x0b);
     disk_info.sectors_per_cluster = temp_sector[0x0d];
+    disk_info.bytes_per_cluster = disk_info.bytes_per_sector * disk_info.sectors_per_cluster;
 
     /* Calculate start of FAT. */
     disk_info.fat_region = get_uint(temp_sector, 0x0e);
@@ -105,13 +111,10 @@ void get_filename(char * buf, const char * dir_entry)
     buf[i] = '\0';
 }
 
-FileError_T file_open(const char * filename, File_T * fd)
+FileError_T get_directory_entry(char * dir_entry, const char * filename)
 {
     ulong sector = disk_info.root_region;
     bool done = FALSE;
-
-    /* Buffer into which we'll copy the file entry. */
-    ubyte file_entry[32];
 
     /* Buffer for filename. */
     ubyte buf[13];
@@ -143,7 +146,7 @@ FileError_T file_open(const char * filename, File_T * fd)
             if (strcmp(buf, filename) == 0)
             {
                 /* We've found the file! */
-                memcpy(file_entry, &temp_sector[f], 32);
+                memcpy(dir_entry, &temp_sector[f], 32);
                 done = TRUE;
                 break;
             }
@@ -153,4 +156,112 @@ FileError_T file_open(const char * filename, File_T * fd)
     }
 
     return NOERROR;
+}
+
+ulong get_start_sector(uint cluster)
+{
+    return disk_info.data_region + ((cluster - 2) * disk_info.sectors_per_cluster);
+}
+
+uint get_next_cluster(uint cluster)
+{
+    /* Calculate offset into FAT of sector to read. */
+    ulong fat_offset = (cluster * 2) / disk_info.bytes_per_sector;
+    ulong fat_sector = disk_info.fat_region + fat_offset;
+
+    /* Calculate offset into that sector of the entry we want. */
+    uint entry = (cluster * 2) % disk_info.bytes_per_sector;
+
+    /* Read the sector and return the appropriate entry. */
+    read_sector(temp_sector, fat_sector);
+    return get_uint(temp_sector, entry);
+}
+
+FileError_T file_open(const char * filename, File_T * fd)
+{
+    FileError_T error;
+
+    /* Buffer into which we'll copy the file entry. */
+    ubyte file_entry[32];
+
+    /* Get relevent file entry. */
+    error = get_directory_entry(file_entry, filename);
+
+    if (error != NOERROR) return error;
+
+    /* Get size in bytes. */
+    fd->size = get_ulong(file_entry, 0x1c);
+
+    /* Get start cluster. */
+    fd->start_cluster = get_uint(file_entry, 0x1a);
+    fd->current_cluster = fd->start_cluster;
+
+    /* Sector (relative to cluster start) */
+    fd->sector = 0;
+
+    /* Set current position to start-of-file. */
+    fd->fpos_within_sector = 0;
+    fd->fpos = 0;
+
+    return NOERROR;
+}
+
+int file_readbyte(File_T * fd)
+{
+    /* Return EOF if we've hit the end of the file. */
+    if (fd->fpos == fd->size) return EOF;
+
+    /* Shouldn't happen (maybe?) but return EOF if we have no more
+     * clusters to read. */
+    if (fd->current_cluster == CLUSTER_EOF)
+    {
+        return EOF;
+    }
+
+    /* Otherwise read a byte from the current cluster. */
+
+    /* Read current sector. */
+    ulong sector = get_start_sector(fd->current_cluster) + fd->sector;
+    read_sector(temp_sector, sector);
+
+    /* Get byte. */
+    ubyte byte = temp_sector[fd->fpos_within_sector];
+
+    /* Increment size. */
+    fd->fpos++;
+    fd->fpos_within_sector++;
+
+    /* If we've reached the end of this sector,
+     * we need to fetch the next sector next time around. This may even be
+     * in a different cluster. */
+    if (fd->fpos_within_sector == disk_info.bytes_per_sector)
+    {
+        fd->sector++;
+        fd->fpos_within_sector = 0;
+
+        /* Do we need the next cluster? */
+        if (fd->sector == disk_info.sectors_per_cluster)
+        {
+            fd->current_cluster = get_next_cluster(fd->current_cluster);
+            fd->sector = 0;
+        }
+    }
+
+    return (int)byte;
+}
+
+size_t file_read(ubyte * buf, File_T * fd, size_t n)
+{
+    size_t bytes = 0;
+    for (size_t i = 0; i < n; i++)
+    {
+        int c = file_readbyte(fd);
+        if (c == EOF) return bytes;
+
+        *buf = (ubyte)c;
+        buf++;
+        bytes++;
+    }
+
+    return bytes;
 }
