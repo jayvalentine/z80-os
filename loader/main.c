@@ -19,8 +19,6 @@ void main(void)
 {
     File_T file;
     FileError_T error;
-
-    puts("Z80-OS\n\rCopyright (C) 2020 Jay Valentine.\n\r");
     
     puts("Reading filesystem... ");
 

@@ -19,6 +19,10 @@ struct DiskInfo_T
     ubyte sectors_per_cluster;
     uint bytes_per_cluster;
     ulong num_sectors;
+
+    /* Caching info. */
+    /* Last sector read into cache. */
+    uint current_cache_sector;
 } disk_info;
 
 /* Temporary storage for sector read/written from/to disk. */
@@ -47,6 +51,16 @@ ulong get_ulong(char* buf, uint i)
     ulong lo_lo = buf[i];
 
     return (hi_hi << 24) | (hi_lo << 16) | (lo_hi << 8) | lo_lo;
+}
+
+void read_sector_cached(char * buf, ulong sector)
+{
+    /* Only read the sector if it's not already in cache. */
+    if (disk_info.current_cache_sector != sector)
+    {
+        read_sector(buf, sector);
+        disk_info.current_cache_sector = sector;
+    }
 }
 
 FileError_T filesystem_init()
@@ -80,6 +94,9 @@ FileError_T filesystem_init()
     {
         disk_info.num_sectors = get_ulong(temp_sector, 0x20);
     }
+
+    /* Technically, the first sector _is_ in the cache. */
+    disk_info.current_cache_sector = 0;
 
     return NOERROR;
 }
@@ -123,7 +140,7 @@ FileError_T get_directory_entry(char * dir_entry, const char * filename)
     while (!done)
     {
         /* Read the sector. */
-        read_sector(temp_sector, sector);
+        read_sector_cached(temp_sector, sector);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint f = 0; f < 512; f += 32)
@@ -173,7 +190,7 @@ uint get_next_cluster(uint cluster)
     uint entry = (cluster * 2) % disk_info.bytes_per_sector;
 
     /* Read the sector and return the appropriate entry. */
-    read_sector(temp_sector, fat_sector);
+    read_sector_cached(temp_sector, fat_sector);
     return get_uint(temp_sector, entry);
 }
 
@@ -222,7 +239,8 @@ int file_readbyte(File_T * fd)
 
     /* Read current sector. */
     ulong sector = get_start_sector(fd->current_cluster) + fd->sector;
-    read_sector(temp_sector, sector);
+
+    read_sector_cached(temp_sector, sector);
 
     /* Get byte. */
     ubyte byte = temp_sector[fd->fpos_within_sector];
