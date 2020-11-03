@@ -1,7 +1,9 @@
     ; Interface to kernel.
     PUBLIC  _kernel
 
+    EXTERN  __tail
+
     ; void kernel(void)
 _kernel:
-    call    $b000
+    call    __tail
     ret

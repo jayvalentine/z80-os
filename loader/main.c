@@ -4,6 +4,8 @@
 #include "file.h"
 #include "kernel.h"
 
+extern char _tail;
+
 char input[256];
 char * argv[256];
 
@@ -37,7 +39,7 @@ void main(void)
     if (error == NOERROR)
     {
         /* Read the file into memory. */
-        char * mem = 0xb000;
+        char * mem = &_tail;
 
         while (TRUE)
         {
