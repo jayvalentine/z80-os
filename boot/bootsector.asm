@@ -57,9 +57,6 @@ _boot_load_loop:
 
 _boot_load_done:
     ; Done, so call the code we've just loaded.
-    ld      DE, $8000+_message_done-_bootsector
-    call    $8000+_print-_bootsector
-
     call    $8200
     ret
 
@@ -83,9 +80,5 @@ _print_done:
     ret
 
 _message_booting:
-    defm    "Booting Z80-OS... "
-    defb    0
-
-_message_done:
-    defm    "Done.\n\r"
+    defm    "Booting Z80-OS...\n\r"
     defb    0
