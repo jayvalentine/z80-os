@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "file.h"
+#include "kernel.h"
 
 char input[256];
 char * argv[256];
@@ -33,17 +34,26 @@ void main(void)
     puts("Done.\n\r");
 
     puts("Loading kernel... ");
-    error = file_open("KERNEL.HEX", &file);
+    error = file_open("KERNEL.BIN", &file);
 
     if (error == NOERROR)
     {
-        /* Read and print some file contents. */
-        char buf[11];
-        file_read(buf, &file, 10);
-        buf[10] = '\0';
+        /* Read the file into memory. */
+        char * mem = 0xb000;
+
+        while (TRUE)
+        {
+            int c = file_readbyte(&file);
+            if (c == EOF) break;
+
+            *mem = (ubyte)c;
+            mem++;
+        }
 
         puts("Done.\n\r");
-        printf("File contents: %s\n\r", buf);
+
+        /* Enter kernel. */
+        kernel();
     }
     else if (error == FILENOTFOUND)
     {
