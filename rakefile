@@ -85,6 +85,28 @@ namespace 'build' do
         end
     end
 
+    desc "Build kernel image"
+    task 'kernel' => ['lib:stdlib'] do
+        cmd = "zcc "
+        cmd += "+#{CONFIG} -compiler-sccz80 "
+        cmd += "-O2 -SO2 "
+        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
+        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
+        cmd += "-Cl\"-r0xb000\" "
+        cmd += "-crt0 kernel/reset.asm "
+        cmd += "-lstdlib "
+        cmd += "-m "
+        cmd += "-o kernel.bin "
+        cmd += "kernel/*.c "
+        cmd += "kernel/*.asm "
+
+        success = system(cmd)
+
+        if success
+            system("z88dk-dis -o 0xb000 kernel.bin > kernel.diss")
+        end
+    end
+
     desc "Build all"
-    task "all" => ["loader", "boot"]
+    task "all" => ["loader", "boot", "kernel"]
 end
