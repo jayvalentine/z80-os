@@ -7,7 +7,7 @@
     DEFC    DISKPORT = $18
     
     ; Publicly visible functions.
-    PUBLIC  _init_disk
+    PUBLIC  _disk_init
     PUBLIC  _read_sector
     PUBLIC  _write_sector
 
@@ -72,10 +72,10 @@ _write_sector:
 
     ret
 
-    ; void init_disk(void)
+    ; void disk_init(void)
     ;
     ; Initialises CF-card.
-_init_disk:
+_disk_init:
     call    _wait
     ld      A, $04
     out     (DISKPORT+7), A

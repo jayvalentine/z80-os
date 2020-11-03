@@ -1,6 +1,10 @@
+require 'rake/clean'
+
 require 'fileutils'
 
 load '../z80-libraries/tasks.rake'
+
+CLEAN.include("**/*.o", "**/*.bin", "**/*.hex", "**/*.diss", "**/*.lib", "**/*.lis", "**/*.map", "**/*.sym")
 
 namespace 'build' do
     desc "Build boot sector image"
@@ -34,44 +38,45 @@ namespace 'build' do
         end
     end
 
-    desc "Build kernel image"
-    task 'kernel' => ['lib:stdlib'] do
+    desc "Build 2nd stage loader image"
+    task 'loader' => ['lib:stdlib'] do
         cmd = "zcc "
         cmd += "+#{CONFIG} -compiler-sccz80 "
         cmd += "-O2 -SO2 "
         cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
         cmd += "-Cl\"-r0x8200\" "
-        cmd += "-crt0 kernel/reset.asm "
+        cmd += "-crt0 loader/reset.asm "
         cmd += "-lstdlib "
         cmd += "-m "
-        cmd += "-o kernel_temp.bin "
-        cmd += "kernel/*.c "
-        cmd += "kernel/*.asm "
+        cmd += "-o loader_temp.bin "
+        cmd += "loader/*.c "
+        cmd += "loader/*.asm "
 
         success = system(cmd)
 
         if success
-            # Pad to 512*7 bytes.
+            # Pad to 512*3 bytes.
+            num_sectors = 7
 
-            bin = File.read("kernel_temp.bin", mode: "rb")
-            abort("Kernel image too large: size is #{bin.size}") if bin.size > (512*7)
+            bin = File.read("loader_temp.bin", mode: "rb")
+            abort("Loader image too large: size is #{bin.size}") if bin.size > (512*num_sectors)
 
-            File.open("kernel.bin", "wb") do |f|
+            File.open("loader.bin", "wb") do |f|
                 bin.bytes.each do |b|
                     f.putc b
                 end
 
-                ((512*7)-bin.size).times do
+                ((512*num_sectors)-bin.size).times do
                     f.putc 0
                 end
             end
 
-            system("z88dk-dis -o 0x8200 kernel.bin > kernel.diss")
+            system("z88dk-dis -o 0x8200 loader.bin > loader.diss")
 
-            File.open("kernel.bin", "rb") do |f|
-                7.times do |i|
-                    File.open("kernel_#{i+1}.bin", "wb") do |f_out|
+            File.open("loader.bin", "rb") do |f|
+                num_sectors.times do |i|
+                    File.open("loader_#{i+1}.bin", "wb") do |f_out|
                         512.times do
                             f_out.putc f.getc
                         end
@@ -82,5 +87,5 @@ namespace 'build' do
     end
 
     desc "Build all"
-    task "all" => ["kernel", "boot"]
+    task "all" => ["loader", "boot"]
 end
