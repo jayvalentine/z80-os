@@ -110,3 +110,11 @@ namespace 'build' do
     desc "Build all"
     task "all" => ["loader", "boot", "kernel"]
 end
+
+namespace 'install' do
+    desc "Install kernel image onto CF-card"
+    task 'kernel', [:path] => ['build:kernel'] do |t, args|
+        abort("No path specified") if args[:path].nil?
+        FileUtils.cp('kernel.bin', File.join(args[:path], 'KERNEL.BIN'))
+    end
+end
