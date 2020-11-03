@@ -57,7 +57,7 @@ void main(void)
     }
     else if (error == FILENOTFOUND)
     {
-        load_error("KERNEL.HEX not found");
+        load_error("KERNEL.BIN not found");
     }
 
     return;
