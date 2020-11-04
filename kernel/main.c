@@ -10,6 +10,7 @@ void main(void)
 
     while (1)
     {
+        puts("> ");
         gets(input);
         printf("You typed: %s\n\r", input);
     }
