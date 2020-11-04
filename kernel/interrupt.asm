@@ -53,7 +53,7 @@ _serial_read_handler:
     ld      D, 0
     ld      A, (_rx_buf_offs_tail)
     ld      E, A
-    adc     HL, DE
+    add     HL, DE
 
     ; Read data from UART.
     in      A, (UART_PORT_DATA)
@@ -86,13 +86,13 @@ _serial_write_handler:
     ld      A, 0b10010110
     out     (UART_PORT_CONTROL), A
     ret
-__tx:
 
+__tx:
     ; Otherwise, we've got something to send.
     ; Calculate buffer offset.
     ld      HL, _tx_buf
     ld      D, 0
-    adc     HL, DE
+    add     HL, DE
 
     ; Load character and send.
     ld      A, (HL)

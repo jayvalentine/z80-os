@@ -17,15 +17,16 @@ _syscall_table:
     ; using offset provided in A, then executes the function at
     ; that address.
 _syscall_handler:
-    ; Save HL, DE because they may contain arguments to the syscall.
+    ; Save HL, DE, BC
     push    HL
     push    DE
+    push    BC
 
     ; Calculate position of word in syscall table.
     ld      HL, _syscall_table
     ld      D, 0
     ld      E, A
-    adc     HL, DE
+    add     HL, DE
     
     ; Load word into HL.
     ld      E, (HL)
@@ -53,8 +54,12 @@ _syscall_handler:
     ; Busy-waits until serial port is ready to transmit, then
     ; writes the given character to the serial port.
 _syscall_swrite:
+    pop     BC
     pop     DE
     pop     HL
+
+    push    DE
+    push    BC
 
     ; This needs to be an atomic operation; Disable interrupts.
     di
@@ -79,7 +84,7 @@ __swrite_append:
     ; Calculate offset into buffer.
     ld      HL, _tx_buf
     ld      D, 0
-    adc     HL, DE
+    add     HL, DE
 
     ; Write into buffer.
     ld      (HL), B
@@ -91,6 +96,9 @@ __swrite_increment:
 
 __swrite_done:
     ei
+
+    pop     BC
+    pop     DE
     ret
 
     PUBLIC  _tx_buf_offs_head
@@ -117,6 +125,7 @@ _tx_buf:
     ; Busy-waits until serial port receives data,
     ; then returns a single received character.
 _syscall_sread:
+    pop     BC
     pop     DE
     pop     HL
 
@@ -135,7 +144,7 @@ __sread_available:
     ; Calculate offset into buffer.
     ld      HL, _rx_buf
     ld      D, 0
-    adc     HL, DE
+    add     HL, DE
 
     ; Load character into A.
     ld      A, (HL)
@@ -149,7 +158,7 @@ __sread_available:
     PUBLIC  _rx_buf_offs_head
     PUBLIC  _rx_buf_offs_tail
     PUBLIC  _rx_buf
-    
+
 _rx_buf_offs_head:
     defb    0
 _rx_buf_offs_tail:
@@ -178,6 +187,7 @@ _rx_buf:
     ; Writes a sector to the CF-card disk,
     ; from the buffer pointed to by HL.
 _syscall_dwrite:
+    pop     BC
     pop     DE
 
     ; Sector number now in DEBC, so we just need
@@ -213,6 +223,7 @@ _syscall_dwrite:
     ; Reads a sector from the CF-card disk,
     ; into the buffer pointed to by HL.
 _syscall_dread:
+    pop     BC
     pop     DE
 
     ; Sector number in DEBC, so we just need
