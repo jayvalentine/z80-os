@@ -72,6 +72,10 @@ void main(void)
             
             puts("Starting Z80-OS...\n\r");
 
+            /* Wait for a bit (to allow sending of message)
+             * before continuing. */
+            for (uint i = 0; i < 256; i++) {}
+
             set_reg(0b11111101);
             kernel();
         }
