@@ -129,6 +129,9 @@ _syscall_sread:
     pop     DE
     pop     HL
 
+    push    DE
+    push    HL
+
     ld      A, (_rx_buf_offs_head)
     ld      E, A
 
@@ -153,6 +156,8 @@ __sread_available:
     ld      HL, _rx_buf_offs_head
     inc     (HL)
 
+    pop     HL
+    pop     DE
     ret
 
     PUBLIC  _rx_buf_offs_head
