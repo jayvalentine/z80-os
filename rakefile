@@ -87,6 +87,9 @@ namespace 'build' do
 
     desc "Build kernel image"
     task 'kernel' => ['lib:stdlib'] do
+        # Include every source file but reset.asm, which is the startup code.
+        src = (Dir.glob("kernel/*.asm") + Dir.glob("kernel/*.c")) - ["kernel/reset.asm"]
+
         cmd = "zcc "
         cmd += "+#{CONFIG} -compiler-sccz80 "
         cmd += "-O2 -SO2 "
@@ -97,10 +100,7 @@ namespace 'build' do
         cmd += "-lstdlib "
         cmd += "-m "
         cmd += "-o kernel.bin "
-        cmd += "kernel/syscall.asm "
-        cmd += "kernel/interrupt.asm "
-        cmd += "kernel/disk.asm "
-        cmd += "kernel/main.c "
+        cmd += src.join(" ")
 
         success = system(cmd)
 
