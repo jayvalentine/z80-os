@@ -103,7 +103,7 @@ FileError_T filesystem_init()
     return NOERROR;
 }
 
-void get_filename(char * buf, const char * dir_entry)
+void filesystem_filename(char * buf, const char * dir_entry)
 {
     uint8_t i;
 
@@ -130,7 +130,7 @@ void get_filename(char * buf, const char * dir_entry)
     buf[i] = '\0';
 }
 
-FileError_T get_directory_entry(char * dir_entry, const char * filename)
+FileError_T filesystem_directory_entry(char * dir_entry, const char * filename)
 {
     uint32_t sector = disk_info.root_region;
     bool done = FALSE;
@@ -159,7 +159,7 @@ FileError_T get_directory_entry(char * dir_entry, const char * filename)
             if (attr & 0b00011000) continue;
 
             /* We now know this is a file. Load the filename and compare. */
-            get_filename(buf, &temp_sector[f]);
+            filesystem_filename(buf, &temp_sector[f]);
 
             /* Now we can compare the filename. */
             if (strcmp(buf, filename) == 0)
@@ -177,12 +177,7 @@ FileError_T get_directory_entry(char * dir_entry, const char * filename)
     return NOERROR;
 }
 
-uint32_t get_start_sector(uint16_t cluster)
-{
-    return disk_info.data_region + ((cluster - 2) * disk_info.sectors_per_cluster);
-}
-
-uint16_t get_next_cluster(uint16_t cluster)
+uint16_t fat_next_cluster(uint16_t cluster)
 {
     /* Calculate offset into FAT of sector to read. */
     uint32_t fat_offset = (cluster * 2) / disk_info.bytes_per_sector;
@@ -196,6 +191,13 @@ uint16_t get_next_cluster(uint16_t cluster)
     return get_uint16_t(temp_sector, entry);
 }
 
+/* Given a file cluster, return the sector in which that cluster starts. */
+uint32_t file_start_sector(uint16_t cluster)
+{
+    return disk_info.data_region + ((cluster - 2) * disk_info.sectors_per_cluster);
+}
+
+/* Open the file with the given name, storing a reference in fd. */
 FileError_T file_open(const char * filename, File_T * fd)
 {
     FileError_T error;
@@ -204,7 +206,7 @@ FileError_T file_open(const char * filename, File_T * fd)
     uint8_t file_entry[32];
 
     /* Get relevent file entry. */
-    error = get_directory_entry(file_entry, filename);
+    error = filesystem_directory_entry(file_entry, filename);
 
     if (error != NOERROR) return error;
 
@@ -240,7 +242,7 @@ int file_readbyte(File_T * fd)
     /* Otherwise read a byte from the current cluster. */
 
     /* Read current sector. */
-    uint32_t sector = get_start_sector(fd->current_cluster) + fd->sector;
+    uint32_t sector = file_start_sector(fd->current_cluster) + fd->sector;
 
     read_sector_cached(temp_sector, sector);
 
@@ -262,7 +264,7 @@ int file_readbyte(File_T * fd)
         /* Do we need the next cluster? */
         if (fd->sector == disk_info.sectors_per_cluster)
         {
-            fd->current_cluster = get_next_cluster(fd->current_cluster);
+            fd->current_cluster = fat_next_cluster(fd->current_cluster);
             fd->sector = 0;
         }
     }
