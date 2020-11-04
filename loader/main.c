@@ -52,8 +52,8 @@ void main(void)
 
         puts("Done.\n\r");
 
-        /* Enter kernel. */
-        kernel();
+        puts("Starting Z80-OS...\n\r");
+        set_reg(0b01010101);
     }
     else if (error == FILENOTFOUND)
     {
