@@ -97,8 +97,10 @@ namespace 'build' do
         cmd += "-lstdlib "
         cmd += "-m "
         cmd += "-o kernel.bin "
-        cmd += "kernel/*.c "
-        cmd += "kernel/*.asm "
+        cmd += "kernel/syscall.asm "
+        cmd += "kernel/interrupt.asm "
+        cmd += "kernel/disk.asm "
+        cmd += "kernel/main.c "
 
         success = system(cmd)
 
