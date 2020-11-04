@@ -3,7 +3,9 @@
     EXTERN  _main
 
 _reset:
-    jp      _main
-
-    ; Lots of padding, to really exercise the filesystem.
+    ld      A, 0b01010101
+    out     ($80), A
+    call    _main
+    halt
+    
     defs    $1234

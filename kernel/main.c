@@ -4,5 +4,5 @@
 
 void main(void)
 {
-    puts("This is the Z80-OS kernel!!!\n\r");
+    return;
 }
