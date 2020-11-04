@@ -26,6 +26,9 @@ _start:
     ; Initialise stack.
     ld      SP, $ffff
 
+    ld      A, 0b11111101
+    out     ($80), A
+
     ; Initialize UART.
 
     ; Master reset.
