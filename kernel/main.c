@@ -21,12 +21,16 @@ char input[256];
 
 void main(void)
 {
-    puts("This is the Z80-OS kernel!\n\r");
+    puts("Initialising kernel... ");
 
-    while (1)
-    {
-        puts("> ");
-        gets(input);
-        printf("You typed: %s\n\r", input);
-    }
+    puts("Done.\n\r");
+
+    puts("Loading command processor... ");
+
+    /* Load command processor into the last 8k of low-RAM. */
+    void * cp_addr = 0x6000;
+    FILE * cp_file = fopen("COMMAND.BIN", "r");
+    size_t bytes = fread(cp_addr, 1, 0x2000, cp_file);
+
+    puts("Done.\n\r");
 }
