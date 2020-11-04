@@ -106,6 +106,11 @@ namespace 'build' do
 
         if success
             system("z88dk-dis -o 0x0000 kernel.bin > kernel.diss")
+
+            # Make sure that the kernel image is no more than 23Kb in size.
+            limit = 23 * 1024
+            bin = File.read("kernel.bin", mode: "rb")
+            abort("Kernel image is too large: size is #{bin.size} (#{limit} expected)") if bin.size > limit
         end
     end
 
