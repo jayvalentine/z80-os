@@ -5,12 +5,7 @@
 #include "kernel.h"
 
 extern char _tail;
-
-char input[256];
-char * argv[256];
-
-size_t argc;
-char * cmd;
+extern char reg_state;
 
 void load_error(const char * msg)
 {
@@ -52,8 +47,35 @@ void main(void)
 
         puts("Done.\n\r");
 
-        puts("Starting Z80-OS...\n\r");
-        set_reg(0b01010101);
+        puts("Testing low-RAM... ");
+
+        set_reg(0b11111101);
+        uint address = ram_test();
+        set_reg(0b00000000);
+
+        if (address != 0x8000)
+        {
+            printf("Error in RAM: %u\n\r", address);
+        }
+        else
+        {
+            puts("Done.\n\r");
+
+            /* Copy kernel image into low-RAM and execute. */
+            puts("Copying kernel image into low-RAM... ");
+
+            set_reg(0b11111101);
+            memcpy((char *)0x0000, &_tail, (uint)file.size);
+            set_reg(0b00000000);
+
+            puts("Done.\n\r");
+            
+            puts("Starting Z80-OS...\n\r");
+
+            set_reg(0b11111101);
+            kernel();
+        }
+
     }
     else if (error == FILENOTFOUND)
     {
