@@ -68,20 +68,61 @@ int command_clear(char ** argv, size_t argc)
 
 int command_dir(char ** argv, size_t argc)
 {
+    char filename[13];
+
     const DiskInfo_T * dinfo = syscall_dinfo();
 
     uint32_t sector = dinfo->root_region;
-    syscall_dread(temp, sector);
 
-    size_t index = 0;
-    for (uint8_t i = 0; i < 32; i++)
+    uint8_t done = 0;
+    while (!done)
     {
-        for (uint8_t j = 0; j < 16; j++)
+        /* Read this sector of the root directory. */
+        syscall_dread(temp, sector);
+
+        for (size_t f = 0; f < 512; f += 32)
         {
-            printf("%x ", temp[index]);
-            index++;
+            /* If the first byte of the file is 0, stop the search. */
+            if (temp[f] == 0)
+            {
+                return 0;
+            }
+
+            /* Check that this is a file. Skip if not. */
+            uint8_t attr = temp[f+11];
+            if (attr & 0b00011000) continue;
+
+            /* Construct the filename. */
+            memcpy(&filename[0], &temp[f], 8);
+            
+            size_t sep_pos;
+            for (sep_pos = 0; sep_pos < 8; sep_pos++)
+            {
+                if (filename[sep_pos] == ' ') break;
+            }
+
+            size_t ext_len;
+            for (ext_len = 0; ext_len < 3; ext_len++)
+            {
+                if (temp[f+8+ext_len] == ' ') break;
+            }
+
+            /* If no extension, don't insert the '.' */
+            if (ext_len == 0)
+            {
+                filename[sep_pos] = '\0';
+            }
+            else
+            {
+                filename[sep_pos] = '.';
+                memcpy(&filename[sep_pos+1], &temp[f+8], ext_len);
+                filename[sep_pos+1+ext_len] = '\0';
+            }
+
+            printf("%s\n\r", filename);
         }
-        puts("\n\r");
+
+        sector++;
     }
 }
 
