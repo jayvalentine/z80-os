@@ -30,9 +30,17 @@ void main(void)
 
     /* Load command processor into the last 8k of low-RAM. */
     void * cp_addr = 0x6000;
-    int fd = syscall_fopen("COMMAND.BIN", FMODE_READ);
-    
-    /* size_t bytes = syscall_fread(cp_addr, 0x2000, fd); */
 
-    puts("Done.\n\r");
+    int fd = syscall_fopen("COMMAND.BIN", FMODE_READ);
+
+    if (fd == E_FILENOTFOUND)
+    {
+        puts("Error: COMMAND.BIN not found.\n\r");
+    }
+    else
+    {
+        /* size_t bytes = syscall_fread(cp_addr, 0x2000, fd); */
+        /* syscall_fclose(fd); */
+        puts("Done.\n\r");
+    }
 }

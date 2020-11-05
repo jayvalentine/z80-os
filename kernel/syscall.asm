@@ -261,7 +261,13 @@ _do_dread:
     ; C - mode for opening
     ;
     ; Returns:
-    ; File descriptor in HL.
+    ; File descriptor/error code in HL.
+    ;
+    ; Error codes are <0, valid file descriptors are >=0.
+    ;
+    ; Possible error codes are:
+    ; E_FILENOTFOUND = -1
+    ; E_FILELIMIT = -2
 _do_fopen:
     ; BC, DE is already on stack (in that order).
     ; We should be able to just call the function.

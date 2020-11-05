@@ -21,12 +21,6 @@ typedef struct _FileDescriptor
     uint16_t fpos_within_sector;
 } FileDescriptor_T;
 
-typedef enum
-{
-    E_FILENOTFOUND = -1,
-    E_FILELIMIT = -2
-} FileError_T;
-
 int filesystem_init(void);
 
 int file_open(const char * filename, uint8_t mode);
