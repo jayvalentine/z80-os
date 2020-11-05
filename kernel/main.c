@@ -48,7 +48,7 @@ void main(void)
     else
     {
         size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
-        /* syscall_fclose(fd); */
+        syscall_fclose(fd);
 
         uint8_t bytes_hi = bytes >> 8;
         uint8_t bytes_lo = bytes & 0x00ff;

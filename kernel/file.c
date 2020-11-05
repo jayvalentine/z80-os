@@ -261,6 +261,13 @@ int file_open(const char * filename, uint8_t mode)
     return fd;
 }
 
+/* Close the file indicated by the given file descriptor. */
+void file_close(int fd)
+{
+    FileDescriptor_T * file = &fdtable[fd];
+    file->flags &= ~FD_FLAGS_CLAIMED;
+}
+
 int file_readbyte(int fd)
 {
     FileDescriptor_T * file = &fdtable[fd];

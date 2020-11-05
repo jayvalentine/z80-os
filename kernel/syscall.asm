@@ -10,6 +10,8 @@ _syscall_table:
     defw    _do_dread
     defw    _do_fopen
     defw    _do_fread
+    defw    $0000 ; fwrite placeholder
+    defw    _do_fclose
 
     PUBLIC  _syscall_handler
 
@@ -255,6 +257,7 @@ _do_dread:
 
     EXTERN  _file_open
     EXTERN  _file_read
+    EXTERN  _file_close
 
     ; 4: fopen: Open a file for writing.
     ;
@@ -306,5 +309,20 @@ _do_fread:
     ; Increment SP, rather than restoring HL and trashing the return value.
     inc     SP
     inc     SP
+
+    ret
+
+    ; 7: fclose: Close an opened file.
+    ;
+    ; Parameters:
+    ; BC - file descriptor
+_do_fclose:
+    ; BC is already top of stack.
+    call    _file_close
+
+    ; Restore BC, DE, HL
+    pop     BC
+    pop     DE
+    pop     HL
 
     ret
