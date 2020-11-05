@@ -12,6 +12,7 @@ _syscall_table:
     defw    _do_fread
     defw    $0000 ; fwrite placeholder
     defw    _do_fclose
+    defw    _do_dinfo
 
     PUBLIC  _syscall_handler
 
@@ -324,5 +325,23 @@ _do_fclose:
     pop     BC
     pop     DE
     pop     HL
+
+    ret
+
+    EXTERN  _disk_info
+
+    ; 8: dinfo: Get information about disk.
+    ;
+    ; Parameters: None
+    ;
+    ; Returns:
+    ; Pointer to disk info struct, in HL.
+_do_dinfo:
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+
+    ld      HL, _disk_info
 
     ret
