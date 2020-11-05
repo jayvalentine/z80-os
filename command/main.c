@@ -18,11 +18,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
+#include <syscall.h>
 
 char input[256];
 char * cmd;
 char * argv[16];
 size_t argc;
+
+char temp[512];
 
 void parse(char * input)
 {
@@ -55,6 +58,7 @@ void toupper(char * s)
     }
 }
 
+/* Clears the screen and resets the cursor to the origin. */
 int command_clear(char ** argv, size_t argc)
 {
     /* Clear screen, cursor to top-left. */
@@ -62,9 +66,28 @@ int command_clear(char ** argv, size_t argc)
     return 0;
 }
 
+int command_dir(char ** argv, size_t argc)
+{
+    const DiskInfo_T * dinfo = syscall_dinfo();
+
+    uint32_t sector = dinfo->root_region;
+    syscall_dread(temp, sector);
+
+    size_t index = 0;
+    for (uint8_t i = 0; i < 32; i++)
+    {
+        for (uint8_t j = 0; j < 16; j++)
+        {
+            printf("%x ", temp[index]);
+            index++;
+        }
+        puts("\n\r");
+    }
+}
+
 typedef int (*Command_T)(char **, size_t);
 
-#define NUM_COMMANDS 1
+#define NUM_COMMANDS 2
 
 typedef struct _Inbuilt
 {
@@ -77,6 +100,10 @@ const Inbuilt_T commands[NUM_COMMANDS] =
     {
         "CLEAR",
         &command_clear
+    },
+    {
+        "DIR",
+        &command_dir
     }
 };
 
