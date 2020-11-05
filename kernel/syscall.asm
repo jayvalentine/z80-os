@@ -9,6 +9,7 @@ _syscall_table:
     defw    _do_dwrite
     defw    _do_dread
     defw    _do_fopen
+    defw    _do_fread
 
     PUBLIC  _syscall_handler
 
@@ -252,7 +253,8 @@ _do_dread:
 
     ret
 
-    EXTERN  _file_fopen
+    EXTERN  _file_open
+    EXTERN  _file_read
 
     ; 4: fopen: Open a file for writing.
     ;
@@ -271,7 +273,7 @@ _do_dread:
 _do_fopen:
     ; BC, DE is already on stack (in that order).
     ; We should be able to just call the function.
-    call    _file_fopen
+    call    _file_open
 
     ; Restore BC, DE
     pop     BC
@@ -279,6 +281,29 @@ _do_fopen:
     
     ; Increment SP. We want to skip past the saved HL on the stack,
     ; rather than overwriting the return value of file_fopen.
+    inc     SP
+    inc     SP
+
+    ret
+
+    ; 5: fread: Read an opened file.
+    ;
+    ; Parameters:
+    ; HL - pointer to location to write to
+    ; DE - number of bytes to read
+    ; BC - file descriptor
+    ;
+    ; Returns:
+    ; Number of bytes written in HL.
+_do_fread:
+    ; BC, DE, HL are already on stack.
+    call    _file_read
+
+    ; Restore BC, DE
+    pop     BC
+    pop     DE
+
+    ; Increment SP, rather than restoring HL and trashing the return value.
     inc     SP
     inc     SP
 

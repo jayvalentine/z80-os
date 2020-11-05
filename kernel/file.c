@@ -224,7 +224,7 @@ int filesystem_assign_fd(void)
 }
 
 /* Open the file with the given name and mode. */
-int file_fopen(const char * filename, uint8_t mode)
+int file_open(const char * filename, uint8_t mode)
 {
     int error;
 

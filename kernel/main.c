@@ -39,8 +39,9 @@ void main(void)
     }
     else
     {
-        /* size_t bytes = syscall_fread(cp_addr, 0x2000, fd); */
+        size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
         /* syscall_fclose(fd); */
-        puts("Done.\n\r");
+        
+        printf("Read %u bytes.\n\r", bytes);
     }
 }
