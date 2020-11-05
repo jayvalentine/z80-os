@@ -16,8 +16,83 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include <stddef.h>
 
 char input[256];
+char * cmd;
+char * argv[16];
+size_t argc;
+
+void parse(char * input)
+{
+    /* Expect at least one command. */
+    cmd = strtok(input, " ");
+
+    if (cmd == NULL) return;
+
+    argc = 0;
+    while (1)
+    {
+        char * a = strtok(NULL, " ");
+        if (a == NULL) break;
+
+        argv[argc] = a;
+        argc++;
+    }
+}
+
+/* In-place "upper-cases" the given string. */
+void toupper(char * s)
+{
+    while (*s != '\0')
+    {
+        if (*s >= 'a' && *s <= 'z')
+        {
+            *s -= ('a' - 'A');
+        }
+        s++;
+    }
+}
+
+int command_clear(char ** argv, size_t argc)
+{
+    /* Clear screen, cursor to top-left. */
+    puts("\033[2J\033[1;1H");
+    return 0;
+}
+
+typedef int (*Command_T)(char **, size_t);
+
+#define NUM_COMMANDS 1
+
+typedef struct _Inbuilt
+{
+    char * name;
+    Command_T run;
+} Inbuilt_T;
+
+const Inbuilt_T commands[NUM_COMMANDS] =
+{
+    {
+        "CLEAR",
+        &command_clear
+    }
+};
+
+Inbuilt_T * get_command(const char * s)
+{
+    for (size_t c = 0; c < NUM_COMMANDS; c++)
+    {
+        Inbuilt_T * command = &commands[c];
+        if (strcmp(cmd, command->name) == 0)
+        {
+            return command;
+        }
+    }
+
+    return NULL;
+}
 
 void main()
 {
@@ -29,10 +104,26 @@ void main()
 
     puts("Z80-OS Command Processor.\n\rCopyright (C) 2020 Jay Valentine\n\r");
 
+    int exitcode = 0;
+
     while (1)
     {
         puts("> ");
+
+        /* Get user input and parse into cmd and argv */
         gets(input);
-        printf("You typed: %s\n\r", input);
+        parse(input);
+
+        toupper(cmd);
+
+        Inbuilt_T * command_to_run = get_command(cmd);
+        
+        if (command_to_run == NULL)
+        {
+            printf("Unknown command: %s\n\r", cmd);
+            continue;
+        }
+        
+        exitcode = command_to_run->run(argv, argc);
     }
 }

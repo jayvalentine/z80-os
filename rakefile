@@ -159,4 +159,7 @@ namespace 'install' do
         abort("No path specified") if args[:path].nil?
         FileUtils.cp('command.bin', File.join(args[:path], 'COMMAND.BIN'))
     end
+
+    desc "Install all"
+    task "all", [:path] => ["kernel", "command"]
 end
