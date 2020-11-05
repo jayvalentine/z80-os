@@ -314,7 +314,7 @@ size_t file_read(char * ptr, size_t n, int fd)
     for (size_t i = 0; i < n; i++)
     {
         int c = file_readbyte(fd);
-        if (c == EOF) return bytes;
+        if (c == EOF) break;
 
         *(char *)ptr = (uint8_t)c;
         ptr++;
