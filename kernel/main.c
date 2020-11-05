@@ -22,6 +22,10 @@
 
 char input[256];
 
+/* Entry point for command-processor. */
+typedef void (*cp_main_t)(void);
+#define cp_main ((cp_main_t)0x6000)
+
 void main(void)
 {
     puts("Initialising kernel... ");
@@ -50,5 +54,7 @@ void main(void)
         uint8_t bytes_lo = bytes & 0x00ff;
 
         printf("Read 0x%x%x bytes.\n\r", bytes_hi, bytes_lo);
+
+        cp_main();
     }
 }
