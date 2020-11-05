@@ -8,24 +8,9 @@
 
 #define CLUSTER_EOF 0xffff
 
-/* Information about the disk. Needed for filesystem interaction. */
-struct DiskInfo_T
-{
-    /* Region start sectors. */
-    uint32_t fat_region;
-    uint32_t root_region;
-    uint32_t data_region;
+uint16_t current_cache_sector;
 
-    /* Other info. */
-    uint16_t bytes_per_sector;
-    uint8_t sectors_per_cluster;
-    uint16_t bytes_per_cluster;
-    uint32_t num_sectors;
-
-    /* Caching info. */
-    /* Last sector read into cache. */
-    uint16_t current_cache_sector;
-} disk_info;
+DiskInfo_T disk_info;
 
 /* Temporary storage for sector read/written from/to disk. */
 char temp_sector[512];
@@ -62,10 +47,10 @@ uint32_t get_uint16_t32_t(char* buf, size_t i)
 void read_sector_cached(char * buf, uint32_t sector)
 {
     /* Only read the sector if it's not already in cache. */
-    if (disk_info.current_cache_sector != sector)
+    if (current_cache_sector != sector)
     {
         syscall_dread(buf, sector);
-        disk_info.current_cache_sector = sector;
+        current_cache_sector = sector;
     }
 }
 
@@ -111,7 +96,7 @@ int filesystem_init()
     }
 
     /* Technically, the first sector _is_ in the cache. */
-    disk_info.current_cache_sector = 0;
+    current_cache_sector = 0;
 
     /* Initialise file descriptor table. */
     fdtable_init();
