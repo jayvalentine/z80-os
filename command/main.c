@@ -24,6 +24,7 @@ char input[256];
 char * cmd;
 char * argv[16];
 size_t argc;
+char program[16];
 
 char temp[512];
 
@@ -130,6 +131,8 @@ typedef int (*Command_T)(char **, size_t);
 
 #define NUM_COMMANDS 2
 
+#define program_main ((Command_T)0x8000)
+
 typedef struct _Inbuilt
 {
     char * name;
@@ -188,10 +191,39 @@ void main()
         
         if (command_to_run == NULL)
         {
-            printf("Unknown command: %s\n\r", cmd);
-            continue;
+            size_t cmd_len = strlen(cmd);
+            if (cmd_len > 8) cmd_len = 8;
+
+            /* Construct name of file to load. */
+            memcpy(program, cmd, cmd_len);
+            program[cmd_len] = '.';
+            memcpy(&program[cmd_len+1], "EXE", 4);
+
+            int program_fd = syscall_fopen(program, FMODE_READ);
+
+            if (program_fd == E_FILENOTFOUND)
+            {
+                printf("%s could not be found\n\r", program);
+            }
+            else
+            {
+                char * program_ram = 0x8000;
+                size_t program_size = 0x7000;
+                size_t bytes = syscall_fread(program_ram, program_size, program_fd);
+
+                if (bytes == 0)
+                {
+                    printf("Error reading %s\n\r", program);
+                }
+                else
+                {
+                    exitcode = program_main(argv, argc);
+                }
+            }
         }
-        
-        exitcode = command_to_run->run(argv, argc);
+        else
+        {
+            exitcode = command_to_run->run(argv, argc);
+        }
     }
 }
