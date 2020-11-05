@@ -48,4 +48,9 @@ _start:
     im      1
     ei
 
-    jp      _main
+    call    _main
+
+    ; We should never return from main. If so, set an LED and halt.
+    ld      A, 0b01111111
+    out     ($80), A
+    halt
