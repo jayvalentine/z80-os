@@ -114,6 +114,35 @@ namespace 'build' do
         end
     end
 
+    desc "Build command processor image"
+    task 'command' => ['lib:stdlib'] do
+        # Include every source file but reset.asm, which is the startup code.
+        src = (Dir.glob("command/*.asm") + Dir.glob("command/*.c")) - ["command/reset.asm"]
+
+        cmd = "zcc "
+        cmd += "+#{CONFIG} -compiler-sccz80 "
+        cmd += "-O2 -SO2 "
+        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
+        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
+        cmd += "-Cl\"-r0x6000\" "
+        cmd += "-crt0 command/reset.asm "
+        cmd += "-lstdlib "
+        cmd += "-m "
+        cmd += "-o command.bin "
+        cmd += src.join(" ")
+
+        success = system(cmd)
+
+        if success
+            system("z88dk-dis -o 0x6000 command.bin > command.diss")
+
+            # Make sure that the command processor image is no more than 8Kb in size.
+            limit = 8 * 1024
+            bin = File.read("command.bin", mode: "rb")
+            abort("Command processor image is too large: size is #{bin.size} (#{limit} expected)") if bin.size > limit
+        end
+    end
+
     desc "Build all"
     task "all" => ["loader", "boot", "kernel"]
 end
@@ -123,5 +152,11 @@ namespace 'install' do
     task 'kernel', [:path] => ['build:kernel'] do |t, args|
         abort("No path specified") if args[:path].nil?
         FileUtils.cp('kernel.bin', File.join(args[:path], 'KERNEL.BIN'))
+    end
+
+    desc "Install command processor image onto CF-card"
+    task 'command', [:path] => ['build:command'] do |t, args|
+        abort("No path specified") if args[:path].nil?
+        FileUtils.cp('command.bin', File.join(args[:path], 'COMMAND.BIN'))
     end
 end
