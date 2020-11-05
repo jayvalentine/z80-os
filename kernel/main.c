@@ -18,11 +18,15 @@
 #include <stdio.h>
 #include <syscall.h>
 
+#include "file.h"
+
 char input[256];
 
 void main(void)
 {
     puts("Initialising kernel... ");
+
+    filesystem_init();
 
     puts("Done.\n\r");
 
@@ -41,7 +45,7 @@ void main(void)
     {
         size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
         /* syscall_fclose(fd); */
-        
+
         printf("Read %u bytes.\n\r", bytes);
     }
 }

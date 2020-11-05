@@ -74,7 +74,7 @@ void fdtable_init()
     /* Clear the "used" flag for each fd. */
     for (size_t i = 0; i < FILE_LIMIT; i++)
     {
-        fdtable[i].flags &= ~FD_FLAGS_CLAIMED;
+        fdtable[i].flags = 0x00;
     }
 }
 
@@ -146,7 +146,7 @@ void filesystem_filename(char * buf, const char * dir_entry)
     buf[i] = '\0';
 }
 
-FileError_T filesystem_directory_entry(char * dir_entry, const char * filename)
+int filesystem_directory_entry(char * dir_entry, const char * filename)
 {
     uint32_t sector = disk_info.root_region;
     bool done = FALSE;
@@ -217,7 +217,8 @@ int filesystem_assign_fd(void)
 {
     for (size_t i = 0; i < FILE_LIMIT; i++)
     {
-        if (!(fdtable[i].flags & FD_FLAGS_CLAIMED)) return i;
+        if (fdtable[i].flags & FD_FLAGS_CLAIMED) continue;
+        return i;
     }
 
     return E_FILELIMIT;
@@ -230,10 +231,11 @@ int file_open(const char * filename, uint8_t mode)
 
     /* Find a free file descriptor. */
     error = filesystem_assign_fd();
-    if (error != 0) return error;
+    if (error < 0) return error;
 
     /* File descriptor is valid. */
-    FileDescriptor_T * file = &fdtable[error];
+    int fd = error;
+    FileDescriptor_T * file = &fdtable[fd];
 
     /* Buffer into which we'll copy the file entry. */
     uint8_t file_entry[32];
@@ -256,7 +258,7 @@ int file_open(const char * filename, uint8_t mode)
     file->fpos_within_sector = 0;
     file->fpos = 0;
 
-    return 0;
+    return fd;
 }
 
 int file_readbyte(int fd)
