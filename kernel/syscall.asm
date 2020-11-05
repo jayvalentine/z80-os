@@ -4,10 +4,11 @@
     
     ; Syscall table.
 _syscall_table:
-    defw    _syscall_swrite
-    defw    _syscall_sread
-    defw    _syscall_dwrite
-    defw    _syscall_dread
+    defw    _do_swrite
+    defw    _do_sread
+    defw    _do_dwrite
+    defw    _do_dread
+    defw    _do_fopen
 
     PUBLIC  _syscall_handler
 
@@ -53,7 +54,7 @@ _syscall_handler:
     ; Description:
     ; Busy-waits until serial port is ready to transmit, then
     ; writes the given character to the serial port.
-_syscall_swrite:
+_do_swrite:
     pop     BC
     pop     DE
     pop     HL
@@ -124,7 +125,7 @@ _tx_buf:
     ; Description:
     ; Busy-waits until serial port receives data,
     ; then returns a single received character.
-_syscall_sread:
+_do_sread:
     pop     BC
     pop     DE
     pop     HL
@@ -191,7 +192,7 @@ _rx_buf:
     ; Description:
     ; Writes a sector to the CF-card disk,
     ; from the buffer pointed to by HL.
-_syscall_dwrite:
+_do_dwrite:
     pop     BC
     pop     DE
 
@@ -227,7 +228,7 @@ _syscall_dwrite:
     ; Description:
     ; Reads a sector from the CF-card disk,
     ; into the buffer pointed to by HL.
-_syscall_dread:
+_do_dread:
     pop     BC
     pop     DE
 
@@ -248,5 +249,24 @@ _syscall_dread:
 
     ; Read 512 bytes from CF-card.
     call    _disk_read_data
+
+    ret
+
+    EXTERN  _file_fopen
+
+    ; 4: fopen: Open a file for writing.
+    ;
+    ; Parameters:
+    ; DE - pointer to filename string
+    ; C - mode for opening
+_do_fopen:
+    ; BC, DE is already on stack (in that order).
+    ; We should be able to just call the function.
+    call    _file_fopen
+
+    ; Restore BC, DE, HL
+    pop     BC
+    pop     DE
+    pop     HL
 
     ret

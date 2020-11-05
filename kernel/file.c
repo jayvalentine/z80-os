@@ -30,6 +30,10 @@ struct DiskInfo_T
 /* Temporary storage for sector read/written from/to disk. */
 char temp_sector[512];
 
+/* File descriptor table. */
+#define FILE_LIMIT 1
+FileDescriptor_T fdtable[FILE_LIMIT];
+
 /* Helper functions. */
 
 /* Get an unsigned integer (in Z80 little-endian)
@@ -60,14 +64,23 @@ void read_sector_cached(char * buf, uint32_t sector)
     /* Only read the sector if it's not already in cache. */
     if (disk_info.current_cache_sector != sector)
     {
-        dread(buf, sector);
+        syscall_dread(buf, sector);
         disk_info.current_cache_sector = sector;
     }
 }
 
-FileError_T filesystem_init()
+void fdtable_init()
 {
-    dread(temp_sector, 0);
+    /* Clear the "used" flag for each fd. */
+    for (size_t i = 0; i < FILE_LIMIT; i++)
+    {
+        fdtable[i].flags &= ~FD_FLAGS_CLAIMED;
+    }
+}
+
+int filesystem_init()
+{
+    syscall_dread(temp_sector, 0);
 
     /* General disk info. */
     disk_info.bytes_per_sector = get_uint16_t(temp_sector, 0x0b);
@@ -100,7 +113,10 @@ FileError_T filesystem_init()
     /* Technically, the first sector _is_ in the cache. */
     disk_info.current_cache_sector = 0;
 
-    return NOERROR;
+    /* Initialise file descriptor table. */
+    fdtable_init();
+
+    return 0;
 }
 
 void filesystem_filename(char * buf, const char * dir_entry)
@@ -149,7 +165,7 @@ FileError_T filesystem_directory_entry(char * dir_entry, const char * filename)
         {
             /* If first byte is 0, we've reached the end of the root directory,
              * but not found the file. */
-            if (temp_sector[f] == 0) return FILENOTFOUND;
+            if (temp_sector[f] == 0) return E_FILENOTFOUND;
 
             /* Otherwise this could be a file.
              * Read the attribute bytes to find out. */
@@ -174,7 +190,7 @@ FileError_T filesystem_directory_entry(char * dir_entry, const char * filename)
         sector++;
     }
 
-    return NOERROR;
+    return 0;
 }
 
 uint16_t fat_next_cluster(uint16_t cluster)
@@ -197,44 +213,62 @@ uint32_t file_start_sector(uint16_t cluster)
     return disk_info.data_region + ((cluster - 2) * disk_info.sectors_per_cluster);
 }
 
-/* Open the file with the given name, storing a reference in fd. */
-FileError_T file_open(const char * filename, File_T * fd)
+int filesystem_assign_fd(void)
 {
-    FileError_T error;
+    for (size_t i = 0; i < FILE_LIMIT; i++)
+    {
+        if (!(fdtable[i].flags & FD_FLAGS_CLAIMED)) return i;
+    }
+
+    return E_FILELIMIT;
+}
+
+/* Open the file with the given name and mode. */
+int file_fopen(const char * filename, uint8_t mode)
+{
+    int error;
+
+    /* Find a free file descriptor. */
+    error = filesystem_assign_fd();
+    if (error != 0) return error;
+
+    /* File descriptor is valid. */
+    FileDescriptor_T * file = &fdtable[error];
 
     /* Buffer into which we'll copy the file entry. */
     uint8_t file_entry[32];
 
     /* Get relevent file entry. */
     error = filesystem_directory_entry(file_entry, filename);
-
-    if (error != NOERROR) return error;
+    if (error != 0) return error;
 
     /* Get size in bytes. */
-    fd->size = get_uint16_t32_t(file_entry, 0x1c);
+    file->size = get_uint16_t32_t(file_entry, 0x1c);
 
     /* Get start cluster. */
-    fd->start_cluster = get_uint16_t(file_entry, 0x1a);
-    fd->current_cluster = fd->start_cluster;
+    file->start_cluster = get_uint16_t(file_entry, 0x1a);
+    file->current_cluster = file->start_cluster;
 
     /* Sector (relative to cluster start) */
-    fd->sector = 0;
+    file->sector = 0;
 
     /* Set current position to start-of-file. */
-    fd->fpos_within_sector = 0;
-    fd->fpos = 0;
+    file->fpos_within_sector = 0;
+    file->fpos = 0;
 
-    return NOERROR;
+    return 0;
 }
 
-int file_readbyte(File_T * fd)
+int file_readbyte(int fd)
 {
+    FileDescriptor_T * file = &fdtable[fd];
+
     /* Return EOF if we've hit the end of the file. */
-    if (fd->fpos == fd->size) return EOF;
+    if (file->fpos == file->size) return EOF;
 
     /* Shouldn't happen (maybe?) but return EOF if we have no more
      * clusters to read. */
-    if (fd->current_cluster == CLUSTER_EOF)
+    if (file->current_cluster == CLUSTER_EOF)
     {
         return EOF;
     }
@@ -242,37 +276,37 @@ int file_readbyte(File_T * fd)
     /* Otherwise read a byte from the current cluster. */
 
     /* Read current sector. */
-    uint32_t sector = file_start_sector(fd->current_cluster) + fd->sector;
+    uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
 
     read_sector_cached(temp_sector, sector);
 
     /* Get byte. */
-    uint8_t byte = temp_sector[fd->fpos_within_sector];
+    uint8_t byte = temp_sector[file->fpos_within_sector];
 
     /* Increment size. */
-    fd->fpos++;
-    fd->fpos_within_sector++;
+    file->fpos++;
+    file->fpos_within_sector++;
 
     /* If we've reached the end of this sector,
      * we need to fetch the next sector next time around. This may even be
      * in a different cluster. */
-    if (fd->fpos_within_sector == disk_info.bytes_per_sector)
+    if (file->fpos_within_sector == disk_info.bytes_per_sector)
     {
-        fd->sector++;
-        fd->fpos_within_sector = 0;
+        file->sector++;
+        file->fpos_within_sector = 0;
 
         /* Do we need the next cluster? */
-        if (fd->sector == disk_info.sectors_per_cluster)
+        if (file->sector == disk_info.sectors_per_cluster)
         {
-            fd->current_cluster = fat_next_cluster(fd->current_cluster);
-            fd->sector = 0;
+            file->current_cluster = fat_next_cluster(file->current_cluster);
+            file->sector = 0;
         }
     }
 
     return (int)byte;
 }
 
-uint32_t file_read(uint8_t * buf, File_T * fd, uint32_t n)
+size_t file_read(void * ptr, size_t n, int fd)
 {
     size_t bytes = 0;
     for (size_t i = 0; i < n; i++)
@@ -280,8 +314,8 @@ uint32_t file_read(uint8_t * buf, File_T * fd, uint32_t n)
         int c = file_readbyte(fd);
         if (c == EOF) return bytes;
 
-        *buf = (uint8_t)c;
-        buf++;
+        *(char *)ptr = (uint8_t)c;
+        ptr++;
         bytes++;
     }
 

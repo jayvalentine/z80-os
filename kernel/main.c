@@ -16,6 +16,7 @@
  */
 
 #include <stdio.h>
+#include <syscall.h>
 
 char input[256];
 
@@ -29,8 +30,9 @@ void main(void)
 
     /* Load command processor into the last 8k of low-RAM. */
     void * cp_addr = 0x6000;
-    FILE * cp_file = fopen("COMMAND.BIN", "r");
-    size_t bytes = fread(cp_addr, 1, 0x2000, cp_file);
+    int fd = syscall_fopen("COMMAND.BIN", FMODE_READ);
+    
+    /* size_t bytes = syscall_fread(cp_addr, 0x2000, fd); */
 
     puts("Done.\n\r");
 }

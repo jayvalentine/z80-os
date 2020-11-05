@@ -2,11 +2,15 @@
 #define _FILE_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #define EOF -1
 
-typedef struct File_T
+#define FD_FLAGS_CLAIMED 0x01
+
+typedef struct _FileDescriptor
 {
+    uint8_t flags;
     uint32_t size;
     uint32_t fpos; /* Not actually used for indexing the file, just for keeping track of size. */
     
@@ -15,18 +19,18 @@ typedef struct File_T
 
     uint8_t sector; /* Limitation - can't handle more than 256 sectors per cluster. */
     uint16_t fpos_within_sector;
-} File_T;
+} FileDescriptor_T;
 
 typedef enum
 {
-    NOERROR,
-    FILENOTFOUND
+    E_FILENOTFOUND = -1,
+    E_FILELIMIT = -2
 } FileError_T;
 
-FileError_T filesystem_init(void);
+int filesystem_init(void);
 
-FileError_T file_open(const char * filename, File_T * fd);
-int file_readbyte(File_T * fd);
-uint32_t file_read(uint8_t * buf, File_T * fd, uint32_t n);
+int file_open(const char * filename, uint8_t mode);
+int file_readbyte(int fd);
+size_t file_read(void * ptr, size_t n, int fd);
 
 #endif /* _FILE_H */
