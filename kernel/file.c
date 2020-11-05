@@ -306,7 +306,7 @@ int file_readbyte(int fd)
     return (int)byte;
 }
 
-size_t file_read(void * ptr, size_t n, int fd)
+size_t file_read(char * ptr, size_t n, int fd)
 {
     size_t bytes = 0;
     for (size_t i = 0; i < n; i++)

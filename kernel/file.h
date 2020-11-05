@@ -25,6 +25,6 @@ int filesystem_init(void);
 
 int file_open(const char * filename, uint8_t mode);
 int file_readbyte(int fd);
-size_t file_read(void * ptr, size_t n, int fd);
+size_t file_read(char * ptr, size_t n, int fd);
 
 #endif /* _FILE_H */
