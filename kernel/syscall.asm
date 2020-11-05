@@ -259,14 +259,21 @@ _do_dread:
     ; Parameters:
     ; DE - pointer to filename string
     ; C - mode for opening
+    ;
+    ; Returns:
+    ; File descriptor in HL.
 _do_fopen:
     ; BC, DE is already on stack (in that order).
     ; We should be able to just call the function.
     call    _file_fopen
 
-    ; Restore BC, DE, HL
+    ; Restore BC, DE
     pop     BC
     pop     DE
-    pop     HL
+    
+    ; Increment SP. We want to skip past the saved HL on the stack,
+    ; rather than overwriting the return value of file_fopen.
+    inc     SP
+    inc     SP
 
     ret
