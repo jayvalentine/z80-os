@@ -173,7 +173,7 @@ void main()
     /* Green text on black background. */
     puts("\033[32;40m");
 
-    puts("Z80-OS Command Processor.\n\rCopyright (C) 2020 Jay Valentine\n\r");
+    puts("Z80-OS Command Processor\n\rCopyright (C) 2020 Jay Valentine\n\r");
 
     int exitcode = 0;
 
@@ -207,6 +207,7 @@ void main()
             }
             else
             {
+                printf("Loading %s...\n\r", program);
                 char * program_ram = 0x8000;
                 size_t program_size = 0x7000;
                 size_t bytes = syscall_fread(program_ram, program_size, program_fd);
