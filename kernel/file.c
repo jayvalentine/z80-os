@@ -152,6 +152,9 @@ int filesystem_directory_entry(char * dir_entry, const char * filename)
              * but not found the file. */
             if (temp_sector[f] == 0) return E_FILENOTFOUND;
 
+            /* If the first byte is e5, this entry is free, so we should skip it. */
+            if (temp_sector[f] == 0xe5) continue;
+
             /* Otherwise this could be a file.
              * Read the attribute bytes to find out. */
             uint8_t attr = temp_sector[f+11];

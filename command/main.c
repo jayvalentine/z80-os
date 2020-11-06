@@ -84,10 +84,10 @@ int command_dir(char ** argv, size_t argc)
         for (size_t f = 0; f < 512; f += 32)
         {
             /* If the first byte of the file is 0, stop the search. */
-            if (temp[f] == 0)
-            {
-                return 0;
-            }
+            if (temp[f] == 0) return 0;
+
+            /* If the first byte is e5, this entry is free, so we should skip it. */
+            if (temp[f] == 0xe5) continue;
 
             /* Check that this is a file. Skip if not. */
             uint8_t attr = temp[f+11];
