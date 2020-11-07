@@ -33,7 +33,6 @@ void main(void)
     filesystem_init();
 
     puts("Done.\n\r");
-
     puts("Loading command processor... ");
 
     /* Load command processor into the last 8k of low-RAM. */
@@ -50,10 +49,7 @@ void main(void)
         size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
         syscall_fclose(fd);
 
-        uint8_t bytes_hi = bytes >> 8;
-        uint8_t bytes_lo = bytes & 0x00ff;
-
-        printf("Read 0x%x%x bytes.\n\r", bytes_hi, bytes_lo);
+        printf("Read %u bytes.\n\r", bytes);
 
         cp_main();
     }
