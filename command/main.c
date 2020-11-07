@@ -67,6 +67,36 @@ int command_clear(char ** argv, size_t argc)
     return 0;
 }
 
+/* Get an unsigned integer (in Z80 little-endian)
+ * from a buffer at the given position.
+ */
+uint16_t get_uint16_t(char * buf, size_t i)
+{
+    uint16_t val;
+    uint8_t * val_ptr = (uint8_t *)&val;
+
+    val_ptr[1] = buf[i+1];
+    val_ptr[0] = buf[i];
+    
+    return val;
+}
+
+/* Get an unsigned long (in little-endian)
+ * from a buffer at a given location.
+ */
+uint32_t get_uint32_t(char* buf, size_t i)
+{
+    uint32_t val;
+    uint8_t * val_ptr = (uint8_t *)&val;
+    
+    val_ptr[3] = buf[i+3];
+    val_ptr[2] = buf[i+2];
+    val_ptr[1] = buf[i+1];
+    val_ptr[0] = buf[i];
+
+    return val;
+}
+
 int command_dir(char ** argv, size_t argc)
 {
     char filename[13];
@@ -120,7 +150,11 @@ int command_dir(char ** argv, size_t argc)
                 filename[sep_pos+1+ext_len] = '\0';
             }
 
-            printf("%s\n\r", filename);
+            puts(filename);
+            for (uint8_t i = strlen(filename); i < 20; i++) putchar(' ');
+
+            uint16_t filesize = get_uint16_t(&temp[f], 0x1c);
+            printf("%u bytes\n\r", filesize); /* Won't handle files more than 65536 in size. */
         }
 
         sector++;
