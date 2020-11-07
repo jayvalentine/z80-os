@@ -153,6 +153,17 @@ int command_dir(char ** argv, size_t argc)
             puts(filename);
             for (uint8_t i = strlen(filename); i < 20; i++) putchar(' ');
 
+            if (attr & 0b00000100)  putchar('s');
+            else                    putchar('~');
+
+            if (attr & 0b00000010)  putchar('h');
+            else                    putchar('~');
+
+            if (attr & 0b00000001)  putchar('r');
+            else                    putchar('~');
+
+            puts("  ");
+
             uint16_t filesize = get_uint16_t(&temp[f], 0x1c);
             printf("%5u", filesize); /* Won't handle files more than 65536 in size. */
 
