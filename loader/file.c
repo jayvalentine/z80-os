@@ -35,9 +35,13 @@ char temp_sector[512];
  */
 uint get_uint(char * buf, uint i)
 {
-    uint hi = buf[i+1];
-    uint lo = buf[i];
-    return (hi << 8) | lo;
+    uint var;
+    ubyte * var_ptr = (ubyte *)&var;
+
+    var_ptr[1] = buf[i+1];
+    var_ptr[0] = buf[i];
+
+    return var;
 }
 
 /* Get an unsigned long (in little-endian)
@@ -45,12 +49,15 @@ uint get_uint(char * buf, uint i)
  */
 ulong get_ulong(char* buf, uint i)
 {
-    ulong hi_hi = buf[i+3];
-    ulong hi_lo = buf[i+2];
-    ulong lo_hi = buf[i+1];
-    ulong lo_lo = buf[i];
+    ulong var;
+    ubyte * var_ptr = (ubyte *)&var;
 
-    return (hi_hi << 24) | (hi_lo << 16) | (lo_hi << 8) | lo_lo;
+    var_ptr[3] = buf[i+3];
+    var_ptr[2] = buf[i+2];
+    var_ptr[1] = buf[i+1];
+    var_ptr[0] = buf[i];
+
+    return var;
 }
 
 void read_sector_cached(char * buf, ulong sector)

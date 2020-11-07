@@ -7,11 +7,6 @@
 extern char _tail;
 extern char reg_state;
 
-void load_error(const char * msg)
-{
-    printf("Error loading kernel: %s\n\r", msg);
-}
-
 void main(void)
 {
     File_T file;
@@ -22,7 +17,7 @@ void main(void)
     error = filesystem_init();
     if (error != NOERROR)
     {
-        load_error("error reading filesystem");
+        puts("Error reading filesystem");
         return;
     }
 
@@ -55,14 +50,18 @@ void main(void)
 
         if (address != 0x8000)
         {
-            printf("Error in RAM: %u\n\r", address);
+            printf("RAM error: %u\n\r", address);
         }
         else
         {
             puts("Done.\n\r");
 
             /* Copy kernel image into low-RAM and execute. */
-            puts("Copying kernel image into low-RAM... ");
+            printf("Copying kernel image... (%u bytes) ", (uint)file.size);
+
+            /* Wait for a bit (to allow sending of message)
+             * before continuing. */
+            for (uint i = 0; i < 10; i++) {}
 
             set_reg(0b11111101);
             memcpy((char *)0x0000, &_tail, (uint)file.size);
@@ -74,16 +73,16 @@ void main(void)
 
             /* Wait for a bit (to allow sending of message)
              * before continuing. */
-            for (uint i = 0; i < 256; i++) {}
+            for (uint i = 0; i < 10; i++) {}
 
             set_reg(0b11111111);
-            kernel();
+            /*kernel();*/
         }
 
     }
     else if (error == FILENOTFOUND)
     {
-        load_error("KERNEL.BIN not found");
+        puts("KERNEL.BIN not found\n\r");
     }
 
     return;
