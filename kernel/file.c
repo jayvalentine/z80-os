@@ -34,7 +34,7 @@ uint16_t get_uint16_t(char * buf, size_t i)
 /* Get an unsigned long (in little-endian)
  * from a buffer at a given location.
  */
-uint32_t get_uint16_t32_t(char* buf, size_t i)
+uint32_t get_uint32_t(char* buf, size_t i)
 {
     uint32_t hi_hi = buf[i+3];
     uint32_t hi_lo = buf[i+2];
@@ -92,7 +92,7 @@ int filesystem_init()
     /* If the small number of sectors is 0, read the large number. */
     if (disk_info.num_sectors == 0)
     {
-        disk_info.num_sectors = get_uint16_t32_t(temp_sector, 0x20);
+        disk_info.num_sectors = get_uint32_t(temp_sector, 0x20);
     }
 
     /* Technically, the first sector _is_ in the cache. */
@@ -233,7 +233,7 @@ int file_open(const char * filename, uint8_t mode)
     if (error != 0) return error;
 
     /* Get size in bytes. */
-    file->size = get_uint16_t32_t(file_entry, 0x1c);
+    file->size = get_uint32_t(file_entry, 0x1c);
 
     /* Get start cluster. */
     file->start_cluster = get_uint16_t(file_entry, 0x1a);
