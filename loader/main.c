@@ -76,7 +76,7 @@ void main(void)
              * before continuing. */
             for (uint i = 0; i < 256; i++) {}
 
-            set_reg(0b11111101);
+            set_reg(0b11111111);
             kernel();
         }
 
