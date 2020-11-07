@@ -162,7 +162,7 @@ int command_dir(char ** argv, size_t argc)
             uint16_t month = (creation_date >> 5) & 0x000f;
             uint16_t day = creation_date & 0x001f;
 
-            printf("%u-%u-%u\n\r", year, month, day);
+            printf("%4u-%2u-%2u\n\r", year, month, day);
         }
 
         sector++;
