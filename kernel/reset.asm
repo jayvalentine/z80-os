@@ -48,6 +48,9 @@ _start:
     im      1
     ei
 
+    ld      A, 0b11111111
+    out     ($80), A
+    
     call    _main
 
     ; We should never return from main. If so, set an LED and halt.
