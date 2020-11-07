@@ -303,15 +303,90 @@ int file_readbyte(int fd)
     return (int)byte;
 }
 
+int file_readsector(char * ptr, int fd)
+{
+    FileDescriptor_T * file = &fdtable[fd];
+
+    /* Return EOF if we've hit the end of the file. */
+    if (file->fpos == file->size) return EOF;
+
+    /* Return EOF if we have no more clusters to read. */
+    if (file->current_cluster == CLUSTER_EOF) return EOF;
+
+    /* Otherwise read a full sector. */
+
+    /* Read current sector. */
+    uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
+
+    /* Don't cache the sector - we're unlikely to read it again. */
+    syscall_dread(ptr, sector);
+
+    /* Increment size. fpos_within_sector doesn't change because we've read an entire sector. */
+    file->fpos += disk_info.bytes_per_sector;
+
+    /* We know we've reached the end of the sector, so we need to fetch the next one
+     * next time around. This may be in a different cluster. */
+    file->sector++;
+
+    /* Do we need the next cluster? */
+    if (file->sector == disk_info.sectors_per_cluster)
+    {
+        file->current_cluster = fat_next_cluster(file->current_cluster);
+        file->sector = 0;
+    }
+
+    return 0;
+}
+
 size_t file_read(char * ptr, size_t n, int fd)
 {
+    /* Guard against an obviously invalid descriptor, that would cause
+     * us to index out of the fdtable. */
+    if (fd < 0 || fd >= FILE_LIMIT) return E_INVALIDDESCRIPTOR;
+
     size_t bytes = 0;
+
+    /* Get the entry associated with this file descriptor */
+    FileDescriptor_T * file = &fdtable[fd];
+
+    /* Read byte-by-byte up to the first sector boundary. */
+    while (file->fpos_within_sector != 0)
+    {
+        int c = file_readbyte(fd);
+
+        if (c == EOF) return bytes;
+        *ptr = (uint8_t)c;
+        
+        ptr++;
+        bytes++;
+        n--;
+    }
+
+    /* How many full sectors do we need to read? */
+    size_t full_sectors = n / disk_info.bytes_per_sector;
+
+    /* Read 0 or more *full* sectors. */
+    for (size_t i = 0; i < full_sectors; i++)
+    {
+        int c = file_readsector(ptr, fd);
+
+        /* We _shouldn't_ ever hit EOF part-way through a sector,
+         * so if readsector returns EOF then we didn't read the sector at all. */
+        if (c == EOF) return bytes;
+
+        /* Otherwise we've read a full sector. */
+        ptr += disk_info.bytes_per_sector;
+        bytes += disk_info.bytes_per_sector;
+        n -= disk_info.bytes_per_sector;
+    }
+
+    /* We must now have <X bytes remaining (where X is the number of bytes per sector). */
     for (size_t i = 0; i < n; i++)
     {
         int c = file_readbyte(fd);
-        if (c == EOF) break;
+        if (c == EOF) return bytes;
 
-        *(char *)ptr = (uint8_t)c;
+        *ptr = (uint8_t)c;
         ptr++;
         bytes++;
     }
