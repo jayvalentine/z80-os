@@ -154,7 +154,15 @@ int command_dir(char ** argv, size_t argc)
             for (uint8_t i = strlen(filename); i < 20; i++) putchar(' ');
 
             uint16_t filesize = get_uint16_t(&temp[f], 0x1c);
-            printf("%u bytes\n\r", filesize); /* Won't handle files more than 65536 in size. */
+            printf("%u ", filesize); /* Won't handle files more than 65536 in size. */
+
+            /* Get creation date. */
+            uint16_t creation_date = get_uint16_t(&temp[f], 0x10);
+            uint16_t year = 1980 + (creation_date >> 9);
+            uint16_t month = (creation_date >> 5) & 0x000f;
+            uint16_t day = creation_date & 0x001f;
+
+            printf("%u-%u-%u\n\r", year, month, day);
         }
 
         sector++;
