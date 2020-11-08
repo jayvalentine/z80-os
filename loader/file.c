@@ -26,7 +26,11 @@ struct DiskInfo_T
 } disk_info;
 
 /* Temporary storage for sector read/written from/to disk. */
-char temp_sector[512];
+
+/* End of image, when loaded into memory. We can use this to address free RAM
+ * without having to declare it in the image. */
+extern char _tail;
+char * temp_sector;
 
 /* Helper functions. */
 
@@ -72,6 +76,7 @@ void read_sector_cached(char * buf, ulong sector)
 
 int filesystem_init()
 {
+    temp_sector = &_tail;
     syscall_dread(temp_sector, 0);
 
     /* General disk info. */
