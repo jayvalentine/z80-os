@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <syscall.h>
 
 #include "file.h"
 #include "kernel.h"
@@ -7,15 +8,15 @@
 extern char _tail;
 extern char reg_state;
 
+File_T file;
+int error;
+
 void main(void)
 {
-    File_T file;
-    FileError_T error;
-    
     puts("Reading filesystem... ");
 
     error = filesystem_init();
-    if (error != NOERROR)
+    if (error != 0)
     {
         puts("Error reading filesystem");
         return;
@@ -26,19 +27,13 @@ void main(void)
     puts("Loading kernel... ");
     error = file_open("KERNEL.BIN", &file);
 
-    if (error == NOERROR)
+    if (error == 0)
     {
         /* Read the file into memory. */
         char * mem = &_tail;
 
-        while (TRUE)
-        {
-            int c = file_readbyte(&file);
-            if (c == EOF) break;
-
-            *mem = (ubyte)c;
-            mem++;
-        }
+        /* Only read up to 0xf000, to avoid trashing system variables. */
+        file_read(mem, &file, (size_t)(0xf000 - (size_t)mem));
 
         puts("Done.\n\r");
 
@@ -80,7 +75,7 @@ void main(void)
         }
 
     }
-    else if (error == FILENOTFOUND)
+    else if (error == E_FILENOTFOUND)
     {
         puts("KERNEL.BIN not found\n\r");
     }

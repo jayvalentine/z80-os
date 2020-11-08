@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdio.h>
+#include <syscall.h>
 
 #include "file.h"
-#include "disk_drivers.h"
 
 #define CLUSTER_EOF 0xffff
 
@@ -65,14 +65,14 @@ void read_sector_cached(char * buf, ulong sector)
     /* Only read the sector if it's not already in cache. */
     if (disk_info.current_cache_sector != sector)
     {
-        read_sector(buf, sector);
+        syscall_dread(buf, sector);
         disk_info.current_cache_sector = sector;
     }
 }
 
-FileError_T filesystem_init()
+int filesystem_init()
 {
-    read_sector(temp_sector, 0);
+    syscall_dread(temp_sector, 0);
 
     /* General disk info. */
     disk_info.bytes_per_sector = get_uint(temp_sector, 0x0b);
@@ -105,7 +105,7 @@ FileError_T filesystem_init()
     /* Technically, the first sector _is_ in the cache. */
     disk_info.current_cache_sector = 0;
 
-    return NOERROR;
+    return 0;
 }
 
 void get_filename(char * buf, const char * dir_entry)
@@ -135,7 +135,7 @@ void get_filename(char * buf, const char * dir_entry)
     buf[i] = '\0';
 }
 
-FileError_T get_directory_entry(char * dir_entry, const char * filename)
+int get_directory_entry(char * dir_entry, const char * filename)
 {
     ulong sector = disk_info.root_region;
     bool done = FALSE;
@@ -154,7 +154,7 @@ FileError_T get_directory_entry(char * dir_entry, const char * filename)
         {
             /* If first byte is 0, we've reached the end of the root directory,
              * but not found the file. */
-            if (temp_sector[f] == 0) return FILENOTFOUND;
+            if (temp_sector[f] == 0) return E_FILENOTFOUND;
 
             /* Otherwise this could be a file.
              * Read the attribute bytes to find out. */
@@ -179,7 +179,7 @@ FileError_T get_directory_entry(char * dir_entry, const char * filename)
         sector++;
     }
 
-    return NOERROR;
+    return 0;
 }
 
 ulong get_start_sector(uint cluster)
@@ -201,9 +201,9 @@ uint get_next_cluster(uint cluster)
     return get_uint(temp_sector, entry);
 }
 
-FileError_T file_open(const char * filename, File_T * fd)
+int file_open(const char * filename, File_T * fd)
 {
-    FileError_T error;
+    int error;
 
     /* Buffer into which we'll copy the file entry. */
     ubyte file_entry[32];
@@ -211,7 +211,7 @@ FileError_T file_open(const char * filename, File_T * fd)
     /* Get relevent file entry. */
     error = get_directory_entry(file_entry, filename);
 
-    if (error != NOERROR) return error;
+    if (error != 0) return error;
 
     /* Get size in bytes. */
     fd->size = get_ulong(file_entry, 0x1c);
@@ -227,10 +227,10 @@ FileError_T file_open(const char * filename, File_T * fd)
     fd->fpos_within_sector = 0;
     fd->fpos = 0;
 
-    return NOERROR;
+    return 0;
 }
 
-int file_readbyte(File_T * fd)
+int file_readbyte(File_T * fd) __z88dk_fastcall
 {
     /* Return EOF if we've hit the end of the file. */
     if (fd->fpos == fd->size) return EOF;
@@ -275,9 +275,75 @@ int file_readbyte(File_T * fd)
     return (int)byte;
 }
 
+int file_readsector(char * ptr, File_T * fd)
+{
+    /* Return EOF if we've hit the end of the file. */
+    if (fd->fpos == fd->size) return EOF;
+
+    /* Return EOF if we have no more clusters to read. */
+    if (fd->current_cluster == CLUSTER_EOF) return EOF;
+
+    /* Otherwise read a full sector. */
+
+    /* Read current sector. */
+    uint32_t sector = get_start_sector(fd->current_cluster) + fd->sector;
+
+    /* Don't cache the sector - we're unlikely to read it again. */
+    syscall_dread(ptr, sector);
+
+    /* Increment size. fpos_within_sector doesn't change because we've read an entire sector. */
+    fd->fpos += disk_info.bytes_per_sector;
+
+    /* We know we've reached the end of the sector, so we need to fetch the next one
+     * next time around. This may be in a different cluster. */
+    fd->sector++;
+
+    /* Do we need the next cluster? */
+    if (fd->sector == disk_info.sectors_per_cluster)
+    {
+        fd->current_cluster = get_next_cluster(fd->current_cluster);
+        fd->sector = 0;
+    }
+
+    return 0;
+}
+
 size_t file_read(ubyte * buf, File_T * fd, size_t n)
 {
     size_t bytes = 0;
+
+    /* Read byte-by-byte up to the first sector boundary. */
+    while (fd->fpos_within_sector != 0)
+    {
+        int c = file_readbyte(fd);
+
+        if (c == EOF) return bytes;
+        *buf = (ubyte)c;
+        
+        buf++;
+        bytes++;
+        n--;
+    }
+
+    /* How many full sectors do we need to read? */
+    size_t full_sectors = n / disk_info.bytes_per_sector;
+
+    /* Read 0 or more *full* sectors. */
+    for (size_t i = 0; i < full_sectors; i++)
+    {
+        int c = file_readsector(buf, fd);
+
+        /* We _shouldn't_ ever hit EOF part-way through a sector,
+         * so if readsector returns EOF then we didn't read the sector at all. */
+        if (c == EOF) return bytes;
+
+        /* Otherwise we've read a full sector. */
+        buf += disk_info.bytes_per_sector;
+        bytes += disk_info.bytes_per_sector;
+        n -= disk_info.bytes_per_sector;
+    }
+
+    /* We must now have <X bytes remaining (where X is the number of bytes per sector). */
     for (size_t i = 0; i < n; i++)
     {
         int c = file_readbyte(fd);

@@ -16,15 +16,9 @@ typedef struct File_T
     uint fpos_within_sector;
 } File_T;
 
-typedef enum
-{
-    NOERROR,
-    FILENOTFOUND
-} FileError_T;
+int filesystem_init(void);
 
-FileError_T filesystem_init(void);
-
-FileError_T file_open(const char * filename, File_T * fd);
+int file_open(const char * filename, File_T * fd);
 int file_readbyte(File_T * fd);
 size_t file_read(ubyte * buf, File_T * fd, size_t n);
 
