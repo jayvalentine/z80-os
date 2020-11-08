@@ -6,20 +6,6 @@
 
 extern char temp[512];
 
-/* Get an unsigned integer (in Z80 little-endian)
- * from a buffer at the given position.
- */
-uint16_t get_uint16_t(char * buf, size_t i)
-{
-    uint16_t val;
-    uint8_t * val_ptr = (uint8_t *)&val;
-
-    val_ptr[1] = buf[i+1];
-    val_ptr[0] = buf[i];
-    
-    return val;
-}
-
 int command_dir(char ** argv, size_t argc)
 {
     char filename[13];
@@ -76,27 +62,22 @@ int command_dir(char ** argv, size_t argc)
             puts(filename);
             for (uint8_t i = strlen(filename); i < 20; i++) putchar(' ');
 
-            if (attr & 0b00000100)  putchar('s');
-            else                    putchar('~');
+            FINFO finfo;
 
-            if (attr & 0b00000010)  putchar('h');
-            else                    putchar('~');
+            syscall_finfo(filename, &finfo);
+            
+            if (finfo.attr & FATTR_SYS)   putchar('s');
+            else                          putchar('~');
 
-            if (attr & 0b00000001)  putchar('r');
-            else                    putchar('~');
+            if (finfo.attr & FATTR_HID)   putchar('h');
+            else                          putchar('~');
 
-            puts("  ");
+            if (finfo.attr & FATTR_RO)    putchar('r');
+            else                          putchar('~');
 
-            uint16_t filesize = get_uint16_t(&temp[f], 0x1c);
-            printf("%5u", filesize); /* Won't handle files more than 65536 in size. */
+            printf("  %5u", (uint16_t)finfo.size); /* Won't handle files more than 65536 in size. */
 
-            /* Get creation date. */
-            uint16_t creation_date = get_uint16_t(&temp[f], 0x10);
-            uint16_t year = 1980 + (creation_date >> 9);
-            uint16_t month = (creation_date >> 5) & 0x000f;
-            uint16_t day = creation_date & 0x001f;
-
-            printf("  %04u-%02u-%02u\n\r", year, month, day);
+            printf("  %04u-%02u-%02u\n\r", finfo.created_year, (uint16_t)finfo.created_month, (uint16_t)finfo.created_day);
         }
 
         sector++;

@@ -26,9 +26,13 @@ FileDescriptor_T fdtable[FILE_LIMIT];
  */
 uint16_t get_uint16_t(char * buf, size_t i)
 {
-    uint16_t hi = buf[i+1];
-    uint16_t lo = buf[i];
-    return (hi << 8) | lo;
+    uint16_t var;
+    uint8_t * var_ptr = (uint8_t *)&var;
+
+    var_ptr[0] = buf[i];
+    var_ptr[1] = buf[i+1];
+    
+    return var;
 }
 
 /* Get an unsigned long (in little-endian)
@@ -36,12 +40,15 @@ uint16_t get_uint16_t(char * buf, size_t i)
  */
 uint32_t get_uint32_t(char* buf, size_t i)
 {
-    uint32_t hi_hi = buf[i+3];
-    uint32_t hi_lo = buf[i+2];
-    uint32_t lo_hi = buf[i+1];
-    uint32_t lo_lo = buf[i];
+    uint32_t var;
+    uint8_t * var_ptr = (uint8_t *)&var;
 
-    return (hi_hi << 24) | (hi_lo << 16) | (lo_hi << 8) | lo_lo;
+    var_ptr[0] = buf[i];
+    var_ptr[1] = buf[i+1];
+    var_ptr[2] = buf[i+2];
+    var_ptr[3] = buf[i+3];
+    
+    return var;
 }
 
 void read_sector_cached(char * buf, uint32_t sector)
@@ -143,7 +150,7 @@ int filesystem_directory_entry(char * dir_entry, const char * filename)
     while (!done)
     {
         /* Read the sector. */
-        read_sector_cached(temp_sector, sector);
+        syscall_dread(temp_sector, sector);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint16_t f = 0; f < 512; f += 32)
@@ -392,4 +399,26 @@ size_t file_read(char * ptr, size_t n, int fd)
     }
 
     return bytes;
+}
+
+int file_info(const char * filename, FINFO * finfo)
+{
+    uint8_t direntry[32];
+    
+    /* Search for the file in the directory. */
+    /* Return error code if it does not exist. */
+    int error = filesystem_directory_entry(direntry, filename);
+    if (error != 0) return error;
+
+    finfo->attr = direntry[0x0b];
+
+    uint16_t creation_date = get_uint16_t(direntry, 0x10);
+
+    finfo->created_year = 1980 + (creation_date >> 9);
+    finfo->created_month = (creation_date >> 5) & 0x000f;
+    finfo->created_day = creation_date & 0x001f;
+
+    finfo->size = get_uint32_t(direntry, 0x1c);
+
+    return 0;
 }

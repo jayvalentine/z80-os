@@ -13,6 +13,7 @@ _syscall_table:
     defw    $0000 ; fwrite placeholder
     defw    _do_fclose
     defw    _do_dinfo
+    defw    _do_finfo
 
     PUBLIC  _syscall_handler
 
@@ -343,5 +344,28 @@ _do_dinfo:
     inc     SP
 
     ld      HL, _disk_info
+
+    ret
+
+    EXTERN  _file_info
+
+    ; 9: finfo: Get information about a file.
+    ;
+    ; Parameters:
+    ; BC - Pointer to struct in which to store the file details
+    ; DE - Pointer to filename string
+    ;
+    ; Returns:
+    ; 0 on success, error code on failure.
+_do_finfo:
+    ; BC and DE are already on top of stack.
+    call    _file_info
+
+    pop     BC
+    pop     DE
+    
+    ; Don't want to trash return value in HL.
+    inc     SP
+    inc     SP
 
     ret

@@ -27,5 +27,6 @@ int file_open(const char * filename, uint8_t mode);
 int file_readbyte(int fd);
 size_t file_read(char * ptr, size_t n, int fd);
 void file_close(int fd);
+int file_info(const char * filename, FINFO * finfo);
 
 #endif /* _FILE_H */
