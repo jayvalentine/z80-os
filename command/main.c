@@ -193,6 +193,9 @@ int command_chmod(char ** argv, size_t argc)
         return 1;
     }
 
+    /* File in upper-case. */
+    toupper(argv[0]);
+
     /* Attempt to find the file. */
     char filename[13];
 
@@ -331,7 +334,7 @@ void main()
 
     while (1)
     {
-        puts("> ");
+        printf("(%u) > ", exitcode);
 
         /* Get user input and parse into cmd and argv */
         gets(input);
