@@ -4,8 +4,6 @@
 
 #include "dir.h"
 
-extern char temp[512];
-
 int command_dir(char ** argv, size_t argc)
 {
     char filename[13];
