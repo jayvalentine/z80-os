@@ -1,8 +1,6 @@
-#include <string.h>
-#include <stdio.h>
-#include <syscall.h>
-
 #include "file.h"
+#include "syscall_wrappers.h"
+#include "utils.h"
 
 #define CLUSTER_EOF 0xffff
 
@@ -291,7 +289,7 @@ int file_readsector(char * ptr, File_T * fd)
     /* Otherwise read a full sector. */
 
     /* Read current sector. */
-    uint32_t sector = get_start_sector(fd->current_cluster) + fd->sector;
+    ulong sector = get_start_sector(fd->current_cluster) + fd->sector;
 
     /* Don't cache the sector - we're unlikely to read it again. */
     syscall_dread(ptr, sector);

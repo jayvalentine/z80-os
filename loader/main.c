@@ -1,9 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include <syscall.h>
-
 #include "file.h"
 #include "kernel.h"
+#include "utils.h"
 
 extern char _tail;
 extern char reg_state;
@@ -47,14 +44,14 @@ void main(void)
 
         if (address != 0x8000)
         {
-            printf("RAM error: %u\n\r", address);
+            puts("RAM error.\n\r");
         }
         else
         {
             puts("Done.\n\r");
 
             /* Copy kernel image into low-RAM and execute. */
-            printf("Copying kernel image... (%u bytes) ", (uint)file.size);
+            puts("Copying kernel image... ");
 
             /* Wait for a bit (to allow sending of message)
              * before continuing. */
@@ -73,7 +70,7 @@ void main(void)
             for (uint i = 0; i < 10; i++) {}
 
             set_reg(0b11111111);
-            /*kernel();*/
+            kernel();
         }
 
     }

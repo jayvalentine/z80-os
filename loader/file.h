@@ -1,8 +1,14 @@
 #ifndef _FILE_H
+#define _FILE_H
 
 #include "defs.h"
 
 #define EOF -1
+
+typedef enum FileError_T
+{
+    E_FILENOTFOUND = -1
+};
 
 typedef struct File_T
 {
