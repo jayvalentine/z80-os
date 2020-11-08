@@ -328,7 +328,7 @@ void main()
     /* Green text on black background. */
     puts("\033[32;40m");
 
-    puts("Z80-OS Command Processor\n\rCopyright (C) 2020 Jay Valentine\n\r");
+    puts("Z80-OS Command Processor\n\rCopyright (C) 2020 Jay Valentine\n\r\n\r");
 
     int exitcode = 0;
 
