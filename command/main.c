@@ -277,7 +277,7 @@ int command_chmod(char ** argv, size_t argc)
 
 typedef int (*Command_T)(char **, size_t);
 
-#define NUM_COMMANDS 2
+#define NUM_COMMANDS 3
 
 #define program_main ((Command_T)0x8000)
 
@@ -296,6 +296,10 @@ const Inbuilt_T commands[NUM_COMMANDS] =
     {
         "DIR",
         &command_dir
+    },
+    {
+        "CHMOD",
+        &command_chmod
     }
 };
 
