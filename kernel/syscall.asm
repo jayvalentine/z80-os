@@ -13,6 +13,7 @@ _syscall_table:
     defw    $0000 ; fwrite placeholder
     defw    _do_fclose
     defw    _do_dinfo
+    defw    _do_finfo
     defw    _do_fentries
     defw    _do_fentry
 
@@ -405,7 +406,6 @@ _do_fentry:
 
     pop     BC
     pop     DE
-
     inc     SP
     inc     SP
     
