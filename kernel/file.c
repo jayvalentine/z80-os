@@ -51,10 +51,11 @@ uint32_t get_uint32_t(char* buf, size_t i)
     return var;
 }
 
-void read_sector_cached(char * buf, uint32_t sector)
+void read_sector_cached(char * buf, uint32_t sector, bool force_load)
 {
     /* Only read the sector if it's not already in cache. */
-    if (current_cache_sector != sector)
+    /* OR... if we've forced a load. */
+    if (force_load || (current_cache_sector != sector))
     {
         syscall_dread(buf, sector);
         current_cache_sector = sector;
@@ -150,7 +151,7 @@ int filesystem_directory_entry(char * dir_entry, const char * filename)
     while (!done)
     {
         /* Read the sector. */
-        syscall_dread(temp_sector, sector);
+        read_sector_cached(temp_sector, sector, TRUE);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint16_t f = 0; f < 512; f += 32)
@@ -198,7 +199,7 @@ uint16_t fat_next_cluster(uint16_t cluster)
     uint16_t entry = (cluster * 2) % disk_info.bytes_per_sector;
 
     /* Read the sector and return the appropriate entry. */
-    read_sector_cached(temp_sector, fat_sector);
+    read_sector_cached(temp_sector, fat_sector, FALSE);
     return get_uint16_t(temp_sector, entry);
 }
 
@@ -282,7 +283,7 @@ int file_readbyte(int fd)
     /* Read current sector. */
     uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
 
-    read_sector_cached(temp_sector, sector);
+    read_sector_cached(temp_sector, sector, FALSE);
 
     /* Get byte. */
     uint8_t byte = temp_sector[file->fpos_within_sector];
@@ -421,4 +422,92 @@ int file_info(const char * filename, FINFO * finfo)
     finfo->size = get_uint32_t(direntry, 0x1c);
 
     return 0;
+}
+
+/* Returns the number of file entries in the root directory. */
+uint16_t file_entries()
+{
+    uint16_t entries = 0;
+
+    uint32_t sector = disk_info.root_region;
+    bool done = FALSE;
+
+    /* Try to find the file in the root directory. */
+    while (!done)
+    {
+        /* Read the sector. */
+        read_sector_cached(temp_sector, sector, TRUE);
+
+        /* Iterate over the files, looking for the one we want. */
+        for (uint16_t f = 0; f < 512; f += 32)
+        {
+            /* If first byte is 0, we've reached the end of the root directory. */
+            if (temp_sector[f] == 0) return entries;
+
+            /* If the first byte is e5, this entry is free, so we should skip it. */
+            if (temp_sector[f] == 0xe5) continue;
+
+            /* Otherwise this could be a file.
+             * Read the attribute bytes to find out. */
+            uint8_t attr = temp_sector[f+11];
+
+            /* Ignore directories and volume labels. */
+            if (attr & 0b00011000) continue;
+
+            /* We now know this is a file. Increment the count. */
+            entries++;
+        }
+
+        sector++;
+    }
+
+    return entries;
+}
+
+/* Gets the name of the nth entry in the root directory.
+ * Returns 0 on success (indicating the string is valid)
+ * or an error code on failure (indicating the string is invalid). */
+int file_entry(char * s, uint16_t entry)
+{
+    uint32_t sector = disk_info.root_region;
+    uint16_t n = 0;
+
+    /* Try to find the file in the root directory. */
+    while (TRUE)
+    {
+        /* Read the sector. */
+        read_sector_cached(temp_sector, sector, TRUE);
+
+        /* Iterate over the files, looking for the one we want. */
+        for (uint16_t f = 0; f < 512; f += 32)
+        {
+            /* If first byte is 0, we've reached the end of the root directory. */
+            if (temp_sector[f] == 0) return E_FILENOTFOUND;
+
+            /* If the first byte is e5, this entry is free, so we should skip it. */
+            if (temp_sector[f] == 0xe5) continue;
+
+            /* Otherwise this could be a file.
+             * Read the attribute bytes to find out. */
+            uint8_t attr = temp_sector[f+11];
+
+            /* Ignore directories and volume labels. */
+            if (attr & 0b00011000) continue;
+
+            /* We now know this is a file. If this is the nth entry we've seen,
+             * populate the filename string and return. */
+            if (n == entry)
+            {
+                filesystem_filename(s, &temp_sector[f]);
+                return 0;
+            }
+
+            /* Otherwise increment the count. */
+            n++;
+        }
+
+        sector++;
+    }
+
+    return E_FILENOTFOUND;
 }

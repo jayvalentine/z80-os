@@ -13,7 +13,8 @@ _syscall_table:
     defw    $0000 ; fwrite placeholder
     defw    _do_fclose
     defw    _do_dinfo
-    defw    _do_finfo
+    defw    _do_fentries
+    defw    _do_fentry
 
     PUBLIC  _syscall_handler
 
@@ -368,4 +369,44 @@ _do_finfo:
     inc     SP
     inc     SP
 
+    ret
+
+    EXTERN  _file_entries
+
+    ; 10: fentries: Return number of file entries in the root directory.
+    ;
+    ; Parameters: None
+    ;
+    ; Returns:
+    ; The number of file entries.
+_do_fentries:
+    call    _file_entries
+
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+    
+    ret
+
+    EXTERN  _file_entry
+
+    ; 11: fentry: Get the name of the nth entry in the root directory.
+    ;
+    ; Parameters:
+    ; BC - n (entry index)
+    ; DE - Pointer to string to populate
+    ;
+    ; Returns:
+    ; (int) 0 on success, error code on failure
+_do_fentry:
+    ; BC and DE are already on top of stack.
+    call    _file_entry
+
+    pop     BC
+    pop     DE
+
+    inc     SP
+    inc     SP
+    
     ret
