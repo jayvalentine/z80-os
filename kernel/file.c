@@ -21,6 +21,19 @@ FileDescriptor_T fdtable[FILE_LIMIT];
 
 /* Helper functions. */
 
+/* In-place "upper-cases" the given string. */
+void toupper(char * s)
+{
+    while (*s != '\0')
+    {
+        if (*s >= 'a' && *s <= 'z')
+        {
+            *s -= ('a' - 'A');
+        }
+        s++;
+    }
+}
+
 /* Get an unsigned integer (in Z80 little-endian)
  * from a buffer at the given position.
  */
@@ -141,6 +154,15 @@ void filesystem_filename(char * buf, const char * dir_entry)
 
 int filesystem_directory_entry(char * dir_entry, const char * filename)
 {
+    if (strlen(filename) > 12)
+    {
+        return E_INVALIDFILENAME;
+    }
+
+    char searchname[13];
+    strcpy(searchname, filename);
+    toupper(searchname);
+
     uint32_t sector = disk_info.root_region;
     bool done = FALSE;
 
@@ -174,7 +196,7 @@ int filesystem_directory_entry(char * dir_entry, const char * filename)
             filesystem_filename(buf, &temp_sector[f]);
 
             /* Now we can compare the filename. */
-            if (strcmp(buf, filename) == 0)
+            if (strcmp(buf, searchname) == 0)
             {
                 /* We've found the file! */
                 memcpy(dir_entry, &temp_sector[f], 32);
