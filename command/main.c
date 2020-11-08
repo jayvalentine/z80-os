@@ -20,9 +20,11 @@
 #include <stddef.h>
 #include <syscall.h>
 
+/* Built-in commands. */
 #include "clear.h"
 #include "chmod.h"
 #include "dir.h"
+#include "type.h"
 
 char input[256];
 char * cmd;
@@ -65,7 +67,7 @@ void toupper(char * s)
 
 typedef int (*Command_T)(char **, size_t);
 
-#define NUM_COMMANDS 3
+#define NUM_COMMANDS 4
 
 #define program_main ((Command_T)0x8000)
 
@@ -88,6 +90,10 @@ const Inbuilt_T commands[NUM_COMMANDS] =
     {
         "CHMOD",
         &command_chmod
+    },
+    {
+        "TYPE",
+        &command_type
     }
 };
 
