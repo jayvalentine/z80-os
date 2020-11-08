@@ -47,7 +47,6 @@ namespace 'build' do
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
         cmd += "-Cl\"-r0x8200\" "
         cmd += "-crt0 loader/reset.asm "
-        cmd += "-lstdlib "
         cmd += "-m "
         cmd += "-o loader_temp.bin "
         cmd += "loader/*.c "
