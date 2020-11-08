@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <syscall.h>
 
+#include "clear.h"
 #include "chmod.h"
 #include "dir.h"
 
@@ -60,14 +61,6 @@ void toupper(char * s)
         }
         s++;
     }
-}
-
-/* Clears the screen and resets the cursor to the origin. */
-int command_clear(char ** argv, size_t argc)
-{
-    /* Clear screen, cursor to top-left. */
-    puts("\033[2J\033[1;1H");
-    return 0;
 }
 
 typedef int (*Command_T)(char **, size_t);
