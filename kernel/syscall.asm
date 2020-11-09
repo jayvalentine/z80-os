@@ -6,16 +6,22 @@
 _syscall_table:
     defw    _do_swrite
     defw    _do_sread
+
     defw    _do_dwrite
     defw    _do_dread
+
     defw    _do_fopen
     defw    _do_fread
     defw    $0000 ; fwrite placeholder
     defw    _do_fclose
+
     defw    _do_dinfo
     defw    _do_finfo
+
     defw    _do_fentries
     defw    _do_fentry
+    
+    defw    _do_pexec
 
     PUBLIC  _syscall_handler
 
@@ -410,3 +416,32 @@ _do_fentry:
     inc     SP
     
     ret
+
+    EXTERN  _process_exec
+
+    ; 12: pexec: Execute loaded executable image.
+    ;
+    ; Parameters:
+    ; BC - argc
+    ; DE - argv
+    ;
+    ; Returns:
+    ; (int) exit code of executable.
+_do_pexec:
+    ; Save stack pointer so we can restore it later.
+    ld      (__pexec_sp), SP
+
+    ; BC and DE are already on top of stack.
+    call    _process_exec
+
+__do_pexec_done:
+    ld      SP, (__pexec_sp)
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+
+    ret
+
+__pexec_sp:
+    defs    2

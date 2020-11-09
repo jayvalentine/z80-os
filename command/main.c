@@ -69,8 +69,6 @@ typedef int (*Command_T)(char **, size_t);
 
 #define NUM_COMMANDS 4
 
-#define program_main ((Command_T)0x8000)
-
 typedef struct _Inbuilt
 {
     char * name;
@@ -164,7 +162,7 @@ void main()
                 }
                 else
                 {
-                    exitcode = program_main(argv, argc);
+                    exitcode = syscall_pexec(argv, argc);
                 }
             }
         }
