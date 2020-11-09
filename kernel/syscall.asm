@@ -23,6 +23,8 @@ _syscall_table:
 
     defw    _do_pexec
 
+    defw    _do_sighandle
+
     PUBLIC  _syscall_handler
 
     ; Syscall handler.
@@ -418,7 +420,6 @@ _do_fentry:
     ret
 
     EXTERN  _process_exec
-    EXTERN  _printf
     EXTERN  _sighandler_cancel
 
     ; 12: pexec: Execute loaded executable image.
@@ -430,84 +431,31 @@ _do_fentry:
     ; Returns:
     ; (int) exit code of executable.
 _do_pexec:
-    ; Restore BC, DE, HL.
-    pop     BC
-    pop     DE
-    pop     HL
-
-    ; We can't make any assumptions about the registers that might be
-    ; used by the executable.
-    push    IX
-    push    IY
-
-    push    HL
-    push    AF
-
-    push    DE
-    push    BC
-
-    ; Save stack pointer so we can restore it later.
-    ld      (__pexec_sp), SP
-
-    ; Set cancel signal handler.
-    ld      HL, _pexec_cancel
-    ld      (_sighandler_cancel), HL
-
     ; BC and DE are on top of stack.
     call    _process_exec
-    jp      __do_pexec_done
 
-    ; void pexec_cancel(uint16_t address)
-    ; Exit point when we receive the CANCEL signal during execution.
-_pexec_cancel:
-    ; Return address
-    pop     HL
-
-    ; Address executing on cancel
-    pop     DE
-
-    ; Restore return address
-    push    HL
-
-    ld      HL, __exec_cancel_msg
-    push    HL
-    
-    push    DE
-    
-    ld      A, 2
-    call    _printf
-    pop     HL
-    pop     HL
-
-    ; Program return code on cancel.
-    ld      HL, $ffff
-
-__do_pexec_done:
-    ; Reset signal handler - atomic operation.
-    di
-    push    HL
-    ld      HL, 0
-    ld      (_sighandler_cancel), HL
-    pop     HL
-    ei
-
-    ld      SP, (__pexec_sp)
-    
-    ; Restore all the saved registers - except HL (return value).
+    ; Restore BC, DE, but not HL (return value).
     pop     BC
     pop     DE
-
-    pop     AF
     inc     SP
     inc     SP
-
-    pop     IY
-    pop     IY
 
     ret
 
-__pexec_sp:
-    defs    2
+    ; 13: sighandle: Set handler function for signal.
+    ;
+    ; Parameters:
+    ; BC - signal number
+    ; DE - function pointer for handler
+_do_sighandle:
+    pop     BC
+    pop     DE
+    pop     HL
 
-__exec_cancel_msg:
-    defm    "\n\rCANCEL in $%04x\n\r", 0
+    ; FIXME: Hardcoded to SIG_CANCEL for now.
+    ld      (_sighandler_cancel), DE
+
+    ret
+
+__test:
+    defm    "CANCEL handler: %04x\n\r", 0

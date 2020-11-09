@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <syscall.h>
+#include <setjmp.h>
 
 /* Built-in commands. */
 #include "clear.h"
@@ -33,6 +34,8 @@ size_t argc;
 char program[16];
 
 char temp[512];
+
+jmp_buf jmp_env;
 
 void parse(char * input)
 {
@@ -63,6 +66,12 @@ void toupper(char * s)
         }
         s++;
     }
+}
+
+void cancel(uint16_t address)
+{
+    printf("\n\rCANCEL in $%04x\n\r", address);
+    longjmp(jmp_env, -1);
 }
 
 typedef int (*Command_T)(char **, size_t);
@@ -123,7 +132,11 @@ void main()
 
     while (1)
     {
-        printf("(%u) > ", exitcode);
+        int code = setjmp(jmp_env);
+        syscall_sighandle((SIGHANDLER_T)0, 0);
+
+        if (code == 0) code = exitcode;
+        printf("(%u) > ", code);
 
         /* Get user input and parse into cmd and argv */
         gets(input);
@@ -162,6 +175,7 @@ void main()
                 }
                 else
                 {
+                    syscall_sighandle(&cancel, 0);
                     exitcode = syscall_pexec(argv, argc);
                 }
             }
