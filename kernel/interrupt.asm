@@ -88,8 +88,10 @@ _serial_read_handler:
     ret
 
 _serial_signal_cancel:
+    ei
     pop     HL
     call    _signal_cancel
+    di
     ret
 
     EXTERN  _tx_buf
