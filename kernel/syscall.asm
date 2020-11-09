@@ -20,7 +20,7 @@ _syscall_table:
 
     defw    _do_fentries
     defw    _do_fentry
-    
+
     defw    _do_pexec
 
     PUBLIC  _syscall_handler
@@ -418,6 +418,9 @@ _do_fentry:
     ret
 
     EXTERN  _process_exec
+    EXTERN  _puts
+
+    PUBLIC  _pexec_cancel
 
     ; 12: pexec: Execute loaded executable image.
     ;
@@ -428,20 +431,54 @@ _do_fentry:
     ; Returns:
     ; (int) exit code of executable.
 _do_pexec:
+    ; Restore BC, DE, HL.
+    pop     BC
+    pop     DE
+    pop     HL
+
+    ; We can't make any assumptions about the registers that might be
+    ; used by the executable.
+    push    IX
+    push    IY
+
+    push    HL
+    push    AF
+
+    push    DE
+    push    BC
+
     ; Save stack pointer so we can restore it later.
     ld      (__pexec_sp), SP
 
-    ; BC and DE are already on top of stack.
+    ; BC and DE are on top of stack.
     call    _process_exec
+    jp      __do_pexec_done
+
+_pexec_cancel:
+    ; Exit point when we receive the CANCEL signal during execution.
+    ld      HL, __exec_cancel_msg
+    call    _puts
+
+    ld      HL, $ffff
 
 __do_pexec_done:
     ld      SP, (__pexec_sp)
+    
+    ; Restore all the saved registers - except HL (return value).
     pop     BC
     pop     DE
+
+    pop     AF
     inc     SP
     inc     SP
+
+    pop     IY
+    pop     IY
 
     ret
 
 __pexec_sp:
     defs    2
+
+__exec_cancel_msg:
+    defm    "\n\rCANCEL\n\r", 0

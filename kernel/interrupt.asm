@@ -47,6 +47,8 @@ __interrupt_handle_ret:
     EXTERN  _rx_buf_offs_head
     EXTERN  _rx_buf_offs_tail
 
+    EXTERN  _signal_cancel
+
 _serial_read_handler:
     ; Get current tail of buffer.
     ld      HL, _rx_buf
@@ -57,6 +59,12 @@ _serial_read_handler:
 
     ; Read data from UART.
     in      A, (UART_PORT_DATA)
+
+    ; Handle special characters.
+    
+    ; $18 (CANCEL) - triggers SIG_CANCEL
+    cp      $18
+    jp      z, _signal_cancel
 
     ; Store received character.
     ld      (HL), A
