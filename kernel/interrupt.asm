@@ -11,6 +11,14 @@ _interrupt_handler:
     push    BC
     push    AF
 
+    ; Get return address into HL.
+    ld      HL, 8
+    add     HL, SP
+    ld      A, (HL)
+    inc     HL
+    ld      H, (HL)
+    ld      L, A
+
     ; Is this an interrupt from the 6850?
     in      A, (UART_PORT_CONTROL)
     bit     7, A
@@ -50,6 +58,9 @@ __interrupt_handle_ret:
     EXTERN  _signal_cancel
 
 _serial_read_handler:
+    ; Save interrupt return address.
+    push    HL
+
     ; Get current tail of buffer.
     ld      HL, _rx_buf
     ld      D, 0
@@ -61,6 +72,7 @@ _serial_read_handler:
     in      A, (UART_PORT_DATA)
 
     ; Handle special characters.
+    pop     DE ; Interrupt return address
     
     ; $18 (CANCEL) - triggers SIG_CANCEL
     cp      $18

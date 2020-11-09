@@ -418,7 +418,7 @@ _do_fentry:
     ret
 
     EXTERN  _process_exec
-    EXTERN  _puts
+    EXTERN  _printf
 
     PUBLIC  _pexec_cancel
 
@@ -456,8 +456,15 @@ _do_pexec:
 
 _pexec_cancel:
     ; Exit point when we receive the CANCEL signal during execution.
+    ; DE will hold return address for interrupt (i.e. the address we were executing
+    ; when the signal occurred).
     ld      HL, __exec_cancel_msg
-    call    _puts
+    push    HL
+    push    DE
+    ld      A, 2
+    call    _printf
+    pop     HL
+    pop     HL
 
     ld      HL, $ffff
 
@@ -481,4 +488,4 @@ __pexec_sp:
     defs    2
 
 __exec_cancel_msg:
-    defm    "\n\rCANCEL\n\r", 0
+    defm    "\n\rCANCEL in $%04x\n\r", 0
