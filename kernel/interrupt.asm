@@ -72,11 +72,10 @@ _serial_read_handler:
     in      A, (UART_PORT_DATA)
 
     ; Handle special characters.
-    pop     DE ; Interrupt return address
     
     ; $18 (CANCEL) - triggers SIG_CANCEL
     cp      $18
-    jp      z, _signal_cancel
+    jp      z, _serial_signal_cancel
 
     ; Store received character.
     ld      (HL), A
@@ -85,6 +84,12 @@ _serial_read_handler:
     ld      HL, _rx_buf_offs_tail
     inc     (HL)
 
+    pop     HL
+    ret
+
+_serial_signal_cancel:
+    pop     HL
+    call    _signal_cancel
     ret
 
     EXTERN  _tx_buf

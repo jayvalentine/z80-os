@@ -19,6 +19,7 @@
 #include <syscall.h>
 
 #include "file.h"
+#include "signal.h"
 
 char input[256];
 
@@ -31,6 +32,7 @@ void main(void)
     puts("Initialising kernel... ");
 
     filesystem_init();
+    signal_init();
 
     puts("Done.\n\r");
     puts("Loading command processor... ");

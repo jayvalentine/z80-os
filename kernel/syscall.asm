@@ -419,8 +419,7 @@ _do_fentry:
 
     EXTERN  _process_exec
     EXTERN  _printf
-
-    PUBLIC  _pexec_cancel
+    EXTERN  _sighandler_cancel
 
     ; 12: pexec: Execute loaded executable image.
     ;
@@ -450,25 +449,48 @@ _do_pexec:
     ; Save stack pointer so we can restore it later.
     ld      (__pexec_sp), SP
 
+    ; Set cancel signal handler.
+    ld      HL, _pexec_cancel
+    ld      (_sighandler_cancel), HL
+
     ; BC and DE are on top of stack.
     call    _process_exec
     jp      __do_pexec_done
 
-_pexec_cancel:
+    ; void pexec_cancel(uint16_t address)
     ; Exit point when we receive the CANCEL signal during execution.
-    ; DE will hold return address for interrupt (i.e. the address we were executing
-    ; when the signal occurred).
+_pexec_cancel:
+    ; Return address
+    pop     HL
+
+    ; Address executing on cancel
+    pop     DE
+
+    ; Restore return address
+    push    HL
+
     ld      HL, __exec_cancel_msg
     push    HL
+    
     push    DE
+    
     ld      A, 2
     call    _printf
     pop     HL
     pop     HL
 
+    ; Program return code on cancel.
     ld      HL, $ffff
 
 __do_pexec_done:
+    ; Reset signal handler - atomic operation.
+    di
+    push    HL
+    ld      HL, 0
+    ld      (_sighandler_cancel), HL
+    pop     HL
+    ei
+
     ld      SP, (__pexec_sp)
     
     ; Restore all the saved registers - except HL (return value).
