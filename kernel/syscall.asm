@@ -420,7 +420,7 @@ _do_fentry:
     ret
 
     EXTERN  _process_exec
-    EXTERN  _sighandler_cancel
+    EXTERN  _signal_sethandler
 
     ; 12: pexec: Execute loaded executable image.
     ;
@@ -448,12 +448,12 @@ _do_pexec:
     ; BC - signal number
     ; DE - function pointer for handler
 _do_sighandle:
+    ; BC, DE already on TOS.
+    call    _signal_sethandler
+
     pop     BC
     pop     DE
     pop     HL
-
-    ; FIXME: Hardcoded to SIG_CANCEL for now.
-    ld      (_sighandler_cancel), DE
 
     ret
 
