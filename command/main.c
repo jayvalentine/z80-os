@@ -26,6 +26,7 @@
 #include "chmod.h"
 #include "dir.h"
 #include "type.h"
+#include "debug.h"
 
 char input[256];
 char * cmd;
@@ -76,7 +77,7 @@ void cancel(uint16_t address)
 
 typedef int (*Command_T)(char **, size_t);
 
-#define NUM_COMMANDS 4
+#define NUM_COMMANDS 5
 
 typedef struct _Inbuilt
 {
@@ -101,6 +102,10 @@ const Inbuilt_T commands[NUM_COMMANDS] =
     {
         "TYPE",
         &command_type
+    },
+    {
+        "DEBUG",
+        &command_debug
     }
 };
 
@@ -160,7 +165,7 @@ void main()
 
             if (program_fd == E_FILENOTFOUND)
             {
-                printf("%s could not be found\n\r", program);
+                printf("%s could not be found.\n\r", program);
             }
             else
             {

@@ -4,6 +4,7 @@
     defc    UART_PORT_CONTROL = 0b00000000
 
     EXTERN  _main
+    EXTERN  _break_handler
     EXTERN  _syscall_handler
     EXTERN  _interrupt_handler
     EXTERN  _disk_init
@@ -13,6 +14,10 @@ _reset:
     ; Disable interrupts on startup.
     di
     jp      _start
+
+    defs    0x0028 - ASMPC
+_break_entry:
+    jp      _break_handler
 
     defs    0x0030 - ASMPC
 _syscall_entry:
