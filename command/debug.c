@@ -6,10 +6,44 @@
 
 uint8_t old_char;
 
-void debug_break(uint16_t address)
+typedef struct _SIGARG_DEBUG
 {
-    printf("BREAK at $%04x\n\r", address);
-    *((uint8_t*)address) = old_char;
+    uint16_t break_address;
+
+    uint8_t f;
+    uint8_t a;
+
+    uint8_t c;
+    uint8_t b;
+
+    uint8_t e;
+    uint8_t d;
+
+    uint8_t l;
+    uint8_t h;
+
+    uint16_t ix;
+    uint16_t iy;
+
+} SIGARG_DEBUG_T;
+
+void debug_break(uint16_t arg)
+{
+    SIGARG_DEBUG_T * d = (SIGARG_DEBUG_T*)arg;
+
+    printf("BREAK at $%04x\n\r\n\r", d->break_address);
+    
+    puts("Registers:\n\r");
+    printf("A: %02x F: %02x\n\r\n\r", (uint16_t)d->a, (uint16_t)d->f);
+
+    printf("B: %02x C: %02x\n\r", (uint16_t)d->b, (uint16_t)d->c);
+    printf("D: %02x E: %02x\n\r", (uint16_t)d->d, (uint16_t)d->e);
+    printf("H: %02x L: %02x\n\r\n\r", (uint16_t)d->h, (uint16_t)d->l);
+
+    printf("IX: %04x\n\r", d->ix);
+    printf("IY: %04x\n\r\n\r", d->iy);
+
+    *((uint8_t*)(d->break_address)) = old_char;
 }
 
 void debug_set_breakpoint(uint8_t * address)
