@@ -1,6 +1,9 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <syscall.h>
+#include <string.h>
+
+#include "utils.h"
 
 #define INST_BREAK 0xef
 
@@ -27,6 +30,51 @@ typedef struct _SIGARG_DEBUG
 
 } SIGARG_DEBUG_T;
 
+char * debug_cmd;
+char * debug_arg;
+
+void debug_parse(char * str)
+{
+    /* Expect at least one command. */
+    debug_cmd = strtok(str, " ");
+
+    if (debug_cmd == NULL) return;
+
+    debug_arg = strtok(NULL, " ");
+}
+
+void debug_set_breakpoint(uint8_t * address)
+{
+    old_char = *address;
+    *address = INST_BREAK;
+    printf("Breakpoint set at $%04x\n\r", (uint16_t)address);
+}
+
+void debug_command(void)
+{
+    char input[32];
+    while (1)
+    {
+        puts("DEBUG> ");
+        
+        /* Get line of input from user. */
+        gets(input);
+        debug_parse(input);
+
+        utils_toupper(debug_cmd);
+        
+        if (strcmp(debug_cmd, "BREAK") == 0)
+        {
+            uint16_t address = utils_strtou(debug_arg);
+            debug_set_breakpoint(address);
+        }
+        else if (strcmp(debug_cmd, "RUN") == 0)
+        {
+            return;
+        }
+    }
+}
+
 void debug_break(uint16_t arg)
 {
     SIGARG_DEBUG_T * d = (SIGARG_DEBUG_T*)arg;
@@ -44,13 +92,8 @@ void debug_break(uint16_t arg)
     printf("IY: %04x\n\r\n\r", d->iy);
 
     *((uint8_t*)(d->break_address)) = old_char;
-}
 
-void debug_set_breakpoint(uint8_t * address)
-{
-    old_char = *address;
-    *address = INST_BREAK;
-    printf("Breakpoint set at $%04x\n\r", (uint16_t)address);
+    debug_command();
 }
 
 int command_debug(char ** argv, size_t argc)

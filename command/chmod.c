@@ -4,10 +4,11 @@
 #include <syscall.h>
 #include <string.h>
 
+#include "utils.h"
+
 #include "chmod.h"
 
 extern char temp[512];
-void toupper(char * s);
 
 int command_chmod(char ** argv, size_t argc)
 {
@@ -19,7 +20,7 @@ int command_chmod(char ** argv, size_t argc)
     }
 
     /* File in upper-case. */
-    toupper(argv[0]);
+    utils_toupper(argv[0]);
 
     /* Attempt to find the file. */
     char filename[13];

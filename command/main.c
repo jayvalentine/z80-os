@@ -21,6 +21,8 @@
 #include <syscall.h>
 #include <setjmp.h>
 
+#include "utils.h"
+
 /* Built-in commands. */
 #include "clear.h"
 #include "chmod.h"
@@ -53,19 +55,6 @@ void parse(char * input)
 
         argv[argc] = a;
         argc++;
-    }
-}
-
-/* In-place "upper-cases" the given string. */
-void toupper(char * s)
-{
-    while (*s != '\0')
-    {
-        if (*s >= 'a' && *s <= 'z')
-        {
-            *s -= ('a' - 'A');
-        }
-        s++;
     }
 }
 
@@ -147,7 +136,7 @@ void main()
         gets(input);
         parse(input);
 
-        toupper(cmd);
+        utils_toupper(cmd);
 
         Inbuilt_T * command_to_run = get_command(cmd);
         
