@@ -11,12 +11,20 @@ void signal_init()
     sighandler_break = NULL;
 }
 
+#ifdef Z88DK
 void signal_cancel(uint16_t address) __z88dk_fastcall
+#else
+void signal_cancel(uint16_t address)
+#endif
 {
     if (sighandler_cancel != NULL) sighandler_cancel(address);
 }
 
+#ifdef Z88DK
 void signal_break(uint16_t address) __z88dk_fastcall
+#else
+void signal_break(uint16_t address)
+#endif
 {
     if (sighandler_break != NULL) sighandler_break(address);
 }

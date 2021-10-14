@@ -92,6 +92,8 @@ namespace 'build' do
         cmd = "zcc "
         cmd += "+#{CONFIG} -compiler-sccz80 "
         cmd += "-O2 -SO2 "
+        cmd += "-DZ88DK "
+        cmd += "-Ikernel "
         cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
         cmd += "-Cl\"-r0x0000\" "
@@ -158,7 +160,36 @@ namespace 'install' do
         abort("No path specified") if args[:path].nil?
         FileUtils.cp('command.bin', File.join(args[:path], 'COMMAND.BIN'))
     end
-
-    desc "Install all"
-    task "all", [:path] => ["kernel", "command"]
 end
+
+namespace 'test' do
+    desc "Run kernel unit tests"
+    task 'kernel' do
+        # Compile test/main.c, other test/*.c, and kernel files for which
+        # a file exists under test.
+        # Include every source file but reset.asm, which is the startup code.
+        src = []
+
+        Dir.glob("kernel/test/*.c").each do |f|
+            src << f
+            src << "kernel/#{File.basename(f)}" unless File.basename(f) == "main.c"
+        end
+
+        # Add mock files
+        Dir.glob("kernel/test/mock/*.c").each do |f|
+            src << f
+        end
+
+        cmd = "gcc "
+        cmd += "-O1 "
+        cmd += "-Ikernel "
+        cmd += "-Ikernel/test/mock "
+        cmd += "-o test_kernel.exe "
+        cmd += src.join(" ")
+
+        puts cmd
+        system(cmd)
+    end
+end
+
+task "install", [:path] => ["install:kernel", "install:command"]
