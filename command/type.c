@@ -3,9 +3,11 @@
 
 #include "type.h"
 
+#define TYPE_BUF_SIZE 512
+
 int command_type(char ** argv, size_t argc)
 {
-    char type_buf[17];
+    char type_buf[TYPE_BUF_SIZE+1];
 
     if (argc < 1)
     {
@@ -26,7 +28,7 @@ int command_type(char ** argv, size_t argc)
         size_t bytes;
 
         /* Print the contents of the file. */
-        while ((bytes = syscall_fread(type_buf, 16, fd)) > 0)
+        while ((bytes = syscall_fread(type_buf, TYPE_BUF_SIZE, fd)) > 0)
         {
             type_buf[bytes] = '\0';
             puts(type_buf);

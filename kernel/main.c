@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <syscall.h>
 
-#include "file.h"
-#include "signal.h"
+#include <include/file.h>
+#include <include/signal.h>
 
 char input[256];
 
@@ -46,13 +46,20 @@ void main(void)
     {
         puts("Error: COMMAND.BIN not found.\n\r");
     }
+    else if (fd < 0)
+    {
+        puts("Unknown error opening COMMAND.BIN.\n\r");
+    }
     else
     {
         size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
         syscall_fclose(fd);
 
-        printf("Read %u bytes.\n\r", bytes);
-
-        cp_main();
+        if (bytes == 0) puts("Error reading COMMAND.BIN.\n\r");
+        else
+        {
+            printf("Read %u bytes.\n\r", bytes);
+            cp_main();
+        }
     }
 }

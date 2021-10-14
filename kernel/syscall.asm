@@ -12,7 +12,7 @@ _syscall_table:
 
     defw    _do_fopen
     defw    _do_fread
-    defw    $0000 ; fwrite placeholder
+    defw    _do_fwrite
     defw    _do_fclose
 
     defw    _do_dinfo
@@ -269,6 +269,7 @@ _do_dread:
 
     EXTERN  _file_open
     EXTERN  _file_read
+    EXTERN  _file_write
     EXTERN  _file_close
 
     ; 4: fopen: Open a file for writing.
@@ -313,6 +314,29 @@ _do_fopen:
 _do_fread:
     ; BC, DE, HL are already on stack.
     call    _file_read
+
+    ; Restore BC, DE
+    pop     BC
+    pop     DE
+
+    ; Increment SP, rather than restoring HL and trashing the return value.
+    inc     SP
+    inc     SP
+
+    ret
+
+    ; 6: fwrite: Write an opened file.
+    ;
+    ; Parameters:
+    ; HL - pointer to location to read to
+    ; DE - number of bytes to write
+    ; BC - file descriptor
+    ;
+    ; Returns:
+    ; Number of bytes written in HL.
+_do_fwrite:
+    ; BC, DE, HL are already on stack.
+    call    _file_write
 
     ; Restore BC, DE
     pop     BC

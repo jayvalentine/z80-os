@@ -233,7 +233,11 @@ int file_open(const char * filename, File_T * fd)
     return 0;
 }
 
+#ifdef Z88DK
 int file_readbyte(File_T * fd) __z88dk_fastcall
+#else
+int file_readbyte(File_T * fd)
+#endif
 {
     /* Return EOF if we've hit the end of the file. */
     if (fd->fpos == fd->size) return EOF;

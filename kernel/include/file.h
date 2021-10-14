@@ -4,13 +4,44 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define EOF -1
+#include <syscall.h>
+
+#define KERNEL_EOF -1
 
 #define FD_FLAGS_CLAIMED 0x01
 
+#define FILE_LIMIT 1
+
+typedef struct _DirectoryEntry
+{
+    char name[8];
+    char ext[3];
+
+    uint8_t attributes;
+
+    uint8_t reserved_for_windows_nt;
+
+    uint8_t creation_milliseconds;
+    uint16_t creation_time;
+    uint16_t creation_date;
+
+    uint16_t last_access_date;
+
+    uint16_t reserved_for_fat32;
+
+    uint16_t last_write_time;
+    uint16_t last_write_date;
+
+    uint16_t starting_cluster;
+    uint32_t size;
+} DirectoryEntry_T;
+
 typedef struct _FileDescriptor
 {
+    char name[13];
+    
     uint8_t flags;
+    uint8_t mode;
     uint32_t size;
     uint32_t fpos; /* Not actually used for indexing the file, just for keeping track of size. */
     

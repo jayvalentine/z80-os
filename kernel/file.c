@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <syscall.h>
 
-#include "file.h"
-#include "defs.h"
+#include <include/file.h>
+#include <include/defs.h>
 
 #define CLUSTER_EOF 0xffff
 
@@ -16,7 +16,6 @@ DiskInfo_T disk_info;
 char temp_sector[512];
 
 /* File descriptor table. */
-#define FILE_LIMIT 1
 FileDescriptor_T fdtable[FILE_LIMIT];
 
 /* Helper functions. */
@@ -46,6 +45,18 @@ uint16_t get_uint16_t(char * buf, size_t i)
     var_ptr[1] = buf[i+1];
     
     return var;
+}
+
+/* Set an unsigned integer (in Z80 little-endian)
+ * in a buffer at the given position.
+ */
+void set_uint16_t(char * buf, size_t i, uint16_t value)
+{
+    uint16_t var = value;
+    uint8_t * var_ptr = (uint8_t *)&var;
+
+    buf[i] = var_ptr[0];
+    buf[i+1] = var_ptr[1];
 }
 
 /* Get an unsigned long (in little-endian)
@@ -152,17 +163,8 @@ void filesystem_filename(char * buf, const char * dir_entry)
     buf[i] = '\0';
 }
 
-int filesystem_directory_entry(char * dir_entry, const char * filename)
+int filesystem_get_directory_entry(char * dir_entry, const char * filename)
 {
-    if (strlen(filename) > 12)
-    {
-        return E_INVALIDFILENAME;
-    }
-
-    char searchname[13];
-    strcpy(searchname, filename);
-    toupper(searchname);
-
     uint32_t sector = disk_info.root_region;
     bool done = FALSE;
 
@@ -196,10 +198,61 @@ int filesystem_directory_entry(char * dir_entry, const char * filename)
             filesystem_filename(buf, &temp_sector[f]);
 
             /* Now we can compare the filename. */
-            if (strcmp(buf, searchname) == 0)
+            if (strcmp(buf, filename) == 0)
             {
                 /* We've found the file! */
                 memcpy(dir_entry, &temp_sector[f], 32);
+                done = TRUE;
+                break;
+            }
+        }
+
+        sector++;
+    }
+
+    return 0;
+}
+
+int filesystem_set_directory_entry(char * dir_entry, const char * filename)
+{
+    uint32_t sector = disk_info.root_region;
+    bool done = FALSE;
+
+    /* Buffer for filename. */
+    uint8_t buf[13];
+
+    /* Try to find the file in the root directory. */
+    while (!done)
+    {
+        /* Read the sector. */
+        read_sector_cached(temp_sector, sector, TRUE);
+
+        /* Iterate over the files, looking for the one we want. */
+        for (uint16_t f = 0; f < 512; f += 32)
+        {
+            /* If first byte is 0, we've reached the end of the root directory,
+             * but not found the file. */
+            if (temp_sector[f] == 0) return E_FILENOTFOUND;
+
+            /* If the first byte is e5, this entry is free, so we should skip it. */
+            if (temp_sector[f] == 0xe5) continue;
+
+            /* Otherwise this could be a file.
+             * Read the attribute bytes to find out. */
+            uint8_t attr = temp_sector[f+11];
+
+            /* Ignore directories and volume labels. */
+            if (attr & 0b00011000) continue;
+
+            /* We now know this is a file. Load the filename and compare. */
+            filesystem_filename(buf, &temp_sector[f]);
+
+            /* Now we can compare the filename. */
+            if (strcmp(buf, filename) == 0)
+            {
+                /* We've found the file! */
+                memcpy(&temp_sector[f], dir_entry, 32);
+                syscall_dwrite(temp_sector, sector);
                 done = TRUE;
                 break;
             }
@@ -225,6 +278,84 @@ uint16_t fat_next_cluster(uint16_t cluster)
     return get_uint16_t(temp_sector, entry);
 }
 
+void fat_set_cluster(uint16_t cluster, uint16_t next_cluster)
+{
+    /* Calculate offset into FAT of sector to read. */
+    uint32_t fat_offset = (cluster * 2) / disk_info.bytes_per_sector;
+    uint32_t fat_sector = disk_info.fat_region + fat_offset;
+
+    /* Calculate offset into that sector of the entry we want. */
+    uint16_t entry = (cluster * 2) % disk_info.bytes_per_sector;
+
+    /* Read the sector and set the appropriate entry. */
+    read_sector_cached(temp_sector, fat_sector, FALSE);
+    set_uint16_t(temp_sector, entry, next_cluster);
+    syscall_dwrite(temp_sector, fat_sector);
+}
+
+uint16_t fat_find_free_cluster(void)
+{
+    /* Find first free entry in FAT. */
+    uint16_t allocated_cluster = 2;
+    uint16_t entry_within_sector = allocated_cluster;
+
+    uint32_t fat_sector = disk_info.fat_region;
+
+    uint16_t entry = CLUSTER_EOF;
+    
+    while (TRUE)
+    {
+        read_sector_cached(temp_sector, fat_sector, FALSE);
+        entry = get_uint16_t(temp_sector, entry_within_sector * 2);
+
+        if (entry == 0x0000) break;
+
+        allocated_cluster++;
+        entry_within_sector++;
+
+        /* If we've gone past this sector, get the next one. */
+        if (entry_within_sector > disk_info.bytes_per_sector / 2)
+        {
+            entry_within_sector = 0;
+            fat_sector++;
+        }
+
+        /* If we're now past the FAT then we don't have any free entries. */
+        if (fat_sector == disk_info.root_region) break;
+    }
+
+    /* If we leave the loop and the entry is not free, we've run out of FAT.
+     * In this case we return 0, which isn't a valid cluster.
+     * Otherwise we return the cluster which has a free entry.
+     */
+    if (entry != 0) return 0;
+    return allocated_cluster;
+}
+
+uint16_t fat_allocate_start_cluster(void)
+{
+    uint16_t free_cluster = fat_find_free_cluster();
+
+    /* No more free clusters :( */
+    if (free_cluster == 0) return 0;
+
+    /* Set this cluster to EOF. */
+    fat_set_cluster(free_cluster, CLUSTER_EOF);
+    return free_cluster;
+}
+
+uint16_t fat_allocate_cluster(uint16_t cluster)
+{
+    uint16_t next_cluster = fat_find_free_cluster();
+
+    if (next_cluster == 0) return 0;
+    else
+    {
+        fat_set_cluster(cluster, next_cluster);
+        return next_cluster;
+    }
+}
+
 /* Given a file cluster, return the sector in which that cluster starts. */
 uint32_t file_start_sector(uint16_t cluster)
 {
@@ -242,24 +373,45 @@ int filesystem_assign_fd(void)
     return E_FILELIMIT;
 }
 
+int file_create(DirectoryEntry_T * entry)
+{
+    uint32_t sector = disk_info.root_region;
+
+    while (TRUE)
+    {
+        read_sector_cached(temp_sector, sector, FALSE);
+
+        for (size_t f = 0; f < 512; f += 32)
+        {
+            /* Free entry? */
+            if (temp_sector[f] == 0 || temp_sector[f] == 0xe5)
+            {
+                /* Yes, copy file entry and write back to disk. */
+                memcpy(&temp_sector[f], entry, 32);
+                syscall_dwrite(temp_sector, sector);
+                return 0;
+            }
+        }
+
+        /* Increment sector, stop if we've hit the data region. */
+        sector++;
+        if (sector == disk_info.data_region)
+        {
+            return 1;
+        }
+    }
+}
+
 /* Open the file with the given name and mode. */
-int file_open(const char * filename, uint8_t mode)
+int file_open_read(FileDescriptor_T * file)
 {
     int error;
-
-    /* Find a free file descriptor. */
-    error = filesystem_assign_fd();
-    if (error < 0) return error;
-
-    /* File descriptor is valid. */
-    int fd = error;
-    FileDescriptor_T * file = &fdtable[fd];
 
     /* Buffer into which we'll copy the file entry. */
     uint8_t file_entry[32];
 
     /* Get relevent file entry. */
-    error = filesystem_directory_entry(file_entry, filename);
+    error = filesystem_get_directory_entry(file_entry, file->name);
     if (error != 0) return error;
 
     /* Get size in bytes. */
@@ -276,6 +428,135 @@ int file_open(const char * filename, uint8_t mode)
     file->fpos_within_sector = 0;
     file->fpos = 0;
 
+    /* Set mode. */
+    file->mode = FMODE_READ;
+
+    return 0;
+}
+
+/* Open the file with the given name and mode. */
+int file_open_write(FileDescriptor_T * file)
+{
+    int error;
+
+    /* Create local directory entry. */
+    DirectoryEntry_T file_entry;
+
+    /* Make sure the file doesn't already exist. */
+    if (filesystem_get_directory_entry(&file_entry, file->name) != E_FILENOTFOUND)
+    {
+        return E_FILEEXIST;
+    }
+
+    /* Try to get a free cluster. */
+    uint16_t start_cluster = fat_allocate_start_cluster();
+    if (start_cluster == 0) return E_DISKFULL;
+
+    /* Copy filename into a buffer to extract name and extension. */
+    char filename_tmp[13];
+    strcpy(filename_tmp, file->name);
+
+    char * sep_pos = strchr(filename_tmp, '.');
+    if (sep_pos == NULL) return E_INVALIDFILENAME;
+
+    *sep_pos = '\0';
+
+    char * entry_filename = filename_tmp;
+    char * entry_ext = sep_pos + 1;
+
+    /* Copy filename into directory entry, padding with spaces. */
+    memcpy(file_entry.name, entry_filename, strlen(entry_filename));
+    for (size_t i = strlen(entry_filename); i < 8; i++) file_entry.name[i] = ' ';
+
+    /* Copy extension into directory entry, padding with spaces. */
+    memcpy(file_entry.ext, entry_ext, strlen(entry_ext));
+    for (size_t i = strlen(entry_ext); i < 3; i++) file_entry.ext[i] = ' ';
+
+    /* Don't set any of the attributes. */
+    file_entry.attributes = 0x00;
+
+    /* Reserved for Windows NT. We're not Windows NT, so we don't care :) */
+    file_entry.reserved_for_windows_nt = 0x00;
+
+    /* Created at the dawn of time, for now! */
+    /* FIXME: Actual creation date/time, once we can know what it is... */
+    file_entry.creation_milliseconds = 0x00;
+    file_entry.creation_time = 0x0000;
+    file_entry.creation_date = 0x0000;
+
+    /* Last access date; also the dawn of time. */
+    file_entry.last_access_date = 0x0000;
+
+    /* Reserved for FAT32. We set this field to 0. */
+    file_entry.reserved_for_fat32 = 0x0000;
+
+    /* Last write time. */
+    file_entry.last_write_time = 0x0000;
+    file_entry.last_write_date = 0x0000;
+
+    /* We know the starting cluster must be valid. */
+    file_entry.starting_cluster = start_cluster;
+
+    /* Size is initially 0. */
+    file_entry.size = 0;
+
+    /* Try to create a directory entry. */
+    if (file_create(&file_entry))
+    {
+        return E_DIRFULL;
+    }
+
+    /* Get size in bytes. */
+    file->size = file_entry.size;
+
+    /* Get start cluster. */
+    file->start_cluster = file_entry.starting_cluster;
+    file->current_cluster = file->start_cluster;
+
+    /* Sector (relative to cluster start) */
+    file->sector = 0;
+
+    /* Set current position to start-of-file. */
+    file->fpos_within_sector = 0;
+    file->fpos = 0;
+
+    /* Set mode. */
+    file->mode = FMODE_WRITE;
+
+    return 0;
+}
+
+int file_open(const char * filename, uint8_t mode)
+{
+    /* Truncate and upper-case the filename. */
+    char filename_upper[13];
+    memcpy(filename_upper, filename, 12);
+    filename_upper[12] = '\0';
+    toupper(filename_upper);
+
+    /* Try to find a free file descriptor. */
+    int fd = filesystem_assign_fd();
+    if (fd < 0) return fd;
+
+    FileDescriptor_T * file = &fdtable[fd];
+    strcpy(file->name, filename_upper);
+
+    int error;
+
+    switch (mode)
+    {
+        case FMODE_READ:    error = file_open_read(file); break;
+        case FMODE_WRITE:   error = file_open_write(file); break;
+        default: return E_INVALIDMODE;
+    }
+
+    if (error < 0)
+    {
+        /* Free the file descriptor and return the error code. */
+        file->flags &= ~FD_FLAGS_CLAIMED;
+        return error;
+    }
+
     return fd;
 }
 
@@ -283,6 +564,16 @@ int file_open(const char * filename, uint8_t mode)
 void file_close(int fd)
 {
     FileDescriptor_T * file = &fdtable[fd];
+
+    /* Update size in directory entry, if opened for writing. */
+    if (file->mode == FMODE_WRITE)
+    {
+        DirectoryEntry_T entry;
+        filesystem_get_directory_entry(&entry, file->name);
+        entry.size = file->size;
+        filesystem_set_directory_entry(&entry, file->name);
+    }
+
     file->flags &= ~FD_FLAGS_CLAIMED;
 }
 
@@ -291,13 +582,13 @@ int file_readbyte(int fd)
     FileDescriptor_T * file = &fdtable[fd];
 
     /* Return EOF if we've hit the end of the file. */
-    if (file->fpos == file->size) return EOF;
+    if (file->fpos == file->size) return KERNEL_EOF;
 
     /* Shouldn't happen (maybe?) but return EOF if we have no more
      * clusters to read. */
     if (file->current_cluster == CLUSTER_EOF)
     {
-        return EOF;
+        return KERNEL_EOF;
     }
 
     /* Otherwise read a byte from the current cluster. */
@@ -338,10 +629,10 @@ int file_readsector(char * ptr, int fd)
     FileDescriptor_T * file = &fdtable[fd];
 
     /* Return EOF if we've hit the end of the file. */
-    if (file->fpos == file->size) return EOF;
+    if (file->fpos == file->size) return KERNEL_EOF;
 
     /* Return EOF if we have no more clusters to read. */
-    if (file->current_cluster == CLUSTER_EOF) return EOF;
+    if (file->current_cluster == CLUSTER_EOF) return KERNEL_EOF;
 
     /* Otherwise read a full sector. */
 
@@ -368,28 +659,142 @@ int file_readsector(char * ptr, int fd)
     return 0;
 }
 
-size_t file_read(char * ptr, size_t n, int fd)
+int file_writesector(char * ptr, size_t offset, size_t n, int fd)
+{
+    /* Can't write past end of sector. */
+    if (offset + n > disk_info.bytes_per_sector) return 1;
+
+    FileDescriptor_T * file = &fdtable[fd];
+
+    /* Read current sector. */
+    uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
+
+    read_sector_cached(temp_sector, sector, FALSE);
+
+    /* Overwrite bytes in memory, write back to disk. */
+    memcpy(temp_sector + offset, ptr, n);
+    syscall_dwrite(temp_sector, sector);
+
+    /* Increment size. fpos_within_sector doesn't change because we've read an entire sector. */
+    file->fpos += n;
+    file->size += n;
+    file->fpos_within_sector += n;
+
+    if (file->fpos_within_sector == disk_info.bytes_per_sector)
+    {
+        file->fpos_within_sector = 0;
+        file->sector++;
+
+        /* Do we need the next cluster? If so we need to allocate one (if it's not already) */
+        if (file->sector == disk_info.sectors_per_cluster)
+        {
+            uint16_t next_cluster = fat_next_cluster(file->current_cluster);
+
+            if (next_cluster == CLUSTER_EOF)
+            {
+                next_cluster = fat_allocate_cluster(file->current_cluster);
+
+                /* Check that the allocation succeeded. If not we're out of disk space :( */
+                if (next_cluster == 0) return E_DISKFULL;
+            }
+
+            file->current_cluster = next_cluster;
+            file->sector = 0;
+        }
+    }
+
+    return 0;
+}
+
+size_t file_write(char * ptr, size_t n, int fd)
 {
     /* Guard against an obviously invalid descriptor, that would cause
      * us to index out of the fdtable. */
-    if (fd < 0 || fd >= FILE_LIMIT) return E_INVALIDDESCRIPTOR;
+    if (fd < 0 || fd >= FILE_LIMIT) return 0;
 
     size_t bytes = 0;
 
     /* Get the entry associated with this file descriptor */
     FileDescriptor_T * file = &fdtable[fd];
 
+    /* Make sure the file has been opened for writing. */
+    if (file->mode != FMODE_WRITE) return 0;
+
+    /* Partial write of the first sector. */
+    if (file->fpos_within_sector != 0)
+    {
+        /* Don't want to write past end of sector with this partial write. */
+        size_t limit = disk_info.bytes_per_sector - file->fpos_within_sector;
+
+        size_t partial_write_size = (n < limit) ? n : limit;
+        int e = file_writesector(ptr, file->fpos_within_sector, partial_write_size, fd);
+        if (e != 0) return 0;
+
+        ptr += partial_write_size;
+        bytes += partial_write_size;
+        n -= partial_write_size;
+    }
+
+    if (n == 0) return bytes;
+
+    /* How many full sectors do we need to write? */
+    size_t full_sectors = n / disk_info.bytes_per_sector;
+
+    /* Write 0 or more *full* sectors. */
+    for (size_t i = 0; i < full_sectors; i++)
+    {
+        int e = file_writesector(ptr, 0, disk_info.bytes_per_sector, fd);
+        if (e != 0) return 0;
+
+        /* We've now written a full sector. */
+        ptr += disk_info.bytes_per_sector;
+        bytes += disk_info.bytes_per_sector;
+        n -= disk_info.bytes_per_sector;
+    }
+
+    if (n == 0) return bytes;
+
+    /* We must now have <X bytes remaining (where X is the number of bytes per sector),
+     * and be aligned on a sector boundary. */
+    file_writesector(ptr, 0, n, fd);
+    bytes += n;
+
+    return bytes;
+}
+
+size_t file_read(char * ptr, size_t n, int fd)
+{
+    /* Guard against an obviously invalid descriptor, that would cause
+     * us to index out of the fdtable. */
+    if (fd < 0 || fd >= FILE_LIMIT) return 0;
+
+    size_t bytes = 0;
+
+    /* Get the entry associated with this file descriptor */
+    FileDescriptor_T * file = &fdtable[fd];
+
+    /* Make sure the file has been opened for reading. */
+    if (file->mode != FMODE_READ) return 0;
+
+    /* If the number of bytes left to read is <n, set n=number of bytes left */
+    if ((file->size - file->fpos) < n)
+    {
+        n = file->size - file->fpos;
+    }
+
     /* Read byte-by-byte up to the first sector boundary. */
     while (file->fpos_within_sector != 0)
     {
         int c = file_readbyte(fd);
 
-        if (c == EOF) return bytes;
+        if (c == KERNEL_EOF) return bytes;
         *ptr = (uint8_t)c;
         
         ptr++;
         bytes++;
         n--;
+
+        if (n == 0) return bytes;
     }
 
     /* How many full sectors do we need to read? */
@@ -410,6 +815,8 @@ size_t file_read(char * ptr, size_t n, int fd)
         n -= disk_info.bytes_per_sector;
     }
 
+    if (n == 0) return bytes;
+
     /* We must now have <X bytes remaining (where X is the number of bytes per sector). */
     for (size_t i = 0; i < n; i++)
     {
@@ -426,11 +833,17 @@ size_t file_read(char * ptr, size_t n, int fd)
 
 int file_info(const char * filename, FINFO * finfo)
 {
+    /* Truncate and upper-case the filename. */
+    char filename_upper[13];
+    memcpy(filename_upper, filename, 12);
+    filename_upper[12] = '\0';
+    toupper(filename_upper);
+
     uint8_t direntry[32];
     
     /* Search for the file in the directory. */
     /* Return error code if it does not exist. */
-    int error = filesystem_directory_entry(direntry, filename);
+    int error = filesystem_get_directory_entry(direntry, filename_upper);
     if (error != 0) return error;
 
     finfo->attr = direntry[0x0b];
