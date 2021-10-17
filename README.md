@@ -18,6 +18,10 @@ Two-stage bootloader allowing loading of OS images from filesystem
 * Interrupt-driven serial I/O driver
 * CF-card driver
 * FAT16 "flat" filesystem (no directory handling)
+  supporting the following operations:
+    * Writing new files (no "append" mode)
+    * Reading files
+    * Deleting files
 * Syscalls implemented using Z80 `rst` instruction for hardware abstraction
 
 #### Command Processor
@@ -28,10 +32,10 @@ Two-stage bootloader allowing loading of OS images from filesystem
 
 ### Planned Functionality (Short-Term)
 
-* Deleting of files
 * Debugger/monitor
 * Loading programs over serial in Intel-HEX format
 * Saving loaded programs to disk
+* "Append" mode when writing to files
 
 ### Planned Functionality (Long-Term)
 
