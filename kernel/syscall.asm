@@ -25,6 +25,8 @@ _syscall_table:
 
     defw    _do_sighandle
 
+    defw    _do_fdelete
+
     PUBLIC  _syscall_handler
 
     ; Syscall handler.
@@ -271,6 +273,7 @@ _do_dread:
     EXTERN  _file_read
     EXTERN  _file_write
     EXTERN  _file_close
+    EXTERN  _file_delete
 
     ; 4: fopen: Open a file for writing.
     ;
@@ -478,6 +481,24 @@ _do_sighandle:
     pop     BC
     pop     DE
     pop     HL
+
+    ret
+
+    ; 14: fdelete: Delete a file.
+    ;
+    ; Parameters:
+    ; BC - pointer to filename
+    ;
+    ; Returns:
+    ; Error code for delete operation, or 0 if successful.
+_do_fdelete:
+    ; BC already on TOS.
+    call    _file_delete
+
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
 
     ret
 

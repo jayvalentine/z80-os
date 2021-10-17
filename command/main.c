@@ -30,6 +30,7 @@
 #include "type.h"
 #include "debug.h"
 #include "load.h"
+#include "del.h"
 
 char input[256];
 char * cmd;
@@ -67,7 +68,7 @@ void cancel(uint16_t address)
 
 typedef int (*Command_T)(char **, size_t);
 
-#define NUM_COMMANDS 6
+#define NUM_COMMANDS 7
 
 typedef struct _Inbuilt
 {
@@ -100,6 +101,10 @@ const Inbuilt_T commands[NUM_COMMANDS] =
     {
         "LOAD",
         &command_load
+    },
+    {
+        "DEL",
+        &command_del
     }
 };
 

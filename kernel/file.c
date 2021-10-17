@@ -7,6 +7,7 @@
 #include <include/defs.h>
 
 #define CLUSTER_EOF 0xffff
+#define CLUSTER_FREE 0x0000
 
 uint16_t current_cache_sector;
 
@@ -21,7 +22,7 @@ FileDescriptor_T fdtable[FILE_LIMIT];
 /* Helper functions. */
 
 /* In-place "upper-cases" the given string. */
-void toupper(char * s)
+void string_toupper(char * s)
 {
     while (*s != '\0')
     {
@@ -163,7 +164,7 @@ void filesystem_filename(char * buf, const char * dir_entry)
     buf[i] = '\0';
 }
 
-int filesystem_get_directory_entry(char * dir_entry, const char * filename)
+int filesystem_get_directory_entry(DirectoryEntry_T * dir_entry, const char * filename)
 {
     uint32_t sector = disk_info.root_region;
     bool done = FALSE;
@@ -201,7 +202,7 @@ int filesystem_get_directory_entry(char * dir_entry, const char * filename)
             if (strcmp(buf, filename) == 0)
             {
                 /* We've found the file! */
-                memcpy(dir_entry, &temp_sector[f], 32);
+                memcpy((char *) dir_entry, &temp_sector[f], 32);
                 done = TRUE;
                 break;
             }
@@ -213,7 +214,7 @@ int filesystem_get_directory_entry(char * dir_entry, const char * filename)
     return 0;
 }
 
-int filesystem_set_directory_entry(char * dir_entry, const char * filename)
+int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const char * filename)
 {
     uint32_t sector = disk_info.root_region;
     bool done = FALSE;
@@ -251,7 +252,60 @@ int filesystem_set_directory_entry(char * dir_entry, const char * filename)
             if (strcmp(buf, filename) == 0)
             {
                 /* We've found the file! */
-                memcpy(&temp_sector[f], dir_entry, 32);
+                memcpy(&temp_sector[f], (char *) dir_entry, 32);
+                syscall_dwrite(temp_sector, sector);
+                done = TRUE;
+                break;
+            }
+        }
+
+        sector++;
+    }
+
+    return 0;
+}
+
+int filesystem_mark_directory_entry_free(const char * filename)
+{
+    uint32_t sector = disk_info.root_region;
+    bool done = FALSE;
+
+    /* Buffer for filename. */
+    uint8_t buf[13];
+
+    /* Try to find the file in the root directory. */
+    while (!done)
+    {
+        /* Read the sector. */
+        read_sector_cached(temp_sector, sector, TRUE);
+
+        /* Iterate over the files, looking for the one we want. */
+        for (uint16_t f = 0; f < 512; f += 32)
+        {
+            /* If first byte is 0, we've reached the end of the root directory,
+             * but not found the file. */
+            if (temp_sector[f] == 0) return E_FILENOTFOUND;
+
+            /* If the first byte is e5, this entry is free, so we should skip it. */
+            if (temp_sector[f] == 0xe5) continue;
+
+            /* Otherwise this could be a file.
+             * Read the attribute bytes to find out. */
+            uint8_t attr = temp_sector[f+11];
+
+            /* Ignore directories and volume labels. */
+            if (attr & 0b00011000) continue;
+
+            /* We now know this is a file. Load the filename and compare. */
+            filesystem_filename(buf, &temp_sector[f]);
+
+            /* Now we can compare the filename. */
+            if (strcmp(buf, filename) == 0)
+            {
+                /* We've found the file! */
+                /* Put 0xe5 in the first character of the filename to mark
+                 * this entry as free. */
+                temp_sector[f] = (char)0xe5;
                 syscall_dwrite(temp_sector, sector);
                 done = TRUE;
                 break;
@@ -308,7 +362,7 @@ uint16_t fat_find_free_cluster(void)
         read_sector_cached(temp_sector, fat_sector, FALSE);
         entry = get_uint16_t(temp_sector, entry_within_sector * 2);
 
-        if (entry == 0x0000) break;
+        if (entry == CLUSTER_FREE) break;
 
         allocated_cluster++;
         entry_within_sector++;
@@ -351,9 +405,18 @@ uint16_t fat_allocate_cluster(uint16_t cluster)
     if (next_cluster == 0) return 0;
     else
     {
+        /* Set this cluster to point to the newly allocated one. */
         fat_set_cluster(cluster, next_cluster);
+
+        /* Set the newly allocated cluster to be the last one. */
+        fat_set_cluster(next_cluster, CLUSTER_EOF);
         return next_cluster;
     }
+}
+
+uint16_t fat_deallocate_cluster(uint16_t cluster)
+{
+    fat_set_cluster(cluster, CLUSTER_FREE);
 }
 
 /* Given a file cluster, return the sector in which that cluster starts. */
@@ -384,7 +447,7 @@ int file_create(DirectoryEntry_T * entry)
         for (size_t f = 0; f < 512; f += 32)
         {
             /* Free entry? */
-            if (temp_sector[f] == 0 || temp_sector[f] == 0xe5)
+            if (temp_sector[f] == (char)0 || temp_sector[f] == (char)0xe5)
             {
                 /* Yes, copy file entry and write back to disk. */
                 memcpy(&temp_sector[f], entry, 32);
@@ -408,17 +471,17 @@ int file_open_read(FileDescriptor_T * file)
     int error;
 
     /* Buffer into which we'll copy the file entry. */
-    uint8_t file_entry[32];
+    DirectoryEntry_T file_entry;
 
     /* Get relevent file entry. */
-    error = filesystem_get_directory_entry(file_entry, file->name);
+    error = filesystem_get_directory_entry(&file_entry, file->name);
     if (error != 0) return error;
 
     /* Get size in bytes. */
-    file->size = get_uint32_t(file_entry, 0x1c);
+    file->size = file_entry.size;
 
     /* Get start cluster. */
-    file->start_cluster = get_uint16_t(file_entry, 0x1a);
+    file->start_cluster = file_entry.starting_cluster;
     file->current_cluster = file->start_cluster;
 
     /* Sector (relative to cluster start) */
@@ -482,7 +545,7 @@ int file_open_write(FileDescriptor_T * file)
     /* FIXME: Actual creation date/time, once we can know what it is... */
     file_entry.creation_milliseconds = 0x00;
     file_entry.creation_time = 0x0000;
-    file_entry.creation_date = 0x0000;
+    file_entry.creation_date = 0x0021; /* Created: 1980-01-01... */
 
     /* Last access date; also the dawn of time. */
     file_entry.last_access_date = 0x0000;
@@ -532,7 +595,7 @@ int file_open(const char * filename, uint8_t mode)
     char filename_upper[13];
     memcpy(filename_upper, filename, 12);
     filename_upper[12] = '\0';
-    toupper(filename_upper);
+    string_toupper(filename_upper);
 
     /* Try to find a free file descriptor. */
     int fd = filesystem_assign_fd();
@@ -575,6 +638,67 @@ void file_close(int fd)
     }
 
     file->flags &= ~FD_FLAGS_CLAIMED;
+}
+
+/* Create a new file with the given name. */
+int file_new(const char * filename)
+{
+    /* Truncate and upper-case the filename. */
+    char filename_upper[13];
+    memcpy(filename_upper, filename, 12);
+    filename_upper[12] = '\0';
+    string_toupper(filename_upper);
+
+    /* Try to find a free file descriptor. */
+    int fd = filesystem_assign_fd();
+    if (fd < 0) return fd;
+
+    FileDescriptor_T * file = &fdtable[fd];
+    strcpy(file->name, filename_upper);
+
+    int error = file_open_write(file);
+
+    /* We always free the file descriptor because
+     * we are only creating the file.
+     */
+    file->flags &= ~FD_FLAGS_CLAIMED;
+
+    return error;
+}
+
+int file_delete(const char * filename)
+{
+    /* Truncate and upper-case the filename. */
+    char filename_upper[13];
+    memcpy(filename_upper, filename, 12);
+    filename_upper[12] = '\0';
+    string_toupper(filename_upper);
+
+    /* Get start cluster of file. */
+    DirectoryEntry_T direntry;
+
+    int error = filesystem_get_directory_entry(&direntry, filename_upper);
+
+    if (error != 0) return error;
+
+    uint16_t cluster = direntry.starting_cluster;
+
+    /* De-allocate each cluster allocated to this file. */
+    while (cluster != CLUSTER_EOF)
+    {
+        /* Get the next allocated cluster after this one. */
+        uint16_t next_cluster = fat_next_cluster(cluster);
+
+        /* Allocate *this* cluster. */
+        fat_deallocate_cluster(cluster);
+
+        /* Now move onto the next allocated cluster. */
+        cluster = next_cluster;
+    }
+
+    error = filesystem_mark_directory_entry_free(filename_upper);
+
+    return error;
 }
 
 int file_readbyte(int fd)
@@ -837,24 +961,24 @@ int file_info(const char * filename, FINFO * finfo)
     char filename_upper[13];
     memcpy(filename_upper, filename, 12);
     filename_upper[12] = '\0';
-    toupper(filename_upper);
+    string_toupper(filename_upper);
 
-    uint8_t direntry[32];
+    DirectoryEntry_T direntry;
     
     /* Search for the file in the directory. */
     /* Return error code if it does not exist. */
-    int error = filesystem_get_directory_entry(direntry, filename_upper);
+    int error = filesystem_get_directory_entry(&direntry, filename_upper);
     if (error != 0) return error;
 
-    finfo->attr = direntry[0x0b];
+    finfo->attr = direntry.attributes;
 
-    uint16_t creation_date = get_uint16_t(direntry, 0x10);
+    uint16_t creation_date = direntry.creation_date;
 
     finfo->created_year = 1980 + (creation_date >> 9);
     finfo->created_month = (creation_date >> 5) & 0x000f;
     finfo->created_day = creation_date & 0x001f;
 
-    finfo->size = get_uint32_t(direntry, 0x1c);
+    finfo->size = direntry.size;
 
     return 0;
 }

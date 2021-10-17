@@ -54,9 +54,12 @@ typedef struct _FileDescriptor
 
 int filesystem_init(void);
 
+int file_new(const char * filename);
+int file_delete(const char * filename);
 int file_open(const char * filename, uint8_t mode);
 int file_readbyte(int fd);
 size_t file_read(char * ptr, size_t n, int fd);
+size_t file_write(char * ptr, size_t n, int fd);
 void file_close(int fd);
 int file_info(const char * filename, FINFO * finfo);
 
