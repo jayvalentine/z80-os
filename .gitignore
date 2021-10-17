@@ -6,3 +6,4 @@ bin/
 *.diss
 *.map
 
+*/test/main.c

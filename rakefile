@@ -1,3 +1,5 @@
+require 'erb'
+
 require 'rake/clean'
 
 require 'fileutils'
@@ -165,14 +167,41 @@ end
 namespace 'test' do
     desc "Run kernel unit tests"
     task 'kernel' do
+        # Delete test exe and main.c if they exist.
+        if File.exist? "test_kernel.exe"
+            FileUtils.rm "test_kernel.exe"
+        end
+
+        if File.exist? "kernel/test/main.c"
+            FileUtils.rm "kernel/test/main.c"
+        end
+        
+        tests = []
+
+        # Get tests from test files.
+        Dir.glob("kernel/test/*.c").each do |f|
+            File.readlines(f).each do |l|
+                if /int (test_\S+)\(\)/ =~ l
+                    tests << $1
+                end
+            end
+        end
+
+        # Create the templated main.
+        template = File.read("kernel/test/main.c.erb")
+        erb = ERB.new(template)
+        File.write("kernel/test/main.c", erb.result(binding))
+
         # Compile test/main.c, other test/*.c, and kernel files for which
         # a file exists under test.
         # Include every source file but reset.asm, which is the startup code.
         src = []
 
         Dir.glob("kernel/test/*.c").each do |f|
+            next if f == "kernel/test/main.c"
+
             src << f
-            src << "kernel/#{File.basename(f)}" unless File.basename(f) == "main.c"
+            src << "kernel/#{File.basename(f)}"
         end
 
         # Add mock files
@@ -181,14 +210,21 @@ namespace 'test' do
         end
 
         cmd = "gcc "
-        cmd += "-O1 "
+        cmd += "-g -O1 "
         cmd += "-Ikernel "
         cmd += "-Ikernel/test/mock "
         cmd += "-o test_kernel.exe "
         cmd += src.join(" ")
+        cmd += " kernel/test/main.c"
 
-        puts cmd
         system(cmd)
+
+        # Now run tests.
+        if (!system("./test_kernel.exe"))
+            puts "TESTS FAILED"
+        else
+            puts "TESTS PASSED"
+        end
     end
 end
 
