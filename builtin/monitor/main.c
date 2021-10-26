@@ -78,10 +78,12 @@ int process_ihex_record(const char * rec)
 
 int main(char ** argv, size_t argc)
 {
+    printf("Z80 Debugger/Monitor.\n\r");
     char command[100];
     while (1)
     {
         /* Get command from user. */
+        printf("> ");
         gets(command);
 
         /* Is it an IHEX record? */

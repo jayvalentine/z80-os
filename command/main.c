@@ -160,28 +160,21 @@ void main()
             program[cmd_len] = '.';
             memcpy(&program[cmd_len+1], "EXE", 4);
 
-            int program_fd = syscall_fopen(program, FMODE_READ);
+            int load_result = syscall_pload(program);
 
-            if (program_fd == E_FILENOTFOUND)
+            if (load_result == E_FILENOTFOUND)
             {
                 printf("%s could not be found.\n\r", program);
             }
+            else if (load_result < 0)
+            {
+                printf("Error occurred loading program %s: %d\n\r", program, load_result);
+            }
             else
             {
-                printf("Loading %s...\n\r", program);
-                char * program_ram = 0x8000;
-                size_t program_size = 0x7000;
-                size_t bytes = syscall_fread(program_ram, program_size, program_fd);
+                syscall_sighandle(&cancel, 0);
 
-                if (bytes == 0)
-                {
-                    printf("Error reading %s\n\r", program);
-                }
-                else
-                {
-                    syscall_sighandle(&cancel, 0);
-                    exitcode = syscall_pexec(argv, argc);
-                }
+                exitcode = syscall_pexec(argv, argc);
             }
         }
         else

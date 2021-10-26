@@ -26,6 +26,8 @@ _syscall_table:
     defw    _do_sighandle
 
     defw    _do_fdelete
+    
+    defw    _do_pload
 
     PUBLIC  _syscall_handler
 
@@ -494,6 +496,26 @@ _do_sighandle:
 _do_fdelete:
     ; BC already on TOS.
     call    _file_delete
+
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+
+    ret
+
+    EXTERN  _process_load
+
+    ; 15: pload: Load an executable
+    ;
+    ; Parameters:
+    ; BC - pointer to filename
+    ;
+    ; Returns:
+    ; Error code for load operation, or 0 if successful.
+_do_pload:
+    ; BC already on TOS.
+    call    _process_load
 
     pop     BC
     pop     DE
