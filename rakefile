@@ -1,4 +1,5 @@
 require 'erb'
+require 'yaml'
 
 require 'rake/clean'
 
@@ -302,6 +303,11 @@ namespace 'build' do
 
         desc "Build executable for builtin program '#{builtin_name}'"
         task "builtin:#{builtin_name}" => ['lib:stdlib'] do
+            config = YAML.load_file(File.join(builtin, "config.yaml"))
+
+            base_address = config["origin"]
+            base_address_string = "0x%04X" % base_address
+
             src = (Dir.glob("#{builtin}/*.asm") + Dir.glob("#{builtin}/*.c"))
 
             cmd = "zcc "
@@ -309,17 +315,27 @@ namespace 'build' do
             cmd += "-O2 -SO2 "
             cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
             cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
-            cmd += "-Cl\"-r0x8000\" "
+            cmd += "-Cl\"-r#{base_address_string}\" "
             cmd += "-crt0 #{LIB}/crt0.asm "
             cmd += "-lstdlib "
             cmd += "-m "
-            cmd += "-o #{builtin_name}.exe "
+            cmd += "-o #{builtin_name}.exe.tmp "
             cmd += src.join(" ")
 
             success = system(cmd)
 
             if success
-                system("z88dk-dis -o 0x8000 #{builtin_name}.exe > #{builtin_name}.diss")
+                system("z88dk-dis -o #{base_address_string} #{builtin_name}.exe.tmp > #{builtin_name}.diss")
+
+                # Place magic numbers at start of binary.
+                File.open("#{builtin_name}.exe", "wb") do |f|
+                    f.write [ 0xa5, base_address && 0x00ff, (base_address >> 8) && 0x00ff ].pack("CC")
+                    File.open("#{builtin_name}.exe.tmp", "rb") do |f2|
+                        f2.each_byte do |b|
+                            f.write [ b ].pack("C")
+                        end
+                    end
+                end
             end
         end
     end
@@ -416,4 +432,5 @@ namespace 'test' do
     end
 end
 
-task "install", [:path] => ["install:kernel", "install:command"]
+task "install", [:path] => ["install:kernel", "install:command"] +
+    Dir.glob("builtin/*").map { |p| "install:builtin:#{File.basename(p)}" }
