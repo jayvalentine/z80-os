@@ -2,6 +2,7 @@ require 'minitest/test'
 require 'fileutils'
 
 require_relative '../../../zemu/lib/zemu'
+require_relative '../../../z80-libraries/vars.rb'
 
 # Serial Input/Output object
 #
@@ -109,6 +110,24 @@ class Serial6850 < Zemu::Config::IOPort
 end
 
 class IntegrationTest < Minitest::Test
+    def compile_test_code(test_files, output_name)
+        cmd = "zcc "
+        cmd += "+#{CONFIG} -compiler-sccz80 "
+        cmd += "-O2 -SO2 "
+        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
+        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
+        cmd += "-Cl\"-r0x6000\" "
+        cmd += "-crt0 command/reset.asm "
+        cmd += "-lstdlib "
+        cmd += "-m "
+        cmd += "-o #{output_name} "
+        cmd += test_files.join(" ")
+
+        success = system(cmd)
+
+        assert success, "Failed to build test code!"
+    end
+
     def start_instance(binary)
         binary_name = File.basename(binary, ".bin")
 
