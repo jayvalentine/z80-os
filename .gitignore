@@ -2,7 +2,6 @@ bin/
 .vscode/
 
 *.bin
-*.tmp
 *.exe
 *.diss
 *.map
