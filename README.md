@@ -1,6 +1,10 @@
 # z80-os
 
-An operating system for the humble Z80.
+An operating system for a Z80 computer, implemented mostly in C with some inline assembler.
+
+## License
+
+This software is licensed under GPLv3. For the full license terms, see [here](LICENSE).
 
 ## Overview
 
@@ -101,11 +105,11 @@ Low RAM                                  High RAM
       │                        │               │                        │
       │                        │               │                        │
       │                        │         0xF800├────────────────────────┤
-      │                        │               │ Special Purpose Area   │
+      │                        │               │ Stack                  │
       └────────────────────────┘               └────────────────────────┘
 ~~~~
 
 * Kernel: This is the memory area in which the kernel (including reset vectors) resides
 * Command Processor: This is the memory area in which the command processor resides
 * User Program Area: User programs are loaded into this memory area when executed
-* Special Purpose Area: Reserved for specific purposes - e.g. monitor code
+* Stack: Reserved for program stack. Stack pointer is initialized to `0xFFFF` on startup and grows down.
