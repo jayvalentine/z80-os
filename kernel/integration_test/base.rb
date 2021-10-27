@@ -114,7 +114,7 @@ class IntegrationTest < Minitest::Test
 
         # Create copy of the "master" disk image for this test case.
         disk_file_name = "#{binary_name}_disk.bin"
-        FileUtils.cp "/integration_test/disk.bin" disk_file_name
+        FileUtils.cp "kernel/integration_test/disk.bin", disk_file_name
 
         conf = Zemu::Config.new do
             name "zemu_#{binary_name}"
@@ -150,14 +150,14 @@ class IntegrationTest < Minitest::Test
                 data_port 0x01
             end)
 
-            add_io (BlockDrive.new do
+            add_io (Zemu::Config::BlockDrive.new do
                 name "drive"
                 base_port 0x18
                 sector_size 512
                 num_sectors 131072
 
                 initialize_from disk_file_name
-            )
+            end)
         end
 
         @instance = Zemu.start(conf)
