@@ -40,26 +40,36 @@ void main(void)
     /* Load command processor into the last 8k of low-RAM. */
     void * cp_addr = 0x6000;
 
+#ifdef DEBUG
+    /* Just call the program in the command processor memory
+     * directly, it will have been loaded by the test.
+     */
+    cp_main();
+#else
     int fd = syscall_fopen("COMMAND.BIN", FMODE_READ);
 
     if (fd == E_FILENOTFOUND)
     {
         puts("Error: COMMAND.BIN not found.\n\r");
+        return;
     }
-    else if (fd < 0)
+
+    if (fd < 0)
     {
         puts("Unknown error opening COMMAND.BIN.\n\r");
+        return;
     }
-    else
-    {
-        size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
-        syscall_fclose(fd);
 
-        if (bytes == 0) puts("Error reading COMMAND.BIN.\n\r");
-        else
-        {
-            printf("Read %u bytes.\n\r", bytes);
-            cp_main();
-        }
+    size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
+    syscall_fclose(fd);
+
+    if (bytes == 0)
+    {
+        puts("Error reading COMMAND.BIN.\n\r");
+        return;
     }
+
+    printf("Read %u bytes.\n\r", bytes);
+    cp_main();
+#endif
 }

@@ -118,6 +118,38 @@ namespace 'build' do
         end
     end
 
+    desc "Build kernel image in debug mode for tests"
+    task 'kernel_debug' => ['lib:stdlib'] do
+        # Include every source file but reset.asm, which is the startup code.
+        src = (Dir.glob("kernel/*.asm") + Dir.glob("kernel/*.c")) - ["kernel/reset.asm"]
+
+        cmd = "zcc "
+        cmd += "+#{CONFIG} -compiler-sccz80 "
+        cmd += "-O2 -SO2 "
+        cmd += "-DZ88DK "
+        cmd += "-DDEBUG " # Debug flag
+        cmd += "-Ikernel "
+        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
+        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
+        cmd += "-Cl\"-r0x0000\" "
+        cmd += "-crt0 kernel/reset.asm "
+        cmd += "-lstdlib "
+        cmd += "-m "
+        cmd += "-o kernel_debug.bin "
+        cmd += src.join(" ")
+
+        success = system(cmd)
+
+        if success
+            system("z88dk-dis -o 0x0000 kernel_debug.bin > kernel_debug.diss")
+
+            # Make sure that the kernel image is no more than 23Kb in size.
+            limit = 23 * 1024
+            bin = File.read("kernel_debug.bin", mode: "rb")
+            abort("Kernel image is too large: size is #{bin.size} (#{limit} expected)") if bin.size > limit
+        end
+    end
+
     desc "Build command processor image"
     task 'command' => ['lib:stdlib'] do
         # Include every source file but reset.asm, which is the startup code.
@@ -205,7 +237,7 @@ end
 namespace 'test' do
     namespace 'kernel' do
         desc "Run kernel integration tests"
-        Rake::TestTask.new :integration => "build:kernel" do |t|
+        Rake::TestTask.new :integration => "build:kernel_debug" do |t|
             t.test_files = FileList['kernel/integration_test/test_*.rb']
         end
 
