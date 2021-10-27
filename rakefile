@@ -265,4 +265,4 @@ namespace 'test' do
     end
 end
 
-task "install", [:path] => ["install:kernel", "install:command"]
+task "install", [:path] => ["install:kernel", "install:command"] + Dir.glob("builtin/*").map { |builtin| "install:builtin:#{File.basename(builtin)}" }
