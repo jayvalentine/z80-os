@@ -135,7 +135,7 @@ class IntegrationTest < Minitest::Test
                 address 0x6000
                 size    0x2000
                 
-                contents from_binary("kernel.bin")
+                contents from_binary(binary)
             end)
     
             add_memory (Zemu::Config::RAM.new do

@@ -16,7 +16,7 @@ class BootTest < IntegrationTest
         # Run, and expect to hit the breakpoint.
         @instance.continue
 
-        assert @instance.break?, "Did not hit breakpoint."
+        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
     end
 end
