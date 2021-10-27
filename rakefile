@@ -202,67 +202,71 @@ namespace 'install' do
 end
 
 namespace 'test' do
+    namespace 'kernel' do
     desc "Run kernel unit tests"
-    task 'kernel' do
-        # Delete test exe and main.c if they exist.
-        if File.exist? "test_kernel.exe"
-            FileUtils.rm "test_kernel.exe"
-        end
+        task 'unit' do
+            # Delete test exe and main.c if they exist.
+            if File.exist? "test_kernel.exe"
+                FileUtils.rm "test_kernel.exe"
+            end
 
-        if File.exist? "kernel/test/main.c"
-            FileUtils.rm "kernel/test/main.c"
-        end
-        
-        tests = []
+            if File.exist? "kernel/unit_test/main.c"
+                FileUtils.rm "kernel/unit_test/main.c"
+            end
+            
+            tests = []
 
-        # Get tests from test files.
-        Dir.glob("kernel/test/*.c").each do |f|
-            File.readlines(f).each do |l|
-                if /int (test_\S+)\(\)/ =~ l
-                    tests << $1
+            # Get tests from test files.
+            Dir.glob("kernel/unit_test/*.c").each do |f|
+                File.readlines(f).each do |l|
+                    if /int (test_\S+)\(\)/ =~ l
+                        tests << $1
+                    end
                 end
             end
-        end
 
-        # Create the templated main.
-        template = File.read("kernel/test/main.c.erb")
-        erb = ERB.new(template)
-        File.write("kernel/test/main.c", erb.result(binding))
+            # Create the templated main.
+            template = File.read("kernel/unit_test/main.c.erb")
+            erb = ERB.new(template)
+            File.write("kernel/unit_test/main.c", erb.result(binding))
 
-        # Compile test/main.c, other test/*.c, and kernel files for which
-        # a file exists under test.
-        # Include every source file but reset.asm, which is the startup code.
-        src = []
+            # Compile test/main.c, other test/*.c, and kernel files for which
+            # a file exists under test.
+            # Include every source file but reset.asm, which is the startup code.
+            src = []
 
-        Dir.glob("kernel/test/*.c").each do |f|
-            next if f == "kernel/test/main.c"
+            Dir.glob("kernel/unit_test/*.c").each do |f|
+                next if f == "kernel/unit_test/main.c"
 
-            src << f
-            src << "kernel/#{File.basename(f)}"
-        end
+                src << f
+                src << "kernel/#{File.basename(f)}"
+            end
 
-        # Add mock files
-        Dir.glob("kernel/test/mock/*.c").each do |f|
-            src << f
-        end
+            # Add mock files
+            Dir.glob("kernel/unit_test/mock/*.c").each do |f|
+                src << f
+            end
 
-        cmd = "gcc "
-        cmd += "-g -O1 "
-        cmd += "-Ikernel "
-        cmd += "-Ikernel/test/mock "
-        cmd += "-o test_kernel.exe "
-        cmd += src.join(" ")
-        cmd += " kernel/test/main.c"
+            cmd = "gcc "
+            cmd += "-g -O1 "
+            cmd += "-Ikernel "
+            cmd += "-Ikernel/unit_test/mock "
+            cmd += "-o test_kernel.exe "
+            cmd += src.join(" ")
+            cmd += " kernel/unit_test/main.c"
 
-        system(cmd)
+            system(cmd)
 
-        # Now run tests.
-        if (!system("./test_kernel.exe"))
-            puts "TESTS FAILED"
-        else
-            puts "TESTS PASSED"
+            # Now run tests.
+            if (!system("./test_kernel.exe"))
+                puts "TESTS FAILED"
+            else
+                puts "TESTS PASSED"
+            end
         end
     end
 end
+
+task "test" => ["test:kernel:unit"]
 
 task "install", [:path] => ["install:kernel", "install:command"] + Dir.glob("builtin/*").map { |builtin| "install:builtin:#{File.basename(builtin)}" }
