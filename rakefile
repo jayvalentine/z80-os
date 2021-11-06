@@ -237,7 +237,7 @@ end
 namespace 'test' do
     namespace 'kernel' do
         desc "Run kernel integration tests"
-        Rake::TestTask.new :integration => "build:kernel_debug" do |t|
+        Rake::TestTask.new 'integration' => "build:kernel_debug" do |t|
             t.test_files = FileList['kernel/integration_test/test_*.rb']
         end
 
@@ -305,6 +305,6 @@ namespace 'test' do
     end
 end
 
-task "test" => ["test:kernel:unit"]
+task "test" => ["test:kernel:unit", "test:kernel:integration"]
 
 task "install", [:path] => ["install:kernel", "install:command"] + Dir.glob("builtin/*").map { |builtin| "install:builtin:#{File.basename(builtin)}" }

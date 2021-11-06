@@ -5,13 +5,21 @@
 
 typedef int (*Command_T)(char **, size_t);
 
-#define process_main ((Command_T)0x8000)
-#define user_ram ((char *)0x8000)
+#define user_ram(addr) ((char *)addr)
 
 #define PROGRAM_KB_LIMIT 28
 
-int process_exec(char ** argv, size_t argc)
+#define PHDR_SIZE 2
+
+#define PHDR_ID 0
+#define PHDR_ID_EXEC 0x0a
+
+#define PHDR_PAGE 1
+#define USER_RAM_START_PAGE 0x80
+
+int process_exec(uint16_t address, char ** argv, size_t argc)
 {
+    Command_T process_main = (Command_T)address;
     return process_main(argv, argc);
 }
 
@@ -28,12 +36,31 @@ int process_exec(char ** argv, size_t argc)
  */
 int process_load(const char * filename)
 {
-    char * user_ram_ptr = user_ram;
-
     int fd = file_open(filename, FMODE_READ);
 
     /* Return early if error. */
     if (fd < 0) return fd;
+
+    /* Read header of executable file. */
+    char header[PHDR_SIZE];
+    size_t header_size = file_read(header, PHDR_SIZE, fd);
+
+    /* Check header size. We should have loaded the right number of bytes. */
+    if (header_size != PHDR_SIZE) return E_INVALIDHEADER;
+
+    /* Check header byte. 0x0a is executable file. */
+    if (header[PHDR_ID] != PHDR_ID_EXEC) return E_INVALIDHEADER;
+
+    /* Base address page is second byte of header. */
+    uint8_t base_addr_page = header[PHDR_PAGE];
+
+    /* Check page is valid. */
+    if (base_addr_page < USER_RAM_START_PAGE) return E_INVALIDPAGE;
+
+    /* Yes, so load the file into that page. */
+    uint16_t base_addr = (uint16_t)base_addr_page << 8;
+
+    char * user_ram_ptr = user_ram(base_addr);
 
     /* Otherwise read the contents of the file
      * and write to user RAM.

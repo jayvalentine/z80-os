@@ -456,11 +456,12 @@ _do_fentry:
     ; Parameters:
     ; BC - argc
     ; DE - argv
+    ; HL - address
     ;
     ; Returns:
     ; (int) exit code of executable.
 _do_pexec:
-    ; BC and DE are on top of stack.
+    ; HL, BC and DE are on top of stack.
     call    _process_exec
 
     ; Restore BC, DE, but not HL (return value).
