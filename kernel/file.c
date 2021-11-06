@@ -450,7 +450,7 @@ int file_create(DirectoryEntry_T * entry)
             if (temp_sector[f] == (char)0 || temp_sector[f] == (char)0xe5)
             {
                 /* Yes, copy file entry and write back to disk. */
-                memcpy(&temp_sector[f], entry, 32);
+                memcpy(&temp_sector[f], (char *)entry, 32);
                 syscall_dwrite(temp_sector, sector);
                 return 0;
             }

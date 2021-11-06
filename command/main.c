@@ -28,7 +28,6 @@
 #include "chmod.h"
 #include "dir.h"
 #include "type.h"
-#include "debug.h"
 #include "load.h"
 #include "del.h"
 
@@ -68,7 +67,7 @@ void cancel(uint16_t address)
 
 typedef int (*Command_T)(char **, size_t);
 
-#define NUM_COMMANDS 7
+#define NUM_COMMANDS 6
 
 typedef struct _Inbuilt
 {
@@ -93,10 +92,6 @@ const Inbuilt_T commands[NUM_COMMANDS] =
     {
         "TYPE",
         &command_type
-    },
-    {
-        "DEBUG",
-        &command_debug
     },
     {
         "LOAD",
@@ -160,7 +155,9 @@ void main()
             program[cmd_len] = '.';
             memcpy(&program[cmd_len+1], "EXE", 4);
 
-            int load_result = syscall_pload(program);
+            uint16_t load_address;
+
+            int load_result = syscall_pload(&load_address, program);
 
             if (load_result == E_FILENOTFOUND)
             {
@@ -174,7 +171,7 @@ void main()
             {
                 syscall_sighandle(&cancel, 0);
 
-                exitcode = syscall_pexec(argv, argc);
+                exitcode = syscall_pexec(load_address, argv, argc);
             }
         }
         else

@@ -510,12 +510,13 @@ _do_fdelete:
     ; 15: pload: Load an executable
     ;
     ; Parameters:
+    ; DE - pointer to address
     ; BC - pointer to filename
     ;
     ; Returns:
     ; Error code for load operation, or 0 if successful.
 _do_pload:
-    ; BC already on TOS.
+    ; BC, DE already on TOS.
     call    _process_load
 
     pop     BC

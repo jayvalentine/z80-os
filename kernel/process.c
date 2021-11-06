@@ -29,12 +29,14 @@ int process_exec(uint16_t address, char ** argv, size_t argc)
  * Loads a file with the given name into user RAM.
  * 
  * Parameters:
+ * address:  Pointer to address to update with location
+ *           of loaded executable.
  * filename: Name of the executable file to load.
  * 
  * Returns:
  * 0 if loaded successfully, <0 if file error occurred.
  */
-int process_load(const char * filename)
+int process_load(uint16_t * address, const char * filename)
 {
     int fd = file_open(filename, FMODE_READ);
 
@@ -71,5 +73,7 @@ int process_load(const char * filename)
         if (bytes != 1024) break;
     }
 
+    /* Update address. Return success. */
+    *address = base_addr;
     return 0;
 }
