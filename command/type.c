@@ -3,7 +3,7 @@
 
 #include "type.h"
 
-#define TYPE_BUF_SIZE 512
+#define TYPE_BUF_SIZE 128
 
 int command_type(char ** argv, size_t argc)
 {
@@ -30,8 +30,17 @@ int command_type(char ** argv, size_t argc)
         /* Print the contents of the file. */
         while ((bytes = syscall_fread(type_buf, TYPE_BUF_SIZE, fd)) > 0)
         {
-            type_buf[bytes] = '\0';
+            /* Get location of first SUB */
+            size_t end_index;
+            for (end_index = 0; end_index < bytes; end_index++)
+            {
+                if (type_buf[end_index] == 0x1a) break;
+            }
+
+            type_buf[end_index] = '\0';
             puts(type_buf);
+
+            for (int i = 0; i < 2000; i++);
         }
 
         syscall_fclose(fd);

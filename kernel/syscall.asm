@@ -29,6 +29,8 @@ _syscall_table:
     
     defw    _do_pload
 
+    defw    _do_smode
+
     PUBLIC  _syscall_handler
 
     ; Syscall handler.
@@ -523,6 +525,30 @@ _do_pload:
     pop     DE
     inc     SP
     inc     SP
+
+    ret
+
+    EXTERN  _serial_mode
+
+    ; 16: smode: Set serial mode
+    ;
+    ; Parameters:
+    ; C - mode
+    ;
+    ; Returns:
+    ; Nothing.
+_do_smode:
+    ; Needs to be an atomic operation.
+    di
+
+    ; BC already on TOS.
+    call    _serial_mode
+
+    pop     BC
+    pop     DE
+    pop     HL
+
+    ei
 
     ret
 

@@ -170,12 +170,12 @@ void main()
             else
             {
                 syscall_sighandle(&cancel, 0);
-
                 exitcode = syscall_pexec(load_address, argv, argc);
             }
         }
         else
         {
+            syscall_sighandle(&cancel, 0);
             exitcode = command_to_run->run(argv, argc);
         }
     }

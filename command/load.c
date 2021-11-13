@@ -3,72 +3,69 @@
 #include <string.h>
 #include <setjmp.h>
 
-jmp_buf env;
+#define ACK 0x06
+#define NAK 0x15
+#define EOT 0x04
 
-void cancel_handler(uint16_t val)
-{
-    longjmp(env, 1);
-}
+char data[128];
 
 int command_load(char ** argv, size_t argc)
 {
-    if (argc < 1)
+    if (argc != 1)
     {
-        puts("Usage: LOAD <filename>\n\r");
-        return 1;
+        puts("Usage: load <file>\r\n");
     }
 
-    char * filename = argv[0];
-    int fd = syscall_fopen(filename, FMODE_WRITE);
+    int fd = syscall_fopen(argv[0], FMODE_WRITE);
 
-    if (fd != 0)
-    {
-        if (fd == E_FILEEXIST)
-        {
-            printf("File %s already exists.\n\r", filename);
-        }
-        else
-        {
-            puts("Unknown error while opening file.\n\r");
-        }
-
-        return 2;
-    }
-
-    /* Set up handler. */
-    syscall_sighandle(cancel_handler, SIG_CANCEL);
-
-    size_t bytes_total = 0;
-    char temp[128];
-
+    /* Wait for user confirmation. */
+    puts("Press <r> to begin receiving...\r\n");
     while (1)
     {
-        int val = setjmp(env);
-        if (val != 0) break;
-
-        gets(temp);
-        if (strlen(temp) == 0) break;
-        
-        memcpy(temp + strlen(temp), "\n\r", 3);
-
-        size_t bytes = syscall_fwrite(temp, strlen(temp), fd);
-
-        if (bytes == 0)
-        {
-            puts("Error writing file.\n\r");
-            syscall_fclose(fd);
-            return 3;
-        }
-
-        bytes_total += bytes;
+        char c = getchar();
+        if (c == 'r') break;
     }
 
-    char term = '\0';
+    syscall_smode(SMODE_BINARY);
 
-    syscall_fwrite(&term, 1, fd);
+    /* Send initial NAK */
+    putchar(NAK);
+    
+    while (1)
+    {
+        /* Get header. */
+        uint8_t header = getchar();
 
-    /* Exit due to cancel. */
+        /* End of transmission? */
+        if (header == EOT) break;
+
+        /* Get packet number. */
+        getchar();
+        getchar();
+
+        /* Get data - 128 bytes. */
+        for (uint8_t i = 0; i < 128; i++)
+        {
+            char c = getchar();
+            data[i] = c;
+        }
+
+        /* Get checksum. */
+        getchar();
+
+        /* Write data to file. */
+        syscall_fwrite(data, 128, fd);
+
+        /* Now send ACK. */
+        putchar(ACK);
+    }
+
+    /* Send final ACK? */
+    putchar(ACK);
+
     syscall_fclose(fd);
-    printf("Wrote %u bytes.\n\r", bytes_total);
+
+    syscall_smode(0x00);
+
     return 0;
 }

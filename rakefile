@@ -6,6 +6,8 @@ require 'rake/testtask'
 
 require 'fileutils'
 
+require_relative 'zemu/config'
+
 load '../z80-libraries/tasks.rake'
 
 CLEAN.include("**/*.o", "**/*.bin", "**/*.hex", "**/*.diss", "**/*.lib", "**/*.lis", "**/*.map", "**/*.sym", "**/*.exe")
@@ -40,6 +42,11 @@ def compile(output_name, source_files, include_dirs, defines, crt, origin)
     cmd += source_files.join(" ")
 
     return system(cmd)
+end
+
+desc 'Start an instance of Z80-OS in the Zemu interactive debugger.'
+task 'debug' => ['build:kernel_debug', 'build:command'] do
+    zemu_start()
 end
 
 namespace 'build' do
@@ -142,7 +149,7 @@ namespace 'build' do
         # Include every source file but reset.asm, which is the startup code.
         src = (Dir.glob("kernel/*.asm") + Dir.glob("kernel/*.c")) - ["kernel/reset.asm"]
 
-        success = compile("kernel.bin", src, ["kernel"], ["DEBUG"], "kernel/reset.asm", 0x0000)
+        success = compile("kernel_debug.bin", src, ["kernel"], ["DEBUG"], "kernel/reset.asm", 0x0000)
 
         if success
             system("z88dk-dis -o 0x0000 kernel_debug.bin > kernel_debug.diss")

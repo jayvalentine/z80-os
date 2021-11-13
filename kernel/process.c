@@ -71,6 +71,7 @@ int process_load(uint16_t * address, const char * filename)
     {
         size_t bytes = file_read(user_ram_ptr, 1024, fd);
         if (bytes != 1024) break;
+        user_ram_ptr += 1024;
     }
 
     /* Update address. Return success. */

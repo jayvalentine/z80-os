@@ -57,6 +57,8 @@ __interrupt_handle_ret:
 
     EXTERN  _signal_cancel
 
+    EXTERN  _serial_current_mode
+
 _serial_read_handler:
     ; Save interrupt return address.
     push    HL
@@ -71,12 +73,18 @@ _serial_read_handler:
     ; Read data from UART.
     in      A, (UART_PORT_DATA)
 
-    ; Handle special characters.
+    ; Handle special characters if in interactive mode.
+    ld      C, A
+    ld      A, (_serial_current_mode)
+    cp      0
+    ld      A, C
+    jp      nz, _serial_read_byte
     
     ; $18 (CANCEL) - triggers SIG_CANCEL
     cp      $18
     jp      z, _serial_signal_cancel
 
+_serial_read_byte:
     ; Store received character.
     ld      (HL), A
 

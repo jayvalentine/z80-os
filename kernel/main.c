@@ -29,16 +29,12 @@ typedef void (*cp_main_t)(void);
 
 void main(void)
 {
+#ifndef DEBUG
     puts("Initialising kernel... ");
+#endif
 
     filesystem_init();
     signal_init();
-
-    puts("Done.\n\r");
-    puts("Loading command processor... ");
-
-    /* Load command processor into the last 8k of low-RAM. */
-    void * cp_addr = 0x6000;
 
 #ifdef DEBUG
     /* Just call the program in the command processor memory
@@ -46,6 +42,12 @@ void main(void)
      */
     cp_main();
 #else
+    puts("Done.\n\r");
+    puts("Loading command processor... ");
+
+    /* Load command processor into the last 8k of low-RAM. */
+    void * cp_addr = 0x6000;
+
     int fd = syscall_fopen("COMMAND.BIN", FMODE_READ);
 
     if (fd == E_FILENOTFOUND)

@@ -160,6 +160,41 @@ class ProcessTest < IntegrationTest
         assert_equal 0xe9, @instance.memory(0x8004)
     end
 
+    def test_pload_large
+        compile_test_code(["kernel/integration_test/test_pload_large.c"], "test_pload_large.bin")
+
+        start_instance("test_pload_large.bin")
+
+        # We expect to start executing at 0x6000,
+        # where the command-processor would reside normally.
+        @instance.break 0x6000, :program
+        
+        # Run, and expect to hit the breakpoint.
+        @instance.continue
+
+        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
+        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
+
+        # Then continue until halt.
+        # By this point the file should have been loaded at 0x8000.
+        @instance.continue 10000000
+        assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
+        assert_equal 0x0000, @instance.registers["HL"]
+        
+        # Assert contents of memory.
+        # First 2048 bytes should be 128-byte blocks of 10..25.
+        base = 0
+        (0...16).each do |i|
+            128.times do |j|
+                address = 0x8000 + base + j
+                expected = i+10
+                actual = @instance.memory(address)
+                assert_equal expected, actual, "Mismatch at address %04x (expected %d, got %d)" % [address, expected, actual]
+            end
+            base += 128
+        end
+    end
+
     def test_pload_different_address
         compile_test_code(["kernel/integration_test/test_pload_different_address.c"], "test_pload_different_address.bin")
 
