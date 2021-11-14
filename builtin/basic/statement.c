@@ -35,17 +35,12 @@ static void statement_tokenize_string(uint8_t ** dst_ptr, const char ** input_pt
  */
 void statement_tokenize(uint8_t * stmt, char * input)
 {
-    printf("Tokenizing at %x (stmt %x)\r\n", (uint16_t)input, (uint16_t)stmt);
     statement_tokenize_string(&stmt, &input);
 
     while (1)
     {
         while (*input == ' ') input++;
         if (*input == '\0') break;
-
-        printf("Tokenizing at %x (stmt %x): ", (uint16_t)input, (uint16_t)stmt);
-        putchar(*input);
-        puts("\r\n");
 
         statement_tokenize_string(&stmt, &input);
     }
@@ -63,16 +58,19 @@ void statement_tokenize(uint8_t * stmt, char * input)
  *     stmt: Token stream to interpret.
  * 
  * Returns:
- *     nothing.
+ *     error, if any.
  */
-void statement_interpret(const uint8_t * stmt)
+error_t statement_interpret(const uint8_t * stmt)
 {
-    for (int i = 0; i < 16; i++)
-    {
-        uint16_t tok = *stmt;
-        printf("%x ", tok);
-        stmt++;
-    }
+    uint8_t tok_type = *stmt;
+    stmt++;
 
-    puts("\r\n");
+    error_t error = ERROR_NOERROR;
+
+    if (tok_type == TOK_KEYWORD)
+    {
+        kw_code kw = *stmt;
+        stmt++;
+        return t_keyword_interpret(kw, stmt);
+    }
 }

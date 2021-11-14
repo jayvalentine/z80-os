@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "statement.h"
+#include "errors.h"
 
 char input[256];
 uint8_t statement[256];
@@ -22,6 +23,11 @@ int user_main(char ** argv, size_t argc)
         gets(input);
 
         statement_tokenize(statement, input);
-        statement_interpret(statement);
+
+        error_t error = statement_interpret(statement);
+        if (error != ERROR_NOERROR)
+        {
+            error_display(error);
+        }
     }
 }

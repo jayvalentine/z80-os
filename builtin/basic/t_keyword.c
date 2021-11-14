@@ -1,6 +1,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "errors.h"
+
 #include "t_defs.h"
 #include "t_keyword.h"
 
@@ -54,4 +56,38 @@ int t_keyword_parse(uint8_t ** dst_ptr, const char ** input_ptr)
     }
 
     return 0;
+}
+
+error_t do_print(const uint8_t * toks)
+{
+    /* Next token must be a string. */
+    if (*toks != TOK_STRING) return ERROR_SYNTAX;
+    toks++;
+
+    /* Now size of the string. */
+    uint8_t size = *toks;
+    toks++;
+
+    /* Now print the string. */
+    for (uint8_t i = 0; i < size; i++)
+    {
+        char c = *toks;
+        toks++;
+        putchar(c);
+    }
+
+    puts("\r\n");
+}
+
+const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
+{
+    do_print
+};
+
+error_t t_keyword_interpret(kw_code kw, const uint8_t * toks)
+{
+    uint8_t index = kw - KEYWORD_BASE;
+    if (kw >= NUM_KEYWORDS) return ERROR_SYNTAX;
+
+    return keyword_funcs[index](toks);
 }

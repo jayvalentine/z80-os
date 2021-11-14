@@ -1,6 +1,8 @@
 #ifndef _STATEMENT_H
 #define _STATEMENT_H
 
+#include "errors.h"
+
 /* statement_tokenize
  *
  * Purpose:
@@ -24,8 +26,8 @@ void statement_tokenize(uint8_t * stmt, char * input);
  *     stmt: Token stream to interpret.
  * 
  * Returns:
- *     nothing.
+ *     error, if any.
  */
-void statement_interpret(const uint8_t * stmt);
+error_t statement_interpret(const uint8_t * stmt);
 
 #endif

@@ -22,8 +22,6 @@ int t_string_parse(uint8_t ** dst_ptr, const char ** input_ptr)
 
     if (*input != '"') return 0;
 
-    puts("IS STRING\r\n");
-
     *dst = TOK_STRING;
     dst++;
 
@@ -42,14 +40,10 @@ int t_string_parse(uint8_t ** dst_ptr, const char ** input_ptr)
         str_size++;
     }
 
-    printf("SIZE: %x\r\n", str_size);
-
     *size = str_size;
 
     /* Skip final '"' */
     *input++;
-
-    printf("DONE AT %x (stmt %x)\r\n", (uint16_t)input, (uint16_t)dst);
 
     /* Update pointers. */
     *input_ptr = input;
