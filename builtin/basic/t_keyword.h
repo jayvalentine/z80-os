@@ -5,7 +5,7 @@
 
 #include "errors.h"
 
-#define NUM_KEYWORDS 3
+#define NUM_KEYWORDS 4
 
 #define KEYWORD_UNDEFINED 0
 
@@ -14,6 +14,7 @@
 #define KEYWORD_PRINT 1
 #define KEYWORD_LIST 2
 #define KEYWORD_NEW 3
+#define KEYWORD_RUN 4
 
 typedef uint8_t kw_code;
 

@@ -30,4 +30,6 @@ error_t statement_tokenize(uint8_t * stmt, char * input);
  */
 error_t statement_interpret(const uint8_t * stmt);
 
+uint8_t statement_size(const uint8_t * stmt);
+
 #endif

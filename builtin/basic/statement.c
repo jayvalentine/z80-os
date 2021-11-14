@@ -62,6 +62,21 @@ error_t statement_tokenize(uint8_t * stmt, char * input)
     *stmt = TOK_TERMINATOR;
 }
 
+uint8_t statement_size(const uint8_t * stmt)
+{
+    uint8_t size = 0;
+    while (*stmt != TOK_TERMINATOR)
+    {
+        uint8_t tok_size = t_defs_size(stmt);
+        size += tok_size;
+        stmt += tok_size;
+    }
+
+    /* Account for final terminator. */
+    size++;
+    return size;
+}
+
 /* statement_interpret
  *
  * Purpose:
@@ -75,6 +90,7 @@ error_t statement_tokenize(uint8_t * stmt, char * input)
  */
 error_t statement_interpret(const uint8_t * stmt)
 {
+#ifdef DEBUG
     uint8_t * p = stmt;
     while (*p != TOK_TERMINATOR)
     {
@@ -89,6 +105,7 @@ error_t statement_interpret(const uint8_t * stmt)
         puts("! ");
     }
     puts("\r\n");
+#endif
 
     uint8_t tok_type = *stmt;
     error_t error = ERROR_NOERROR;

@@ -11,4 +11,6 @@ error_t program_insert(const uint8_t * toks);
 
 void program_list(void);
 
+error_t program_run(void);
+
 #endif
