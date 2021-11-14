@@ -21,4 +21,6 @@
  */
 int t_string_parse(uint8_t ** stmt, const char ** input);
 
+const uint8_t * t_string_list(const uint8_t * toks);
+
 #endif

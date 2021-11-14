@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "errors.h"
+#include "program.h"
 
 #include "t_defs.h"
 #include "t_keyword.h"
@@ -11,6 +12,14 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "PRINT",
         KEYWORD_PRINT
+    },
+    {
+        "LIST",
+        KEYWORD_LIST
+    },
+    {
+        "NEW",
+        KEYWORD_NEW
     }
 };
 
@@ -77,17 +86,52 @@ error_t do_print(const uint8_t * toks)
     }
 
     puts("\r\n");
+
+    return ERROR_NOERROR;
+}
+
+error_t do_list(const uint8_t * toks)
+{
+    program_list();
+    return ERROR_NOERROR;
+}
+
+error_t do_new(const uint8_t * toks)
+{
+    program_new();
+    return ERROR_NOERROR;
 }
 
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
-    do_print
+    do_print,
+    do_list,
+    do_new
 };
 
 error_t t_keyword_interpret(kw_code kw, const uint8_t * toks)
 {
     uint8_t index = kw - KEYWORD_BASE;
-    if (kw >= NUM_KEYWORDS) return ERROR_SYNTAX;
+    if (index >= NUM_KEYWORDS) return ERROR_UNDEFINED_KW;
 
     return keyword_funcs[index](toks);
+}
+
+const uint8_t * t_keyword_list(const uint8_t * toks)
+{
+    kw_code kw = *toks;
+    toks++;
+
+    for (int i = 0; i < NUM_KEYWORDS; i++)
+    {
+        if (kw == keywords[i].code)
+        {
+            puts(keywords[i].str);
+            break;
+        }
+    }
+
+    putchar(' ');
+
+    return toks;
 }

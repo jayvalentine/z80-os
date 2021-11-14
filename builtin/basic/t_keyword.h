@@ -5,12 +5,15 @@
 
 #include "errors.h"
 
-#define NUM_KEYWORDS 2
+#define NUM_KEYWORDS 3
 
 #define KEYWORD_UNDEFINED 0
 
 #define KEYWORD_BASE 1
+
 #define KEYWORD_PRINT 1
+#define KEYWORD_LIST 2
+#define KEYWORD_NEW 3
 
 typedef uint8_t kw_code;
 
@@ -23,6 +26,7 @@ typedef struct _Keyword_T
 } Keyword_T;
 
 int t_keyword_parse(uint8_t ** dst, const char ** s);
+const uint8_t * t_keyword_list(const uint8_t * toks);
 
 error_t t_keyword_interpret(kw_code kw, const uint8_t * toks);
 

@@ -51,3 +51,21 @@ int t_string_parse(uint8_t ** dst_ptr, const char ** input_ptr)
 
     return 1;
 }
+
+const uint8_t * t_string_list(const uint8_t * toks)
+{
+    putchar('"');
+
+    uint8_t size = *toks;
+    toks++;
+
+    for (uint8_t i = 0; i < size; i++)
+    {
+        char c = *toks;
+        toks++;
+        putchar(c);
+    }
+
+    puts("\" ");
+    return toks;
+}

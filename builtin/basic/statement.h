@@ -13,9 +13,9 @@
  *     input: Buffer containing input to be tokenized
  * 
  * Returns:
- *     nothing.
+ *     error, if any.
  */
-void statement_tokenize(uint8_t * stmt, char * input);
+error_t statement_tokenize(uint8_t * stmt, char * input);
 
 /* statement_interpret
  *

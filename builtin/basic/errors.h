@@ -7,6 +7,7 @@ typedef uint8_t error_t;
 
 #define ERROR_NOERROR 0
 #define ERROR_SYNTAX 1
+#define ERROR_UNDEFINED_KW 2
 
 void error_display(error_t error);
 
