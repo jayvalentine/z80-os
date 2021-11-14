@@ -6,7 +6,7 @@
 #define NUM_KEYWORDS 1
 
 #define KEYWORD_UNDEFINED 0
-#define KEYWORD_PRINT 128
+#define KEYWORD_PRINT 1
 
 typedef uint8_t kw_code; 
 
@@ -16,6 +16,6 @@ typedef struct _Keyword_T
     kw_code code;
 } Keyword_T;
 
-kw_code keyword_parse(const char * s);
+int keyword_parse(uint8_t ** dst, const char ** s);
 
 #endif

@@ -5,24 +5,20 @@
 #include "statement.h"
 #include "keyword.h"
 
+#include "t_defs.h"
+#include "t_string.h"
+
 /* Tokenize a substring of a statement,
  * returning a pointer to the next byte to be filled
  * in the token stream.
  */
-static uint8_t * statement_tokenize_string(uint8_t * dst, const char * input)
+static void statement_tokenize_string(uint8_t ** dst_ptr, const char ** input_ptr)
 {
-    kw_code keyword = keyword_parse(input);
+    /* Is this a string? */
+    if (t_string_parse(dst_ptr, input_ptr)) return;
 
-    if (keyword == KEYWORD_UNDEFINED)
-    {
-        *dst = 0x0f;
-    }
-    else
-    {
-        *dst = keyword;
-    }
-
-    return dst + 1; 
+    /* Otherwise it must be a keyword. */
+    if (keyword_parse(dst_ptr, input_ptr)) return;
 }
 
 /* statement_tokenize
@@ -39,24 +35,23 @@ static uint8_t * statement_tokenize_string(uint8_t * dst, const char * input)
  */
 void statement_tokenize(uint8_t * stmt, char * input)
 {
-    const char * s;
-
-    /* Expect at least one substring. */
-    s = strtok(input, " ");
-
-    stmt = statement_tokenize_string(stmt, s);
+    printf("Tokenizing at %x (stmt %x)\r\n", (uint16_t)input, (uint16_t)stmt);
+    statement_tokenize_string(&stmt, &input);
 
     while (1)
     {
-        s = strtok(NULL, " ");
+        while (*input == ' ') input++;
+        if (*input == '\0') break;
 
-        if (s == NULL) break;
+        printf("Tokenizing at %x (stmt %x): ", (uint16_t)input, (uint16_t)stmt);
+        putchar(*input);
+        puts("\r\n");
 
-        stmt = statement_tokenize_string(stmt, s);
+        statement_tokenize_string(&stmt, &input);
     }
 
     /* Final terminating character. */
-    *stmt = 0;
+    *stmt = TOK_TERMINATOR;
 }
 
 /* statement_interpret
@@ -72,7 +67,7 @@ void statement_tokenize(uint8_t * stmt, char * input)
  */
 void statement_interpret(const uint8_t * stmt)
 {
-    while (*stmt != 0)
+    for (int i = 0; i < 16; i++)
     {
         uint16_t tok = *stmt;
         printf("%x ", tok);
