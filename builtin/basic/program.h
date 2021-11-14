@@ -5,6 +5,8 @@
 
 #include "errors.h"
 
+uint16_t program_free(void);
+
 void program_new(void);
 
 error_t program_insert(const uint8_t * toks);

@@ -9,7 +9,14 @@
 extern uint8_t _tail;
 
 #define program_start (&_tail)
+#define program_max ((uint8_t *)0xe000)
+
 uint8_t * program_end;
+
+uint16_t program_free(void)
+{
+    return (uint16_t)(program_max - program_end);
+}
 
 void program_new(void)
 {
