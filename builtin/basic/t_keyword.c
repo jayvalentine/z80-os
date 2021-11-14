@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "keyword.h"
 #include "t_defs.h"
+#include "t_keyword.h"
 
 const Keyword_T keywords[NUM_KEYWORDS] =
 {
@@ -12,7 +12,7 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     }
 };
 
-int keyword_parse(uint8_t ** dst_ptr, const char ** input_ptr)
+int t_keyword_parse(uint8_t ** dst_ptr, const char ** input_ptr)
 {
     char kw_str[11];
     size_t len = 0;

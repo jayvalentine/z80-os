@@ -16,6 +16,6 @@ typedef struct _Keyword_T
     kw_code code;
 } Keyword_T;
 
-int keyword_parse(uint8_t ** dst, const char ** s);
+int t_keyword_parse(uint8_t ** dst, const char ** s);
 
 #endif

@@ -3,10 +3,10 @@
 #include <stdio.h>
 
 #include "statement.h"
-#include "keyword.h"
 
 #include "t_defs.h"
 #include "t_string.h"
+#include "t_keyword.h"
 
 /* Tokenize a substring of a statement,
  * returning a pointer to the next byte to be filled
@@ -18,7 +18,7 @@ static void statement_tokenize_string(uint8_t ** dst_ptr, const char ** input_pt
     if (t_string_parse(dst_ptr, input_ptr)) return;
 
     /* Otherwise it must be a keyword. */
-    if (keyword_parse(dst_ptr, input_ptr)) return;
+    if (t_keyword_parse(dst_ptr, input_ptr)) return;
 }
 
 /* statement_tokenize
