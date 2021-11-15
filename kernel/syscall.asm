@@ -83,6 +83,7 @@ _do_swrite:
     push    DE
     push    BC
 
+__swrite_wait_available_loop:
     ; This needs to be an atomic operation; Disable interrupts.
     di
 
@@ -93,6 +94,21 @@ _do_swrite:
     ld      A, (_tx_buf_offs_head)
     ld      E, A
     ld      A, (_tx_buf_offs_tail)
+
+    ; If head is one less than tail,
+    ; we need to wait until that isn't the case.
+__swrite_is_available:
+    inc     E
+    cp      E
+    jp      nz, __swrite_continue
+
+    ei
+    nop
+    jp      __swrite_wait_available_loop
+
+__swrite_continue:
+    ; Otherwise decrement E and continue.
+    dec     E
 
     ; If head and tail are equal, we need to enable interrupts before appending to the buffer.
     cp      E
