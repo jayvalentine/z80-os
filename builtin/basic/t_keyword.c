@@ -6,6 +6,7 @@
 
 #include "t_defs.h"
 #include "t_keyword.h"
+#include "t_numeric.h"
 
 const Keyword_T keywords[NUM_KEYWORDS] =
 {
@@ -28,6 +29,10 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "END",
         KEYWORD_END
+    },
+    {
+        "GOTO",
+        KEYWORD_GOTO
     }
 };
 
@@ -120,13 +125,27 @@ error_t do_end(const uint8_t * toks)
     return program_end(ERROR_NOERROR);
 }
 
+error_t do_goto(const uint8_t * toks)
+{
+    /* Next token must be numeric. */
+    uint8_t tok_type = *toks;
+    toks++;
+
+    if (tok_type != TOK_NUMERIC) return ERROR_SYNTAX;
+
+    int lineno = t_numeric_get(toks);
+    program_set_next_lineno(lineno);
+    return ERROR_NOERROR;
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
     do_list,
     do_new,
     do_run,
-    do_end
+    do_end,
+    do_goto
 };
 
 error_t t_keyword_interpret(kw_code kw, const uint8_t * toks)

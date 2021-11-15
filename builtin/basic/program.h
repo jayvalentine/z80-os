@@ -55,4 +55,17 @@ int program_current_lineno(void);
  */
 int program_next_lineno(void);
 
+/* program_set_next_lineno
+ *
+ * Purpose:
+ *     Set the next line number to be executed.
+ * 
+ * Parameters:
+ *     Integer line number.
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void program_set_next_lineno(int lineno);
+
 #endif

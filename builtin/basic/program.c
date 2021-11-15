@@ -176,6 +176,22 @@ int program_current_lineno(void)
     return current_lineno;
 }
 
+/* program_set_next_lineno
+ *
+ * Purpose:
+ *     Set the next line number to be executed.
+ * 
+ * Parameters:
+ *     Integer line number.
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void program_set_next_lineno(int lineno)
+{
+    next_lineno = lineno;
+}
+
 /* program_next_lineno
  *
  * Purpose:
