@@ -12,20 +12,44 @@ extern uint8_t _tail;
 #define program_start (&_tail)
 #define program_max ((uint8_t *)0xe000)
 
-uint8_t * program_end;
+uint8_t * program_end_ptr;
 const uint8_t * program_stmt_ptr;
 int current_lineno;
 int next_lineno;
 
+#define PROGSTATE_RUNNING 0
+#define PROGSTATE_READY 1
+
+uint8_t program_state;
+
+/* program_end
+ *
+ * Purpose:
+ *     End the currently-running program.
+ * 
+ * Parameters:
+ *     Error, if program has been ended with error.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_end(error_t error)
+{
+    if (program_state != PROGSTATE_RUNNING) return ERROR_NOT_RUNNING;
+    program_state = PROGSTATE_READY;
+    return error;
+}
+
 uint16_t program_free(void)
 {
-    return (uint16_t)(program_max - program_end);
+    return (uint16_t)(program_max - program_end_ptr);
 }
 
 void program_new(void)
 {
     current_lineno = 0;
-    program_end = program_start;
+    program_end_ptr = program_start;
+    program_state = PROGSTATE_READY;
 }
 
 error_t program_insert(const uint8_t * toks)
@@ -35,14 +59,14 @@ error_t program_insert(const uint8_t * toks)
         uint8_t size = t_defs_size(toks);
         for (uint8_t i = 0; i < size; i++)
         {
-            *program_end = *toks;
-            program_end++;
+            *program_end_ptr = *toks;
+            program_end_ptr++;
             toks++;
         }
     }
 
-    *program_end = TOK_TERMINATOR;
-    program_end++;
+    *program_end_ptr = TOK_TERMINATOR;
+    program_end_ptr++;
 
     return ERROR_NOERROR;
 }
@@ -51,7 +75,7 @@ void program_list(void)
 {
     uint8_t * p = program_start;
 
-    while (p != program_end)
+    while (p != program_end_ptr)
     {
         p = t_defs_list(p);
     }
@@ -69,7 +93,7 @@ const uint8_t * program_getlineno(int lineno)
     if (lineno >= current_lineno)
     {
         const uint8_t * ptr = program_stmt_ptr;
-        while (ptr < program_end)
+        while (ptr < program_end_ptr)
         {
             /* Get numeric. */
             uint8_t tok_type = *ptr;
@@ -97,16 +121,17 @@ const uint8_t * program_getlineno(int lineno)
 
 error_t program_run(void)
 {
+    program_state = PROGSTATE_RUNNING;
     program_stmt_ptr = program_start;
 
-    while (program_stmt_ptr < program_end)
+    while (1)
     {
         const uint8_t * stmt = program_stmt_ptr;
 
         /* Sanity check, should start with a line number. */
         if (*stmt != TOK_NUMERIC)
         {
-            return ERROR_LINENUM;
+            return program_end(ERROR_LINENUM);
         }
 
         stmt++;
@@ -120,13 +145,18 @@ error_t program_run(void)
 
         /* Interpret the statement. */
         error_t e = statement_interpret(stmt);
-        if (e != ERROR_NOERROR) return e;
+
+        /* We could have ended the program. */
+        if (program_state != PROGSTATE_RUNNING) break;
+
+        if (e != ERROR_NOERROR) return program_end(e);
 
         /* Move onto next statement. */
         program_stmt_ptr = program_getlineno(next_lineno);
-        if (program_stmt_ptr == NULL) return ERROR_GOTO;
+        if (program_stmt_ptr == NULL) return program_end(ERROR_GOTO);
     }
 
+    program_state = PROGSTATE_READY;
     return ERROR_NOERROR;
 }
 

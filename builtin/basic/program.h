@@ -5,6 +5,19 @@
 
 #include "errors.h"
 
+/* program_end
+ *
+ * Purpose:
+ *     End the currently-running program.
+ * 
+ * Parameters:
+ *     Error, if program has been ended with error.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_end(error_t error);
+
 uint16_t program_free(void);
 
 void program_new(void);

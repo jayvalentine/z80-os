@@ -10,6 +10,7 @@ typedef uint8_t error_t;
 #define ERROR_UNDEFINED_KW 2
 #define ERROR_LINENUM 3
 #define ERROR_GOTO 4
+#define ERROR_NOT_RUNNING 5
 
 void error_display(error_t error);
 

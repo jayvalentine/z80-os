@@ -24,6 +24,10 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "RUN",
         KEYWORD_RUN
+    },
+    {
+        "END",
+        KEYWORD_END
     }
 };
 
@@ -111,12 +115,18 @@ error_t do_run(const uint8_t * toks)
     return program_run();
 }
 
+error_t do_end(const uint8_t * toks)
+{
+    return program_end(ERROR_NOERROR);
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
     do_list,
     do_new,
-    do_run
+    do_run,
+    do_end
 };
 
 error_t t_keyword_interpret(kw_code kw, const uint8_t * toks)
