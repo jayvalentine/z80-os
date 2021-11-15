@@ -31,6 +31,8 @@ _syscall_table:
 
     defw    _do_smode
 
+    defw    _do_version
+
     PUBLIC  _syscall_handler
 
     ; Syscall handler.
@@ -567,6 +569,24 @@ _do_smode:
     ei
 
     ret
+
+    ; 17: version: Get version string of kernel.
+    ;
+    ; Parameters:
+    ; None.
+    ;
+    ; Returns:
+    ; Pointer to version in HL.
+_do_version:
+    pop     BC
+    pop     DE
+    pop     HL
+
+    ld      HL, __kernel_version
+    ret
+
+__kernel_version:
+    defm    "0.1.0", 0
 
 __test:
     defm    "CANCEL handler: %04x\n\r", 0
