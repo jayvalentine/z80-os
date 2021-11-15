@@ -81,6 +81,33 @@ void program_list(void)
     }
 }
 
+/* Helper function to search for a statement
+ * with a given linenumber.
+ * Returns NULL if it can't be found.
+ */
+const uint8_t * program_search_lineno(int lineno, const uint8_t * stmt)
+{
+    const uint8_t * ptr = stmt;
+    while (ptr < program_end_ptr)
+    {
+        /* Get numeric. */
+        uint8_t tok_type = *ptr;
+        if (tok_type != TOK_NUMERIC) return NULL;
+
+        int this_lineno = t_numeric_get(ptr+1);
+        if (this_lineno >= lineno)
+        {
+            return ptr;
+        }
+
+        /* Otherwise not matching, move onto next statement. */
+        ptr += statement_size(ptr);
+    }
+
+    /* Didn't find matching line number. */
+    return NULL;
+}
+
 /* Helper function to return a pointer to the statement
  * with a given line number, or the nearest higher statement
  * if none equal exists.
@@ -92,25 +119,7 @@ const uint8_t * program_getlineno(int lineno)
      */
     if (lineno >= current_lineno)
     {
-        const uint8_t * ptr = program_stmt_ptr;
-        while (ptr < program_end_ptr)
-        {
-            /* Get numeric. */
-            uint8_t tok_type = *ptr;
-            if (tok_type != TOK_NUMERIC) return NULL;
-
-            int this_lineno = t_numeric_get(ptr+1);
-            if (this_lineno >= lineno)
-            {
-                return ptr;
-            }
-
-            /* Otherwise not matching, move onto next statement. */
-            ptr += statement_size(ptr);
-        }
-
-        /* Didn't find matching line number. */
-        return NULL;
+        return program_search_lineno(lineno, program_stmt_ptr);
     }
 
     /* Otherwise search from beginning
