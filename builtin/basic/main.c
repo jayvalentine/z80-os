@@ -16,7 +16,7 @@ int user_main(char ** argv, size_t argc)
     program_new();
     uint16_t free = program_free();
 
-    puts("ZOS BASIC\r\n");
+    puts("ZEBRA BASIC.\r\n");
     printf("%u bytes free.\r\n", free);
 
     while (1)
