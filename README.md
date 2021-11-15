@@ -1,6 +1,6 @@
-# z80-os
+# ZEBRA Z80 Operating System
 
-An operating system for a Z80 computer, implemented mostly in C with some inline assembler.
+ZEBRA is an operating system for a Z80 computer, implemented mostly in C with some assembler.
 
 ## License
 

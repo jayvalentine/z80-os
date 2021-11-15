@@ -23,6 +23,8 @@
 
 #include "utils.h"
 
+#include "zebra.h"
+
 /* Built-in commands. */
 #include "clear.h"
 #include "chmod.h"
@@ -123,9 +125,11 @@ void main()
     puts("\033[2J\033[1;1H");
 
     /* Green text on black background. */
-    puts("\033[32;40m");
+    puts("\033[32m");
 
-    puts("Z80-OS Command Processor\n\rCopyright (C) 2020 Jay Valentine\n\r\n\r");
+    puts("ZEBRA Command Processor\n\rCopyright (C) 2020 Jay Valentine\n\r\n\r");
+
+    zebra_display();
 
     int exitcode = 0;
 
