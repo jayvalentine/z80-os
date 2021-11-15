@@ -27,7 +27,8 @@ int user_main(char ** argv, size_t argc)
         error = statement_tokenize(statement, input);
         if (error != ERROR_NOERROR)
         {
-            puts("T: ");
+            puts("TOK: ");
+            printf("L%u ", program_current_lineno());
             error_display(error);
             continue;
         }
@@ -35,7 +36,8 @@ int user_main(char ** argv, size_t argc)
         error_t error = statement_interpret(statement);
         if (error != ERROR_NOERROR)
         {
-            puts("I: ");
+            puts("INT: ");
+            printf("L%u ", program_current_lineno());
             error_display(error);
             continue;
         }

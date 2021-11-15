@@ -2,6 +2,23 @@
 
 #include "t_numeric.h"
 
+/* t_numeric_get
+ *
+ * Purpose:
+ *     Return a numeric (int) from the given token stream.
+ * 
+ * Parameters:
+ *     toks: Token stream to read from.
+ * 
+ * Returns:
+ *     integer value of numeric.
+ */
+int t_numeric_get(uint8_t * toks)
+{
+    int * numeric_ptr = (int *)toks;
+    return *numeric_ptr;
+}
+
 /* t_numeric_parse
  *
  * Purpose:

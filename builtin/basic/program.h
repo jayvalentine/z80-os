@@ -15,4 +15,17 @@ void program_list(void);
 
 error_t program_run(void);
 
+/* program_current_lineno
+ *
+ * Purpose:
+ *     Get the current line number of the executing program.
+ *
+ * Parameters:
+ *     Nothing.
+ *
+ * Returns:
+ *     Integer line number.
+ */
+int program_current_lineno(void);
+
 #endif

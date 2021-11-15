@@ -5,6 +5,7 @@
 #include "statement.h"
 
 #include "t_defs.h"
+#include "t_numeric.h"
 
 extern uint8_t _tail;
 
@@ -12,6 +13,8 @@ extern uint8_t _tail;
 #define program_max ((uint8_t *)0xe000)
 
 uint8_t * program_end;
+uint8_t * program_stmt_ptr;
+int current_lineno;
 
 uint16_t program_free(void)
 {
@@ -20,6 +23,7 @@ uint16_t program_free(void)
 
 void program_new(void)
 {
+    current_lineno = 0;
     program_end = program_start;
 }
 
@@ -52,8 +56,6 @@ void program_list(void)
     }
 }
 
-uint8_t * program_stmt_ptr;
-
 error_t program_run(void)
 {
     program_stmt_ptr = program_start;
@@ -66,8 +68,13 @@ error_t program_run(void)
             return ERROR_LINENUM;
         }
 
+        program_stmt_ptr++;
+
+        /* Get numeric line number. */
+        current_lineno = t_numeric_get(program_stmt_ptr);
+
         /* Skip initial lineno. */
-        program_stmt_ptr += 3;
+        program_stmt_ptr += 2;
 
         uint8_t size = statement_size(program_stmt_ptr);
 
@@ -80,4 +87,20 @@ error_t program_run(void)
     }
 
     return ERROR_NOERROR;
+}
+
+/* program_current_lineno
+ *
+ * Purpose:
+ *     Get the current line number of the executing program.
+ *
+ * Parameters:
+ *     Nothing.
+ *
+ * Returns:
+ *     Integer line number.
+ */
+int program_current_lineno(void)
+{
+    return current_lineno;
 }
