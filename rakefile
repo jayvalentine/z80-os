@@ -85,6 +85,7 @@ namespace 'build' do
     task 'loader' => ['lib:stdlib'] do
         cmd = "zcc "
         cmd += "+#{CONFIG} -compiler-sccz80 "
+        cmd += "-DZ88DK "
         cmd += "-O2 -SO2 "
         cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
