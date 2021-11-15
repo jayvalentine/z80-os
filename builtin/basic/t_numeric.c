@@ -13,7 +13,7 @@
  * Returns:
  *     integer value of numeric.
  */
-int t_numeric_get(uint8_t * toks)
+int t_numeric_get(const uint8_t * toks)
 {
     int * numeric_ptr = (int *)toks;
     return *numeric_ptr;

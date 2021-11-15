@@ -28,4 +28,18 @@ error_t program_run(void);
  */
 int program_current_lineno(void);
 
+/* program_next_lineno
+ *
+ * Purpose:
+ *     Get the next line number to be executed.
+ *     Mainly used for error reporting.
+ * 
+ * Parameters:
+ *     Nothing.
+ * 
+ * Returns:
+ *     Integer line number.
+ */
+int program_next_lineno(void);
+
 #endif
