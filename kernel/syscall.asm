@@ -35,6 +35,9 @@ _syscall_table:
 
     PUBLIC  _syscall_handler
 
+    EXTERN  _status_set_syscall
+    EXTERN  _status_clr_syscall
+
     ; Syscall handler.
     ;
     ; Calculates absolute position of syscall function address
@@ -45,6 +48,10 @@ _syscall_handler:
     push    HL
     push    DE
     push    BC
+
+    push    AF
+    call    _status_set_syscall
+    pop     AF
 
     ; Calculate position of word in syscall table.
     ld      HL, _syscall_table
@@ -61,6 +68,21 @@ _syscall_handler:
     ; Execute syscall.
     ; Syscall function will need to pop DE, HL off the stack.
     jp      (HL)
+
+_syscall_common_ret:
+    push    AF
+    push    HL
+    push    BC
+    push    DE
+
+    call    _status_clr_syscall
+
+    pop     DE
+    pop     BC
+    pop     HL
+    pop     AF
+
+    ret
 
     ; *****************************
     ; SYSCALL DEFINITIONS
@@ -139,7 +161,7 @@ __swrite_done:
 
     pop     BC
     pop     DE
-    ret
+    jp      _syscall_common_ret
 
     PUBLIC  _tx_buf_offs_head
     PUBLIC  _tx_buf_offs_tail
@@ -198,7 +220,7 @@ __sread_available:
 
     pop     HL
     pop     DE
-    ret
+    jp      _syscall_common_ret
 
     PUBLIC  _rx_buf_offs_head
     PUBLIC  _rx_buf_offs_tail
@@ -253,7 +275,7 @@ _do_dwrite:
     ; Write 512 bytes to CF-card.
     call    _disk_write_data
 
-    ret
+    jp      _syscall_common_ret
 
     ; 3: dread: Read 512 bytes from disk sector.
     ;
@@ -289,7 +311,7 @@ _do_dread:
     ; Read 512 bytes from CF-card.
     call    _disk_read_data
 
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _file_open
     EXTERN  _file_read
@@ -325,7 +347,7 @@ _do_fopen:
     inc     SP
     inc     SP
 
-    ret
+    jp      _syscall_common_ret
 
     ; 5: fread: Read an opened file.
     ;
@@ -348,7 +370,7 @@ _do_fread:
     inc     SP
     inc     SP
 
-    ret
+    jp      _syscall_common_ret
 
     ; 6: fwrite: Write an opened file.
     ;
@@ -371,7 +393,7 @@ _do_fwrite:
     inc     SP
     inc     SP
 
-    ret
+    jp      _syscall_common_ret
 
     ; 7: fclose: Close an opened file.
     ;
@@ -386,7 +408,7 @@ _do_fclose:
     pop     DE
     pop     HL
 
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _disk_info
 
@@ -404,7 +426,7 @@ _do_dinfo:
 
     ld      HL, _disk_info
 
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _file_info
 
@@ -427,7 +449,7 @@ _do_finfo:
     inc     SP
     inc     SP
 
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _file_entries
 
@@ -445,7 +467,7 @@ _do_fentries:
     inc     SP
     inc     SP
     
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _file_entry
 
@@ -466,7 +488,7 @@ _do_fentry:
     inc     SP
     inc     SP
     
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _process_exec
     EXTERN  _signal_sethandler
@@ -490,7 +512,7 @@ _do_pexec:
     inc     SP
     inc     SP
 
-    ret
+    jp      _syscall_common_ret
 
     ; 13: sighandle: Set handler function for signal.
     ;
@@ -505,7 +527,7 @@ _do_sighandle:
     pop     DE
     pop     HL
 
-    ret
+    jp      _syscall_common_ret
 
     ; 14: fdelete: Delete a file.
     ;
@@ -523,7 +545,7 @@ _do_fdelete:
     inc     SP
     inc     SP
 
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _process_load
 
@@ -544,7 +566,7 @@ _do_pload:
     inc     SP
     inc     SP
 
-    ret
+    jp      _syscall_common_ret
 
     EXTERN  _serial_mode
 
@@ -568,7 +590,7 @@ _do_smode:
 
     ei
 
-    ret
+    jp      _syscall_common_ret
 
     ; 17: version: Get version string of kernel.
     ;
@@ -583,7 +605,7 @@ _do_version:
     pop     HL
 
     ld      HL, __kernel_version
-    ret
+    jp      _syscall_common_ret
 
 __kernel_version:
     defm    "0.1.0", 0

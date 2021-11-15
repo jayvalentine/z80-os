@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #define LED_INT 1
+#define LED_SYSCALL 2
 
 /* All LEDs initially off. */
 uint8_t current_status = 0b11111111;
@@ -31,4 +32,14 @@ void status_set_int(void)
 void status_clr_int(void)
 {
     status_led_off(LED_INT);
+}
+
+void status_set_syscall(void)
+{
+    status_led_on(LED_SYSCALL);
+}
+
+void status_clr_syscall(void)
+{
+    status_led_off(LED_SYSCALL);
 }
