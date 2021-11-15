@@ -338,7 +338,7 @@ size_t file_read(ubyte * buf, File_T * fd, size_t n)
     /* Read 0 or more *full* sectors. */
     for (size_t i = 0; i < full_sectors; i++)
     {
-        int c = file_readsector((char *)buf, fd);
+        int c = file_readsector(buf, fd);
 
         /* We _shouldn't_ ever hit EOF part-way through a sector,
          * so if readsector returns EOF then we didn't read the sector at all. */

@@ -2,7 +2,7 @@
 #include "kernel.h"
 #include "utils.h"
 
-extern ubyte _tail;
+extern char _tail;
 extern char reg_state;
 
 File_T file;
@@ -29,7 +29,7 @@ void main(void)
         /* Read the file into memory.
          * We have temporary memory in the first 512 bytes after tail,
          * so we need to make sure not to overwrite that when loading. */
-        ubyte * mem = &_tail + 512;
+        char * mem = &_tail + 512;
 
         /* Only read up to 0xf000, to avoid trashing system variables. */
         file_read(mem, &file, (size_t)(0xf000 - (size_t)mem));
@@ -58,7 +58,7 @@ void main(void)
             for (uint i = 0; i < 10; i++) {}
 
             set_reg(0b11111101);
-            memcpy((char *)0x0000, (const char *)mem, (uint)file.size);
+            memcpy((char *)0x0000, mem, (uint)file.size);
             set_reg(0b00000000);
 
             puts("Done.\n\r");
