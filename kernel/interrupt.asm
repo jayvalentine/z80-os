@@ -4,12 +4,17 @@
     
     PUBLIC  _interrupt_handler
 
+    EXTERN  _status_set_int
+    EXTERN  _status_clr_int
+
 _interrupt_handler:
     di
     push    HL
     push    DE
     push    BC
     push    AF
+
+    call    _status_set_int
 
     ; Get return address into HL.
     ld      HL, 8
@@ -44,6 +49,8 @@ __interrupt_skip2:
     call    _unknown_interrupt
 
 __interrupt_handle_ret:
+    call    _status_clr_int
+    
     pop     AF
     pop     BC
     pop     DE
