@@ -115,17 +115,17 @@ const uint8_t * program_search_lineno(int lineno, const uint8_t * stmt)
 const uint8_t * program_getlineno(int lineno)
 {
     /* Greater than current lineno?
-     * If so increment from current program pointer.
+     * If so search forward from current program pointer.
      */
     if (lineno >= current_lineno)
     {
         return program_search_lineno(lineno, program_stmt_ptr);
     }
 
-    /* Otherwise search from beginning
+    /* Otherwise search forward from beginning
      * (can't search backwards)
      */
-    return NULL;
+    return program_search_lineno(lineno, program_start);
 }
 
 error_t program_run(void)
