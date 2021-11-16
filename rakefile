@@ -44,6 +44,70 @@ def compile(output_name, source_files, include_dirs, defines, crt, origin)
     return system(cmd)
 end
 
+# Helper function for running unit tests.
+# Delete test exe and main.c if they exist.
+def unit_test(directory)
+    exe_name = "test_" + directory.gsub("/", "_") + ".exe"
+
+    if File.exist? exe_name
+        FileUtils.rm exe_name
+    end
+
+    if File.exist? "#{directory}/unit_test/main.c"
+        FileUtils.rm "#{directory}/unit_test/main.c"
+    end
+
+    tests = []
+
+    # Get tests from test files.
+    Dir.glob("#{directory}/unit_test/*.c").each do |f|
+        File.readlines(f).each do |l|
+            if /int (test_\S+)\(\)/ =~ l
+                tests << $1
+            end
+        end
+    end
+
+    # Create the templated main.
+    template = File.read("#{directory}/unit_test/main.c.erb")
+    erb = ERB.new(template)
+    File.write("#{directory}/unit_test/main.c", erb.result(binding))
+
+    # Compile test/main.c, other test/*.c, and kernel files for which
+    # a file exists under test.
+    # Include every source file but reset.asm, which is the startup code.
+    src = []
+
+    Dir.glob("#{directory}/unit_test/*.c").each do |f|
+        next if f == "#{directory}/unit_test/main.c"
+
+        src << f
+        src << "#{directory}/#{File.basename(f)}"
+    end
+
+    # Add mock files
+    Dir.glob("#{directory}/unit_test/mock/*.c").each do |f|
+        src << f
+    end
+
+    cmd = "gcc "
+    cmd += "-g -O1 "
+    cmd += "-I#{directory} "
+    cmd += "-I#{directory}/unit_test/mock "
+    cmd += "-o #{exe_name}.exe "
+    cmd += src.join(" ")
+    cmd += " #{directory}/unit_test/main.c"
+
+    system(cmd)
+
+    # Now run tests.
+    if (!system("./#{exe_name}.exe"))
+        puts "TESTS FAILED"
+    else
+        puts "TESTS PASSED"
+    end
+end
+
 desc 'Start an instance of Z80-OS in the Zemu interactive debugger.'
 task 'debug' => ['build:kernel_debug', 'build:command'] do
     zemu_start()
@@ -241,6 +305,15 @@ namespace 'install' do
 end
 
 namespace 'test' do
+    Dir.glob("builtin/*").each do |builtin|
+        builtin_name = File.basename(builtin)
+
+        desc "Run unit tests for builtin program '#{builtin_name}'"
+        task "builtin:#{builtin_name}" do
+            unit_test(builtin)
+        end
+    end
+
     namespace 'kernel' do
         desc "Run kernel integration tests"
         Rake::TestTask.new 'integration' => "build:kernel_debug" do |t|
@@ -249,64 +322,7 @@ namespace 'test' do
 
         desc "Run kernel unit tests"
         task 'unit' do
-            # Delete test exe and main.c if they exist.
-            if File.exist? "test_kernel.exe"
-                FileUtils.rm "test_kernel.exe"
-            end
-
-            if File.exist? "kernel/unit_test/main.c"
-                FileUtils.rm "kernel/unit_test/main.c"
-            end
-            
-            tests = []
-
-            # Get tests from test files.
-            Dir.glob("kernel/unit_test/*.c").each do |f|
-                File.readlines(f).each do |l|
-                    if /int (test_\S+)\(\)/ =~ l
-                        tests << $1
-                    end
-                end
-            end
-
-            # Create the templated main.
-            template = File.read("kernel/unit_test/main.c.erb")
-            erb = ERB.new(template)
-            File.write("kernel/unit_test/main.c", erb.result(binding))
-
-            # Compile test/main.c, other test/*.c, and kernel files for which
-            # a file exists under test.
-            # Include every source file but reset.asm, which is the startup code.
-            src = []
-
-            Dir.glob("kernel/unit_test/*.c").each do |f|
-                next if f == "kernel/unit_test/main.c"
-
-                src << f
-                src << "kernel/#{File.basename(f)}"
-            end
-
-            # Add mock files
-            Dir.glob("kernel/unit_test/mock/*.c").each do |f|
-                src << f
-            end
-
-            cmd = "gcc "
-            cmd += "-g -O1 "
-            cmd += "-Ikernel "
-            cmd += "-Ikernel/unit_test/mock "
-            cmd += "-o test_kernel.exe "
-            cmd += src.join(" ")
-            cmd += " kernel/unit_test/main.c"
-
-            system(cmd)
-
-            # Now run tests.
-            if (!system("./test_kernel.exe"))
-                puts "TESTS FAILED"
-            else
-                puts "TESTS PASSED"
-            end
+            unit_test("kernel")
         end
     end
 end
