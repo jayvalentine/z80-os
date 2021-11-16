@@ -19,7 +19,7 @@ typedef uint8_t tok_size_t;
 typedef const tok_t * (*t_list_t)(const tok_t *);
 typedef tok_t (*t_size_t)(const tok_t *);
 
-tok_t * t_defs_list(const tok_t * toks);
+const tok_t * t_defs_list(const tok_t * toks);
 tok_size_t t_defs_size(const tok_t * toks);
 
 #endif

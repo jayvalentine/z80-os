@@ -40,7 +40,7 @@ static error_t statement_tokenize_string(tok_t ** dst_ptr, const char ** input_p
  * Returns:
  *     length of token stream in bytes.
  */
-error_t statement_tokenize(tok_t * stmt, char * input)
+error_t statement_tokenize(tok_t * stmt, const char * input)
 {
     error_t error;
 

@@ -23,6 +23,10 @@ int test_numeric_parse_negative_boundary();
 
 int test_numeric_size();
 
+int test_eval_numeric();
+
+int test_eval_addition();
+
 
 int main(void)
 {
@@ -38,6 +42,10 @@ int main(void)
     RUN_TEST(test_numeric_parse_negative_boundary);
 
     RUN_TEST(test_numeric_size);
+
+    RUN_TEST(test_eval_numeric);
+
+    RUN_TEST(test_eval_addition);
 
     printf("\n");
     return 0;

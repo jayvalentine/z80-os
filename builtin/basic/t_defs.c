@@ -38,7 +38,7 @@ t_list_t t_list[NUM_TOKS] =
     t_numeric_list
 };
 
-tok_t * t_defs_list(const tok_t * toks)
+const tok_t * t_defs_list(const tok_t * toks)
 {
     tok_t tok_type = *toks;
     toks++;

@@ -7,10 +7,19 @@
 #include "t_defs.h"
 #include "t_numeric.h"
 
+#ifdef Z88DK
 extern tok_t _tail;
 
 #define program_start (&_tail)
 #define program_max ((tok_t *)0xe000)
+
+#else
+
+tok_t program_region[4096];
+
+#define program_start (&program_region[0])
+#define program_max (program_start + 4096)
+#endif
 
 tok_t * program_end_ptr;
 const tok_t * program_stmt_ptr;
@@ -73,7 +82,7 @@ error_t program_insert(const tok_t * toks)
 
 void program_list(void)
 {
-    tok_t * p = program_start;
+    const tok_t * p = program_start;
 
     while (p != program_end_ptr)
     {

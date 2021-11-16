@@ -3,6 +3,8 @@
 
 #include "errors.h"
 
+#include "t_defs.h"
+
 /* statement_tokenize
  *
  * Purpose:
@@ -15,7 +17,7 @@
  * Returns:
  *     error, if any.
  */
-error_t statement_tokenize(tok_t * stmt, char * input);
+error_t statement_tokenize(tok_t * stmt, const char * input);
 
 /* statement_interpret
  *

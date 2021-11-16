@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "errors.h"
+#include "t_defs.h"
 
 /* program_end
  *

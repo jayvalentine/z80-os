@@ -82,7 +82,12 @@ def unit_test(directory)
         next if f == "#{directory}/unit_test/main.c"
 
         src << f
-        src << "#{directory}/#{File.basename(f)}"
+    end
+
+    Dir.glob("#{directory}/*.c").each do |f|
+        next if f == "#{directory}/main.c"
+        
+        src << f
     end
 
     # Add mock files

@@ -19,3 +19,15 @@ extern int failed_line;
         return 1;                                       \
     }                                                   \
 } while (0)
+
+#define ASSERT_EQUAL_UINT(expected, actual) do           \
+{                                                       \
+    failed_line = __LINE__;                             \
+    if (expected != actual)                             \
+    {                                                   \
+        printf("\nexpected: %u actual: %u",             \
+            expected,                                   \
+            actual);                                    \
+        return 1;                                       \
+    }                                                   \
+} while (0)
