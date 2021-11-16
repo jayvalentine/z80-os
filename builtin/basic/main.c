@@ -2,12 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "t_defs.h"
+
 #include "statement.h"
 #include "errors.h"
 #include "program.h"
 
 char input[256];
-uint8_t statement[256];
+tok_t statement[256];
 
 int user_main(char ** argv, size_t argc)
 {

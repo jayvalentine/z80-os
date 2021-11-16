@@ -14,7 +14,7 @@
  * returning a pointer to the next byte to be filled
  * in the token stream.
  */
-static error_t statement_tokenize_string(uint8_t ** dst_ptr, const char ** input_ptr)
+static error_t statement_tokenize_string(tok_t ** dst_ptr, const char ** input_ptr)
 {
     /* Is this a string? */
     if (t_string_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
@@ -40,7 +40,7 @@ static error_t statement_tokenize_string(uint8_t ** dst_ptr, const char ** input
  * Returns:
  *     length of token stream in bytes.
  */
-error_t statement_tokenize(uint8_t * stmt, char * input)
+error_t statement_tokenize(tok_t * stmt, char * input)
 {
     error_t error;
 
@@ -62,12 +62,12 @@ error_t statement_tokenize(uint8_t * stmt, char * input)
     *stmt = TOK_TERMINATOR;
 }
 
-uint8_t statement_size(const uint8_t * stmt)
+tok_size_t statement_size(const tok_t * stmt)
 {
-    uint8_t size = 0;
+    tok_size_t size = 0;
     while (*stmt != TOK_TERMINATOR)
     {
-        uint8_t tok_size = t_defs_size(stmt);
+        tok_size_t tok_size = t_defs_size(stmt);
         size += tok_size;
         stmt += tok_size;
     }
@@ -88,7 +88,7 @@ uint8_t statement_size(const uint8_t * stmt)
  * Returns:
  *     error, if any.
  */
-error_t statement_interpret(const uint8_t * stmt)
+error_t statement_interpret(const tok_t * stmt)
 {
 #ifdef DEBUG
     uint8_t * p = stmt;
@@ -107,7 +107,7 @@ error_t statement_interpret(const uint8_t * stmt)
     puts("\r\n");
 #endif
 
-    uint8_t tok_type = *stmt;
+    tok_t tok_type = *stmt;
     error_t error = ERROR_NOERROR;
 
     /* We've got a line in the program. */

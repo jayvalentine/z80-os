@@ -15,7 +15,7 @@
  * Returns:
  *     error, if any.
  */
-error_t statement_tokenize(uint8_t * stmt, char * input);
+error_t statement_tokenize(tok_t * stmt, char * input);
 
 /* statement_interpret
  *
@@ -28,8 +28,8 @@ error_t statement_tokenize(uint8_t * stmt, char * input);
  * Returns:
  *     error, if any.
  */
-error_t statement_interpret(const uint8_t * stmt);
+error_t statement_interpret(const tok_t * stmt);
 
-uint8_t statement_size(const uint8_t * stmt);
+tok_size_t statement_size(const tok_t * stmt);
 
 #endif

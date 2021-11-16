@@ -7,13 +7,13 @@
 #include "t_defs.h"
 #include "t_numeric.h"
 
-extern uint8_t _tail;
+extern tok_t _tail;
 
 #define program_start (&_tail)
-#define program_max ((uint8_t *)0xe000)
+#define program_max ((tok_t *)0xe000)
 
-uint8_t * program_end_ptr;
-const uint8_t * program_stmt_ptr;
+tok_t * program_end_ptr;
+const tok_t * program_stmt_ptr;
 int current_lineno;
 int next_lineno;
 
@@ -52,12 +52,12 @@ void program_new(void)
     program_state = PROGSTATE_READY;
 }
 
-error_t program_insert(const uint8_t * toks)
+error_t program_insert(const tok_t * toks)
 {
     while (*toks != TOK_TERMINATOR)
     {
-        uint8_t size = t_defs_size(toks);
-        for (uint8_t i = 0; i < size; i++)
+        tok_size_t size = t_defs_size(toks);
+        for (tok_size_t i = 0; i < size; i++)
         {
             *program_end_ptr = *toks;
             program_end_ptr++;
@@ -73,7 +73,7 @@ error_t program_insert(const uint8_t * toks)
 
 void program_list(void)
 {
-    uint8_t * p = program_start;
+    tok_t * p = program_start;
 
     while (p != program_end_ptr)
     {
@@ -85,13 +85,13 @@ void program_list(void)
  * with a given linenumber.
  * Returns NULL if it can't be found.
  */
-const uint8_t * program_search_lineno(int lineno, const uint8_t * stmt)
+const tok_t * program_search_lineno(int lineno, const tok_t * stmt)
 {
-    const uint8_t * ptr = stmt;
+    const tok_t * ptr = stmt;
     while (ptr < program_end_ptr)
     {
         /* Get numeric. */
-        uint8_t tok_type = *ptr;
+        tok_t tok_type = *ptr;
         if (tok_type != TOK_NUMERIC) return NULL;
 
         int this_lineno = t_numeric_get(ptr+1);
@@ -112,7 +112,7 @@ const uint8_t * program_search_lineno(int lineno, const uint8_t * stmt)
  * with a given line number, or the nearest higher statement
  * if none equal exists.
  */
-const uint8_t * program_getlineno(int lineno)
+const tok_t * program_getlineno(int lineno)
 {
     /* Greater than current lineno?
      * If so search forward from current program pointer.
@@ -135,7 +135,7 @@ error_t program_run(void)
 
     while (1)
     {
-        const uint8_t * stmt = program_stmt_ptr;
+        const tok_t * stmt = program_stmt_ptr;
 
         /* Sanity check, should start with a line number. */
         if (*stmt != TOK_NUMERIC)

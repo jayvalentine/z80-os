@@ -20,7 +20,7 @@
 
 typedef uint8_t kw_code;
 
-typedef error_t (*f_interpreter_t)(const uint8_t *);
+typedef error_t (*f_interpreter_t)(const tok_t *);
 
 typedef struct _Keyword_T
 {
@@ -28,9 +28,9 @@ typedef struct _Keyword_T
     kw_code code;
 } Keyword_T;
 
-int t_keyword_parse(uint8_t ** dst, const char ** s);
-const uint8_t * t_keyword_list(const uint8_t * toks);
+int t_keyword_parse(tok_t ** dst, const char ** s);
+const tok_t * t_keyword_list(const tok_t * toks);
 
-error_t t_keyword_interpret(kw_code kw, const uint8_t * toks);
+error_t t_keyword_interpret(kw_code kw, const tok_t * toks);
 
 #endif

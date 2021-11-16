@@ -36,13 +36,13 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     }
 };
 
-int t_keyword_parse(uint8_t ** dst_ptr, const char ** input_ptr)
+int t_keyword_parse(tok_t ** dst_ptr, const char ** input_ptr)
 {
     char kw_str[11];
     size_t len = 0;
 
     const char * input = *input_ptr;
-    uint8_t * dst = *dst_ptr;
+    tok_t * dst = *dst_ptr;
 
     while (*input != ' ' && *input != '\0')
     {
@@ -80,18 +80,18 @@ int t_keyword_parse(uint8_t ** dst_ptr, const char ** input_ptr)
     return 0;
 }
 
-error_t do_print(const uint8_t * toks)
+error_t do_print(const tok_t * toks)
 {
     /* Next token must be a string. */
     if (*toks != TOK_STRING) return ERROR_SYNTAX;
     toks++;
 
     /* Now size of the string. */
-    uint8_t size = *toks;
+    tok_size_t size = *toks;
     toks++;
 
     /* Now print the string. */
-    for (uint8_t i = 0; i < size; i++)
+    for (tok_size_t i = 0; i < size; i++)
     {
         char c = *toks;
         toks++;
@@ -103,32 +103,32 @@ error_t do_print(const uint8_t * toks)
     return ERROR_NOERROR;
 }
 
-error_t do_list(const uint8_t * toks)
+error_t do_list(const tok_t * toks)
 {
     program_list();
     return ERROR_NOERROR;
 }
 
-error_t do_new(const uint8_t * toks)
+error_t do_new(const tok_t * toks)
 {
     program_new();
     return ERROR_NOERROR;
 }
 
-error_t do_run(const uint8_t * toks)
+error_t do_run(const tok_t * toks)
 {
     return program_run();
 }
 
-error_t do_end(const uint8_t * toks)
+error_t do_end(const tok_t * toks)
 {
     return program_end(ERROR_NOERROR);
 }
 
-error_t do_goto(const uint8_t * toks)
+error_t do_goto(const tok_t * toks)
 {
     /* Next token must be numeric. */
-    uint8_t tok_type = *toks;
+    tok_t tok_type = *toks;
     toks++;
 
     if (tok_type != TOK_NUMERIC) return ERROR_SYNTAX;
@@ -148,7 +148,7 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_goto
 };
 
-error_t t_keyword_interpret(kw_code kw, const uint8_t * toks)
+error_t t_keyword_interpret(kw_code kw, const tok_t * toks)
 {
     uint8_t index = kw - KEYWORD_BASE;
     if (index >= NUM_KEYWORDS) return ERROR_UNDEFINED_KW;
@@ -156,7 +156,7 @@ error_t t_keyword_interpret(kw_code kw, const uint8_t * toks)
     return keyword_funcs[index](toks);
 }
 
-const uint8_t * t_keyword_list(const uint8_t * toks)
+const tok_t * t_keyword_list(const tok_t * toks)
 {
     kw_code kw = *toks;
     toks++;
