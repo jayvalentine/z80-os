@@ -11,9 +11,13 @@
 int failed_line;
 
 
+int test_numeric_parse_zero();
+
 
 int main(void)
 {
+
+    RUN_TEST(test_numeric_parse_zero);
 
     printf("\n");
     return 0;

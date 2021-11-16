@@ -5,6 +5,8 @@
 
 #include "t_defs.h"
 
+typedef int16_t numeric_t;
+
 /* t_numeric_get
  *
  * Purpose:
@@ -16,7 +18,7 @@
  * Returns:
  *     integer value of numeric.
  */
-int t_numeric_get(const uint8_t * toks);
+numeric_t t_numeric_get(const tok_t * toks);
 
 /* t_numeric_parse
  *
@@ -30,8 +32,8 @@ int t_numeric_get(const uint8_t * toks);
  * Returns:
  *     true value if a numeric has been parsed, false otherwise.
  */
-int t_numeric_parse(uint8_t ** dst_ptr, const char ** input_ptr);
+int t_numeric_parse(tok_t ** dst_ptr, const char ** input_ptr);
 
-const uint8_t * t_numeric_list(const uint8_t * toks);
+const tok_t * t_numeric_list(const tok_t * toks);
 
 #endif

@@ -13,9 +13,9 @@
  * Returns:
  *     integer value of numeric.
  */
-int t_numeric_get(const tok_t * toks)
+numeric_t t_numeric_get(const tok_t * toks)
 {
-    int * numeric_ptr = (int *)toks;
+    numeric_t * numeric_ptr = (numeric_t *)toks;
     return *numeric_ptr;
 }
 
@@ -60,7 +60,7 @@ int t_numeric_parse(tok_t ** dst_ptr, const char ** input_ptr)
     char first_digit = *input;
     input++;
 
-    int val = first_digit - '0';
+    numeric_t val = first_digit - '0';
 
     while (*input >= '0' && *input <= '9')
     {
@@ -77,7 +77,7 @@ int t_numeric_parse(tok_t ** dst_ptr, const char ** input_ptr)
         val = -val;
     }
 
-    int * numeric_ptr = (int *)dst;
+    numeric_t * numeric_ptr = (numeric_t *)dst;
     *numeric_ptr = val;
     dst += 2;
 
@@ -90,10 +90,10 @@ int t_numeric_parse(tok_t ** dst_ptr, const char ** input_ptr)
 
 const tok_t * t_numeric_list(const tok_t * toks)
 {
-    int * numeric_ptr = (int *)toks;
+    numeric_t * numeric_ptr = (numeric_t *)toks;
     toks += 2;
 
-    int val = *numeric_ptr;
+    numeric_t val = *numeric_ptr;
 
     char sign = (val < 0) ? '-' : ' ';
 

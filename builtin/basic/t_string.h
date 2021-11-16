@@ -19,8 +19,8 @@
  *     Pointer to the next byte after the tokenized string
  *     in the token stream.
  */
-int t_string_parse(uint8_t ** stmt, const char ** input);
+int t_string_parse(tok_t ** stmt, const char ** input);
 
-const uint8_t * t_string_list(const uint8_t * toks);
+const tok_t * t_string_list(const tok_t * toks);
 
 #endif
