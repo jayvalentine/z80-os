@@ -3,10 +3,10 @@
 #define RUN_TEST(test_name)             \
     if (test_name())                    \
     {                                   \
-        printf(#test_name " X (line %d)\n", failed_line);   \
+        printf("\n" #test_name " X (line %d)\n", failed_line);   \
         return 1;                       \
     }                                   \
-    else printf(#test_name " O\n")
+    else printf(".")
 
 int failed_line;
 
@@ -19,5 +19,6 @@ int main(void)
 <% tests.each do |t| %>
     RUN_TEST(<%= t %>);
 <% end %>
+    printf("\n");
     return 0;
 }
