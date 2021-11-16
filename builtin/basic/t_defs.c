@@ -30,11 +30,6 @@ tok_size_t t_string_size(const tok_t * toks)
     return size + 1;
 }
 
-tok_size_t t_numeric_size(const tok_t * toks)
-{
-    return 2;
-}
-
 t_list_t t_list[NUM_TOKS] =
 {
     t_terminator_list,
