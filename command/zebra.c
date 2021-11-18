@@ -43,6 +43,11 @@ void zebra_display(void)
         uint32_t line = zebra_pattern[i];
         for (uint8_t i = 0; i < 32; i++)
         {
+            if (line == 0)
+            {
+                break;
+            }
+            
             if (line & UPPER_MASK)
             {
                 puts("##");
