@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <syscall.h>
 
+#include <include/status.h>
 #include <include/file.h>
 #include <include/signal.h>
 
@@ -35,6 +36,7 @@ void main(void)
 
     filesystem_init();
     signal_init();
+    status_init();
 
 #ifdef DEBUG
     /* Just call the program in the command processor memory
