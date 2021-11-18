@@ -102,9 +102,15 @@ class IntegrationTest < Minitest::Test
 
                 initialize_from disk_file_name
             end)
+
+            add_io (StatusLedPort.new do
+                name "status"
+                port 0x80
+                labels %w(X X X X X SYS INT MEM)
+            end)
         end
 
-        @instance = Zemu.start(conf)
+        @instance = Zemu.start(conf, TEST: 1)
     end
 
     def load_user_program(address, program)

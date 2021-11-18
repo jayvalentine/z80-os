@@ -11,7 +11,13 @@ class StatusLedPort < Zemu::Config::IOPort
 <<-EOF
 #include <stdio.h>
 
-const char * labels[8] = { #{labels.map { |x| "\"#{x}\"" }.join(", ")} };
+const char * #{name}_labels[8] = { #{labels.map { |x| "\"#{x}\"" }.join(", ")} };
+zuint8 #{name}_reg_value = 0;
+
+zuint8 zemu_io_#{name}_value(void)
+{
+    return #{name}_reg_value;
+}
 EOF
         end
 
@@ -29,9 +35,12 @@ EOF
 <<-EOF
 if (port == #{port})
 {
+    #{name}_reg_value = value;
+
+#ifndef TEST
     for (int i = 0; i < 8; i++)
     {
-        printf("%-4s", labels[i]);
+        printf("%-4s", #{name}_labels[i]);
     }
     printf("\\n");
     for (int i = 0; i < 8; i++)
@@ -41,6 +50,7 @@ if (port == #{port})
         value <<= 1;
     }
     printf("\\n\\n");
+#endif
 }
 EOF
         end
@@ -50,7 +60,13 @@ EOF
     end
 
     def functions
-        []
+        [
+            {
+                "name" => "zemu_io_#{name}_value".to_sym,
+                "args" => [],
+                "return" => :uint8
+            }
+        ]
     end
 
     def params
