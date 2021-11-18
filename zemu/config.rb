@@ -169,5 +169,5 @@ end
 def zemu_start
     config = zemu_config()
 
-    Zemu.start_interactive(config)
+    Zemu.start_interactive(config, print_serial: false)
 end

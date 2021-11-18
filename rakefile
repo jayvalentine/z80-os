@@ -115,6 +115,10 @@ end
 
 desc 'Start an instance of Z80-OS in the Zemu interactive debugger.'
 task 'debug' => ['build:kernel_debug', 'build:command'] do
+    unless File.exist?("disk_copy.bin")
+        FileUtils.cp "zemu/disk.img", "disk_copy.bin"
+    end
+
     zemu_start()
 end
 
