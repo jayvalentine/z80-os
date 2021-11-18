@@ -1,5 +1,63 @@
 require_relative '../../zemu/lib/zemu'
 
+# Status LEDs object
+#
+# Represents the status LEDs on the z80 computer.
+class StatusLedPort < Zemu::Config::IOPort
+    def initialize
+        super
+
+        when_setup do
+<<-EOF
+#include <stdio.h>
+
+const char * labels[8] = { #{labels.map { |x| "\"#{x}\"" }.join(", ")} };
+EOF
+        end
+
+        # Cannot read from port, but we need
+        # to return a value.
+        when_read do
+<<-EOF
+if (port == #{port}) return 0;
+EOF
+        end
+
+        # Write just prints the new
+        # value of the LEDs to stdout.
+        when_write do
+<<-EOF
+if (port == #{port})
+{
+    for (int i = 0; i < 8; i++)
+    {
+        printf("%-4s", labels[i]);
+    }
+    printf("\\n");
+    for (int i = 0; i < 8; i++)
+    {
+        if (value & 0x80) printf("1   ");
+        else printf("0   ");
+        value <<= 1;
+    }
+    printf("\\n\\n");
+}
+EOF
+        end
+
+        when_clock do
+        end
+    end
+
+    def functions
+        []
+    end
+
+    def params
+        %w(name port labels)
+    end
+end
+
 # Serial Input/Output object
 #
 # Represents a serial connection between the emulated CPU
@@ -160,6 +218,12 @@ def zemu_config
             num_sectors 131072
 
             initialize_from "disk_copy.bin"
+        end)
+
+        add_io (StatusLedPort.new do
+            name "status"
+            port 0x80
+            labels %w(X X X X X SYS INT MEM)
         end)
     end
 
