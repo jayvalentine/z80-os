@@ -608,7 +608,7 @@ _do_version:
     jp      _syscall_common_ret
 
 __kernel_version:
-    defm    "0.1.1", 0
+    defm    "0.1.2", 0
 
 __test:
     defm    "CANCEL handler: %04x\n\r", 0
