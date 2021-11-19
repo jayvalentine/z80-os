@@ -56,6 +56,8 @@ __interrupt_handle_ret:
     pop     DE
     pop     HL
     ei
+
+__interrupt_handler_end:
     reti
 
     EXTERN  _rx_buf

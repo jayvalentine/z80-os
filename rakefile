@@ -119,6 +119,8 @@ task 'debug' => ['build:kernel_debug', 'build:command'] do
         FileUtils.cp "zemu/disk.img", "disk_copy.bin"
     end
 
+
+    assert success, "Failed to build test code!"
     zemu_start()
 end
 
@@ -333,6 +335,15 @@ namespace 'test' do
         task 'unit' do
             unit_test("kernel")
         end
+    end
+end
+
+namespace 'benchmark' do
+    desc "Run kernel benchmarks"
+    task 'kernel' => "build:kernel_debug" do
+        require_relative 'benchmark/kernel/interrupt.rb'
+        benchmarks()
+        undef :benchmarks
     end
 end
 
