@@ -14,13 +14,9 @@ _interrupt_handler:
 
     call    _status_set_int
 
-    ; Get return address into HL.
-    ld      HL, 2
-    add     HL, SP
-    ld      A, (HL)
-    inc     HL
-    ld      H, (HL)
-    ld      L, A
+    ; Get return address (TOS) into HL.
+    pop     HL
+    push    HL ; Don't forget to restore it!
 
     ; Is this an interrupt from the 6850?
     in      A, (UART_PORT_CONTROL)
@@ -77,17 +73,19 @@ _serial_read_handler:
 
     ; Read data from UART.
     in      A, (UART_PORT_DATA)
-
-    ; Handle special characters if in interactive mode.
-    ld      C, A
-    ld      A, (_serial_current_mode)
-    cp      0
-    ld      A, C
-    jp      nz, _serial_read_byte
     
     ; $18 (CANCEL) - triggers SIG_CANCEL
     cp      $18
+    jp      nz, _serial_read_byte
+
+    ; Handle special characters only if in interactive mode.
+    ld      C, A
+    ld      A, (_serial_current_mode)
+    cp      0
     jp      z, _serial_signal_cancel
+    
+    ; Need the byte, so restore A.
+    ld      A, C
 
 _serial_read_byte:
     ; Store received character.
