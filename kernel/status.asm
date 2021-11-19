@@ -42,7 +42,6 @@ _status_clr_int:
     or      A, STATUS_SETMASK_INT       ; OR mask to set INT bit (LED off)
     ld      (_current_status), A        ; Write back to keep track
 
-    or      A, %00000001
     out     ($80), A ; Output to port.
 
     pop     AF
@@ -55,7 +54,6 @@ _status_clr_syscall:
     or      A, STATUS_SETMASK_SYSCALL   ; OR mask to set SYSCALL bit (LED off)
     ld      (_current_status), A        ; Write back to keep track
 
-    or      A, %00000001
     out     ($80), A ; Output to port.
     
     pop     AF
@@ -68,7 +66,6 @@ _status_set_int:
     and     A, STATUS_CLRMASK_INT       ; AND mask to clear INT bit (LED on)
     ld      (_current_status), A        ; Write back to keep track
 
-    or      A, %00000001
     out     ($80), A ; Output to port.
 
     pop     AF
@@ -81,7 +78,6 @@ _status_set_syscall:
     and     A, STATUS_CLRMASK_SYSCALL   ; AND mask to clear SYSCALL bit (LED on)
     ld      (_current_status), A        ; Write back to keep track
 
-    or      A, %00000001
     out     ($80), A ; Output to port.
 
     pop     AF

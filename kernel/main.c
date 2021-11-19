@@ -30,13 +30,14 @@ typedef void (*cp_main_t)(void);
 
 void main(void)
 {
+    status_init();
+    
 #ifndef DEBUG
     puts("Initialising kernel... ");
 #endif
 
     filesystem_init();
     signal_init();
-    status_init();
 
 #ifdef DEBUG
     /* Just call the program in the command processor memory
