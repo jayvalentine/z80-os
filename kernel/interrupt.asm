@@ -9,15 +9,13 @@
 
 _interrupt_handler:
     di
-    push    HL
-    push    DE
-    push    BC
-    push    AF
+    exx
+    ex      AF, AF'
 
     call    _status_set_int
 
     ; Get return address into HL.
-    ld      HL, 8
+    ld      HL, 2
     add     HL, SP
     ld      A, (HL)
     inc     HL
@@ -51,10 +49,8 @@ __interrupt_skip2:
 __interrupt_handle_ret:
     call    _status_clr_int
     
-    pop     AF
-    pop     BC
-    pop     DE
-    pop     HL
+    ex      AF, AF'
+    exx
     ei
 
 __interrupt_handler_end:
@@ -105,10 +101,12 @@ _serial_read_byte:
     ret
 
 _serial_signal_cancel:
+    exx
     ei
     pop     HL
     call    _signal_cancel
     di
+    exx
     ret
 
     EXTERN  _tx_buf
