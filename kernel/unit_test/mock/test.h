@@ -1,3 +1,5 @@
+#include <mock.h>
+
 #define ASSERT(cond) do         \
 {                               \
     failed_line = __LINE__;     \

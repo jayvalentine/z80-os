@@ -1,7 +1,13 @@
+/* Syscall wrappers. */
+/* Not all syscalls are represented here - just the ones that need to be called from C programs. */
+
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
 #include <stdint.h>
+#include <stddef.h>
+
+#define SMODE_BINARY 0x01
 
 #define FMODE_READ 0x01
 #define FMODE_WRITE 0x02
@@ -47,13 +53,42 @@ typedef enum
     E_DISKFULL = -6,
     E_FILEEXIST = -7,
     E_DIRFULL = -8,
-    E_INVALIDMODE = -9
+    E_INVALIDMODE = -9,
+    E_INVALIDPAGE = -10,
+    E_INVALIDHEADER = -11
 } FileError_T;
+
+typedef enum
+{
+    SIG_CANCEL = 0,
+    SIG_BREAK = 1
+} Signal_T;
+
+/* Signal handler function pointer type. */
+typedef void (*SIGHANDLER_T)(uint16_t);
+
+void syscall_smode(uint8_t mode);
 
 void syscall_dwrite(char * buf, uint32_t sector);
 void syscall_dread(char * buf, uint32_t sector);
 const DiskInfo_T * syscall_dinfo(void);
 
-void mock_drive_init(void);
+int syscall_fopen(const char * filename, uint8_t mode);
+size_t syscall_fread(char * ptr, size_t n, int fd);
+size_t syscall_fwrite(char * ptr, size_t n, int fd);
+void syscall_fclose(int fd);
+int syscall_fdelete(const char * filename);
+
+int syscall_finfo(const char * filename, FINFO * finfo);
+
+uint16_t syscall_fentries(void);
+int syscall_fentry(char * s, uint16_t entry);
+
+int syscall_pexec(uint16_t addr, char ** argv, size_t argc);
+int syscall_pload(uint16_t * addr, const char * filename);
+
+void syscall_sighandle(SIGHANDLER_T handle, Signal_T sig);
+
+const char * syscall_version(void);
 
 #endif /* _SYSCALL_H */
