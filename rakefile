@@ -119,8 +119,6 @@ task 'debug' => ['build:kernel_debug', 'build:command'] do
         FileUtils.cp "zemu/disk.img", "disk_copy.bin"
     end
 
-
-    assert success, "Failed to build test code!"
     zemu_start()
 end
 
