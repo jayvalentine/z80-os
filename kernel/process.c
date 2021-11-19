@@ -17,7 +17,7 @@ typedef int (*Command_T)(char **, size_t);
 #define PHDR_PAGE 1
 #define USER_RAM_START_PAGE 0x80
 
-int process_exec(uint16_t address, char ** argv, size_t argc)
+int process_exec(void * address, char ** argv, size_t argc)
 {
     Command_T process_main = (Command_T)address;
     return process_main(argv, argc);
@@ -36,7 +36,7 @@ int process_exec(uint16_t address, char ** argv, size_t argc)
  * Returns:
  * 0 if loaded successfully, <0 if file error occurred.
  */
-int process_load(uint16_t * address, const char * filename)
+int process_load(uintptr_t * address, const char * filename)
 {
     int fd = file_open(filename, FMODE_READ);
 
@@ -54,13 +54,13 @@ int process_load(uint16_t * address, const char * filename)
     if (header[PHDR_ID] != PHDR_ID_EXEC) return E_INVALIDHEADER;
 
     /* Base address page is second byte of header. */
-    uint8_t base_addr_page = header[PHDR_PAGE];
+    uintptr_t base_addr_page = header[PHDR_PAGE];
 
     /* Check page is valid. */
     if (base_addr_page < USER_RAM_START_PAGE) return E_INVALIDPAGE;
 
     /* Yes, so load the file into that page. */
-    uint16_t base_addr = (uint16_t)base_addr_page << 8;
+    void * base_addr = (void *)(base_addr_page << 8);
 
     char * user_ram_ptr = user_ram(base_addr);
 
@@ -75,6 +75,6 @@ int process_load(uint16_t * address, const char * filename)
     }
 
     /* Update address. Return success. */
-    *address = base_addr;
+    *address = (uintptr_t)base_addr;
     return 0;
 }
