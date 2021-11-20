@@ -77,3 +77,27 @@ int test_eval_addition()
 
     return 0;
 }
+
+int test_eval_addition_three_terms()
+{
+    const char * input = "10+3+4";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    tok_t eval_buf[3];
+    tok_t * eval = eval_buf;
+
+    error_t err = eval_numeric(eval, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
+
+    numeric_t num = t_numeric_get(eval+1);
+
+    ASSERT_EQUAL_INT(17, num);
+
+    return 0;
+}
