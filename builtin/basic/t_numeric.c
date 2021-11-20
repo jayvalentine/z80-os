@@ -57,13 +57,6 @@ int t_numeric_parse(tok_t ** dst_ptr, const char ** input_ptr)
         return 0;
     }
 
-    char sign = ' ';
-    if (*input == '-')
-    {
-        sign = '-';
-        input++;
-    }
-
     /* Next input needs to be digit. */
     if (*input < '0' || *input > '9')
     {
@@ -87,12 +80,6 @@ int t_numeric_parse(tok_t ** dst_ptr, const char ** input_ptr)
         val += (digit - '0');
     }
 
-    /* Sign? */
-    if (sign == '-')
-    {
-        val = -val;
-    }
-
     numeric_t * numeric_ptr = (numeric_t *)dst;
     *numeric_ptr = val;
     dst += 2;
@@ -110,11 +97,6 @@ const tok_t * t_numeric_list(const tok_t * toks)
     toks += 2;
 
     numeric_t val = *numeric_ptr;
-
-    char sign = (val < 0) ? '-' : ' ';
-
-    /* Make absolute. */
-    if (val < 0) val = -val;
 
     char ten_thousands = '0';
     char thousands = '0';
@@ -149,7 +131,6 @@ const tok_t * t_numeric_list(const tok_t * toks)
     /* Guaranteed to be <10 now. */
     units += val;
 
-    if (sign != ' ')          putchar(sign);
     if (ten_thousands != '0') putchar(ten_thousands);
     if (thousands != '0')     putchar(thousands);
     if (hundreds != '0')      putchar(hundreds);
