@@ -227,3 +227,62 @@ int test_eval_variable()
 
     return 0;
 }
+
+int test_eval_variable_complex()
+{
+    program_new();
+
+    /* Set up context. */
+    program_def_numeric("VAR", 42);
+    program_def_numeric("FRED", 9);
+
+    const char * input = "VAR + 22 - FRED";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    tok_t eval_buf[3];
+    tok_t * eval = eval_buf;
+
+    error_t err = eval_numeric(eval, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
+
+    numeric_t num = t_numeric_get(eval+1);
+
+    ASSERT_EQUAL_INT(55, num);
+
+    return 0;
+}
+
+int test_eval_variable_negation()
+{
+    program_new();
+
+    /* Set up context. */
+    program_def_numeric("VAR", 8);
+
+    const char * input = "-VAR";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    tok_t eval_buf[3];
+    tok_t * eval = eval_buf;
+
+    error_t err = eval_numeric(eval, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
+
+    numeric_t num = t_numeric_get(eval+1);
+
+    ASSERT_EQUAL_INT(-8, num);
+
+    return 0;
+}
