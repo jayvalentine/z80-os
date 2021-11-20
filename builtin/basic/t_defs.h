@@ -3,13 +3,14 @@
 
 #include <stdint.h>
 
-#define NUM_TOKS 5
+#define NUM_TOKS 6
 
 #define TOK_TERMINATOR 0x00
 #define TOK_STRING 0x01
 #define TOK_KEYWORD 0x02
 #define TOK_NUMERIC 0x03
 #define TOK_OPERATOR 0x04
+#define TOK_VARIABLE 0x05
 
 /* Type representing a token in a program. */
 typedef uint8_t tok_t;
