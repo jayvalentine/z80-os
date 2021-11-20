@@ -86,6 +86,15 @@ error_t eval_numeric(tok_t * dst, const tok_t * src)
         }
         else if (tok == TOK_OPERATOR)
         {
+            /* Pop all operators off the stack. */
+            while (opstack.count > 0)
+            {
+                *output_ptr = TOK_OPERATOR;
+                output_ptr++;
+                opstack_pop(&opstack, output_ptr);
+                output_ptr++;
+            }
+
             operator_t op = *(src+1);
             opstack_push(&opstack, op);
         }
