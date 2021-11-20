@@ -150,6 +150,18 @@ error_t eval_numeric(tok_t * dst, const tok_t * src)
 
                     numstack_push(&numstack, a);
                 }
+                else if (numstack.count == 2)
+                {
+                    /* Pop 2 numbers off stack, add them together. */
+                    numeric_t a;
+                    numeric_t b;
+
+                    numstack_pop(&numstack, &a);
+                    numstack_pop(&numstack, &b);
+
+                    numeric_t c = b - a;
+                    numstack_push(&numstack, c);
+                }
             }
         }
 
