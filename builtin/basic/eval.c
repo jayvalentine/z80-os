@@ -93,13 +93,14 @@ error_t eval_numeric(tok_t * dst, const tok_t * src)
         src += t_defs_size(src);
     }
 
-    /* At this point we have a numeric
-     * in the output stream. */
-
-    *output_ptr = TOK_OPERATOR;
-    output_ptr++;
-    opstack_pop(&opstack, output_ptr);
-    output_ptr++;
+    /* Now pop all operators off the stack. */
+    while (opstack.count > 0)
+    {
+        *output_ptr = TOK_OPERATOR;
+        output_ptr++;
+        opstack_pop(&opstack, output_ptr);
+        output_ptr++;
+    }
 
     *output_ptr = TOK_TERMINATOR;
 
@@ -121,6 +122,35 @@ error_t eval_numeric(tok_t * dst, const tok_t * src)
         }
         else if (tok == TOK_OPERATOR)
         {
+            operator_t op = *(output_ptr+1);
+
+            if (op == OP_PLUS)
+            {
+                /* Pop 2 numbers off stack, add them together. */
+                numeric_t a;
+                numeric_t b;
+
+                numstack_pop(&numstack, &a);
+                numstack_pop(&numstack, &b);
+
+                numeric_t c = a + b;
+                numstack_push(&numstack, c);
+            }
+
+            else if (op == OP_MINUS)
+            {
+                /* How many values on stack? */
+                if (numstack.count == 1)
+                {
+                    /* Just one, so this is negation. */
+                    numeric_t a;
+                    numstack_pop(&numstack, &a);
+
+                    a = -a;
+
+                    numstack_push(&numstack, a);
+                }
+            }
         }
 
         output_ptr += t_defs_size(output_ptr);
