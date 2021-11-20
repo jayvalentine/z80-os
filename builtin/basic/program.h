@@ -82,10 +82,10 @@ int program_next_lineno(void);
  */
 void program_set_next_lineno(int lineno);
 
-/* program_def_numeric
+/* program_set_numeric
  *
  * Purpose:
- *     Define a new numeric variable.
+ *     Set a numeric variable.
  * 
  * Parameters:
  *     name: Name of the variable.
@@ -94,7 +94,7 @@ void program_set_next_lineno(int lineno);
  * Returns:
  *     Error, if any.
  */
-error_t program_def_numeric(const char * name, numeric_t val);
+error_t program_set_numeric(const char * name, numeric_t val);
 
 /* program_get_numeric
  *

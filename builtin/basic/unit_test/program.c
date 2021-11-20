@@ -8,7 +8,7 @@ int test_program_def_variable()
 
     const char * name = "ABC";
 
-    error_t success = program_def_numeric(name, 42);
+    error_t success = program_set_numeric(name, 42);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, success);
 
@@ -28,10 +28,10 @@ int test_program_def_2_variables()
     const char * name1 = "ABC";
     const char * name2 = "FRED";
 
-    error_t success1 = program_def_numeric(name1, 42);
+    error_t success1 = program_set_numeric(name1, 42);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, success1);
 
-    error_t success2 = program_def_numeric(name2, 13);
+    error_t success2 = program_set_numeric(name2, 13);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, success2);
 
     numeric_t num1;
@@ -58,11 +58,11 @@ int test_program_def_too_many_variables()
     {
         name[0] = c; c++;
         name[1] = '\0';
-        error_t success = program_def_numeric(name, i);
+        error_t success = program_set_numeric(name, i);
         ASSERT_EQUAL_UINT(ERROR_NOERROR, success);
     }
 
-    error_t success2 = program_def_numeric("BOB", 42);
+    error_t success2 = program_set_numeric("BOB", 42);
     ASSERT_EQUAL_UINT(ERROR_TOO_MANY_VARS, success2);
     
     c = 'A';
@@ -85,7 +85,7 @@ int test_program_def_variable_toolong()
 
     const char * name = "ABCDE";
 
-    error_t success = program_def_numeric(name, 42);
+    error_t success = program_set_numeric(name, 42);
 
     ASSERT_EQUAL_UINT(ERROR_VARNAME, success);
     
@@ -103,5 +103,32 @@ int test_program_get_variable_undefined()
 
     ASSERT_EQUAL_UINT(ERROR_UNDEFINED_VAR, success);
     
+    return 0;
+}
+
+int test_program_set_variable_twice()
+{
+    program_new();
+
+    const char * name = "ABC";
+
+    error_t success = program_set_numeric(name, 42);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, success);
+
+    numeric_t num;
+    error_t error = program_get_numeric(name, &num);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, error);
+    ASSERT_EQUAL_INT(42, num);
+
+    error_t error2 = program_set_numeric(name, 15);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, error2);
+
+    error_t error3 = program_get_numeric(name, &num);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, error3);
+    ASSERT_EQUAL_INT(15, num);
+
     return 0;
 }

@@ -256,10 +256,10 @@ int program_next_lineno(void)
 /* The functions below relate to defining, setting,
  * and getting variables. */
 
-/* program_def_numeric
+/* program_set_numeric
  *
  * Purpose:
- *     Define a new numeric variable.
+ *     Set a numeric variable.
  * 
  * Parameters:
  *     name: Name of the variable.
@@ -268,9 +268,21 @@ int program_next_lineno(void)
  * Returns:
  *     Error, if any.
  */
-error_t program_def_numeric(const char * name, numeric_t val)
+error_t program_set_numeric(const char * name, numeric_t val)
 {
     if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
+
+    /* First check if it is already defined. */
+    for (uint8_t i = 0; i < program_context.count; i++)
+    {
+        if (strcmp(program_context.defines[i].name, name) == 0)
+        {
+            program_context.defines[i].value = val;
+            return ERROR_NOERROR;
+        }
+    }
+    
+    /* Otherwise we're defining a new variable. */
     if (program_context.count == MAX_NUMERICS) return ERROR_TOO_MANY_VARS;
 
     context_numeric_t * define = &program_context.defines[program_context.count];
@@ -296,6 +308,8 @@ error_t program_def_numeric(const char * name, numeric_t val)
  */
 error_t program_get_numeric(const char * name, numeric_t * val)
 {
+    if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
+    
     for (uint8_t i = 0; i < program_context.count; i++)
     {
         if (strcmp(program_context.defines[i].name, name) == 0)

@@ -4,21 +4,21 @@
 #include "errors.h"
 
 #include "t_defs.h"
+#include "t_numeric.h"
 
 /* eval_numeric
  *
  * Purpose:
  *     Attempts to evaluate the expression given
- *     by the tokens at src and write the result
- *     as a numeric token to dst.
+ *     by the tokens at src and provides the result.
  * 
  * Parameters:
- *     dst: Destination for result token.
- *     src: Expression tokens to evaluate.
+ *     result: Destination for result value
+ *     src:    Expression tokens to evaluate.
  * 
  * Returns:
  *     Error, if any.
  */
-error_t eval_numeric(tok_t * dst, const tok_t * src);
+error_t eval_numeric(numeric_t * result, const tok_t * src);
 
 #endif

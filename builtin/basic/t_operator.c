@@ -36,6 +36,11 @@ int t_operator_parse(tok_t ** dst_ptr, const char ** input_ptr)
         op = OP_PLUS;
         input++;
     }
+    else if (c == '=')
+    {
+        op = OP_EQUAL;
+        input++;
+    }
     else
     {
         return 0;
@@ -92,6 +97,10 @@ const tok_t * t_operator_list(const tok_t * toks)
     else if (op == OP_PLUS)
     {
         putchar('+');
+    }
+    else if (op == OP_EQUAL)
+    {
+        putchar('=');
     }
 
     putchar(' ');

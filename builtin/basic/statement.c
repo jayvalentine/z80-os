@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "statement.h"
+#include "eval.h"
 #include "program.h"
 
 #include "t_defs.h"
@@ -133,5 +134,30 @@ error_t statement_interpret(const tok_t * stmt)
         kw_code kw = *stmt;
         stmt++;
         return t_keyword_interpret(kw, stmt);
+    }
+    else if (tok_type == TOK_VARIABLE)
+    {
+        stmt++;
+
+        /* Assignment. Check that the next token is equals. */
+        char varname[VARNAME_BUF_SIZE];
+
+        size_t n = *stmt;
+        memcpy(varname, stmt+1, n);
+        varname[n] = '\0';
+
+        stmt += t_variable_size(stmt);
+        if (*stmt != TOK_OPERATOR) return ERROR_SYNTAX;
+        stmt++;
+        if (*stmt != OP_EQUAL) return ERROR_SYNTAX;
+        stmt++;
+
+        /* Now we have a statement to evaluate. */
+        numeric_t val;
+        error_t error = eval_numeric(&val, stmt);
+        if (error != ERROR_NOERROR) return error;
+
+        /* Eval was successful, assign the value. */
+        return program_set_numeric(varname, val);
     }
 }
