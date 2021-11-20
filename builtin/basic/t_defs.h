@@ -9,6 +9,7 @@
 #define TOK_STRING 0x01
 #define TOK_KEYWORD 0x02
 #define TOK_NUMERIC 0x03
+#define TOK_OPERATOR 0x04
 
 /* Type representing a token in a program. */
 typedef uint8_t tok_t;
