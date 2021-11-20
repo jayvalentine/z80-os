@@ -1,7 +1,11 @@
+#include <string.h>
+
 #include "eval.h"
+#include "program.h"
 
 #include "t_numeric.h"
 #include "t_operator.h"
+#include "t_variable.h"
 
 #define OPSTACK_MAX 16
 #define NUMSTACK_MAX 16
@@ -96,7 +100,24 @@ error_t eval_numeric(tok_t * dst, const tok_t * src)
         {
             numeric_t num = t_numeric_get(src+1);
             t_numeric_put(output_ptr, num);
-            output_ptr += t_numeric_size(output_ptr) + 1;
+            output_ptr += 3;
+        }
+        else if (tok == TOK_VARIABLE)
+        {
+            /* Construct variable name string. */
+            char varname[VARNAME_BUF_SIZE];
+            tok_size_t size = *(src+1);
+            memcpy(varname, (src+2), size);
+            varname[size] = '\0';
+
+            /* Get variable value. */
+            numeric_t val;
+            error_t e = program_get_numeric(varname, &val);
+            if (e != ERROR_NOERROR) return e;
+
+            /* Write value to output. */
+            t_numeric_put(output_ptr, val);
+            output_ptr += 3;
         }
         else if (tok == TOK_OPERATOR)
         {

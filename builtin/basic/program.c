@@ -32,11 +32,9 @@ int next_lineno;
 
 uint8_t program_state;
 
-#define VAR_NAME_SIZE 4
-
 typedef struct _CONTEXT_NUMERIC_T
 {
-    char name[VAR_NAME_SIZE+1];
+    char name[VARNAME_BUF_SIZE];
     numeric_t value;
 } context_numeric_t;
 
@@ -272,7 +270,7 @@ int program_next_lineno(void)
  */
 error_t program_def_numeric(const char * name, numeric_t val)
 {
-    if (strlen(name) > VAR_NAME_SIZE) return ERROR_VARNAME;
+    if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
     if (program_context.count == MAX_NUMERICS) return ERROR_TOO_MANY_VARS;
 
     context_numeric_t * define = &program_context.defines[program_context.count];

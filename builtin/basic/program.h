@@ -6,6 +6,7 @@
 #include "errors.h"
 #include "t_defs.h"
 #include "t_numeric.h"
+#include "t_variable.h"
 
 /* program_end
  *
