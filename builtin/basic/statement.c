@@ -10,6 +10,7 @@
 #include "t_keyword.h"
 #include "t_numeric.h"
 #include "t_operator.h"
+#include "t_variable.h"
 
 /* Tokenize a substring of a statement,
  * returning a pointer to the next byte to be filled
@@ -26,8 +27,11 @@ static error_t statement_tokenize_string(tok_t ** dst_ptr, const char ** input_p
     /* Is it numeric? */
     if (t_numeric_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
 
-    /* Otherwise it must be a keyword. */
+    /* Keyword? */
     if (t_keyword_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
+
+    /* Variable? */
+    if (t_variable_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
 
     return ERROR_SYNTAX;
 }

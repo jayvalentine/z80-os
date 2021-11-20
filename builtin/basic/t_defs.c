@@ -6,6 +6,7 @@
 #include "t_string.h"
 #include "t_numeric.h"
 #include "t_operator.h"
+#include "t_variable.h"
 
 const tok_t * t_terminator_list(const tok_t * toks)
 {
@@ -37,7 +38,8 @@ t_list_t t_list[NUM_TOKS] =
     t_string_list,
     t_keyword_list,
     t_numeric_list,
-    t_operator_list
+    t_operator_list,
+    t_variable_list
 };
 
 const tok_t * t_defs_list(const tok_t * toks)
@@ -54,7 +56,8 @@ t_size_t t_size[NUM_TOKS] =
     t_string_size,
     t_keyword_size,
     t_numeric_size,
-    t_operator_size
+    t_operator_size,
+    t_variable_size
 };
 
 tok_size_t t_defs_size(const tok_t * toks)
