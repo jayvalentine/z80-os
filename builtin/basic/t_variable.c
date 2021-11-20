@@ -30,9 +30,14 @@ int t_variable_parse(tok_t ** dst_ptr, const char ** input_ptr)
 
     while (*input >= 'A' && *input <= 'Z')
     {
-        *dst = *input;
-        dst++; input++;
-        size++;
+        if (size < VARNAME_SIZE)
+        {
+            *dst = *input;
+            dst++;
+            size++;
+        }
+
+        input++;
     }
 
     if (size == 0)

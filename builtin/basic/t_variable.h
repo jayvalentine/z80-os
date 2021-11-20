@@ -5,6 +5,9 @@
 
 #include "t_defs.h"
 
+#define VARNAME_SIZE 4
+#define VARNAME_BUF_SIZE (VARNAME_SIZE+1)
+
 /* t_variable_parse
  *
  * Purpose:
