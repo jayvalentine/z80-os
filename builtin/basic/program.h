@@ -5,6 +5,7 @@
 
 #include "errors.h"
 #include "t_defs.h"
+#include "t_numeric.h"
 
 /* program_end
  *
@@ -21,6 +22,17 @@ error_t program_end(error_t error);
 
 uint16_t program_free(void);
 
+/* program_new
+ *
+ * Purpose:
+ *     Create a new program.
+ * 
+ * Parameters:
+ *     None.
+ * 
+ * Returns:
+ *     None.
+ */
 void program_new(void);
 
 error_t program_insert(const tok_t * toks);
@@ -68,5 +80,33 @@ int program_next_lineno(void);
  *     Nothing.
  */
 void program_set_next_lineno(int lineno);
+
+/* program_def_numeric
+ *
+ * Purpose:
+ *     Define a new numeric variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val:  Value of the variable.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_def_numeric(const char * name, numeric_t val);
+
+/* program_get_numeric
+ *
+ * Purpose:
+ *     Get the value of a numeric variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val:  Reference value of the variable.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_get_numeric(const char * name, numeric_t * val);
 
 #endif

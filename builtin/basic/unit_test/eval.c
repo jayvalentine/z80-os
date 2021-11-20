@@ -1,6 +1,7 @@
 #include "test.h"
 
 #include "statement.h"
+#include "program.h"
 
 #include "t_numeric.h"
 #include "eval.h"
@@ -194,6 +195,35 @@ int test_eval_subtraction_addition()
     numeric_t num = t_numeric_get(eval+1);
 
     ASSERT_EQUAL_INT(11, num);
+
+    return 0;
+}
+
+int test_eval_variable()
+{
+    program_new();
+
+    /* Set up context. */
+    program_def_numeric("VAR", 42);
+
+    const char * input = "VAR";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    tok_t eval_buf[3];
+    tok_t * eval = eval_buf;
+
+    error_t err = eval_numeric(eval, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
+
+    numeric_t num = t_numeric_get(eval+1);
+
+    ASSERT_EQUAL_INT(42, num);
 
     return 0;
 }

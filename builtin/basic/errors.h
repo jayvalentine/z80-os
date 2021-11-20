@@ -11,6 +11,9 @@ typedef uint8_t error_t;
 #define ERROR_LINENUM 3
 #define ERROR_GOTO 4
 #define ERROR_NOT_RUNNING 5
+#define ERROR_VARNAME 6
+#define ERROR_UNDEFINED_VAR 7
+#define ERROR_TOO_MANY_VARS 8
 
 void error_display(error_t error);
 

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "program.h"
 
@@ -31,6 +32,26 @@ int next_lineno;
 
 uint8_t program_state;
 
+#define VAR_NAME_SIZE 4
+
+typedef struct _CONTEXT_NUMERIC_T
+{
+    char name[VAR_NAME_SIZE+1];
+    numeric_t value;
+} context_numeric_t;
+
+
+#define MAX_NUMERICS 16
+
+typedef struct _CONTEXT_T
+{
+    uint8_t count;
+
+    context_numeric_t defines[MAX_NUMERICS];
+} context_t;
+
+context_t program_context;
+
 /* program_end
  *
  * Purpose:
@@ -59,6 +80,13 @@ void program_new(void)
     current_lineno = 0;
     program_end_ptr = program_start;
     program_state = PROGSTATE_READY;
+
+    /* Free the variable context. */
+    program_context.count = 0;
+    for (int i = 0; i < MAX_NUMERICS; i++)
+    {
+        program_context.defines[i].name[0] = '\0';
+    }
 }
 
 error_t program_insert(const tok_t * toks)
@@ -225,4 +253,59 @@ void program_set_next_lineno(int lineno)
 int program_next_lineno(void)
 {
     return next_lineno;
+}
+
+/* The functions below relate to defining, setting,
+ * and getting variables. */
+
+/* program_def_numeric
+ *
+ * Purpose:
+ *     Define a new numeric variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val:  Value of the variable.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_def_numeric(const char * name, numeric_t val)
+{
+    if (strlen(name) > VAR_NAME_SIZE) return ERROR_VARNAME;
+    if (program_context.count == MAX_NUMERICS) return ERROR_TOO_MANY_VARS;
+
+    context_numeric_t * define = &program_context.defines[program_context.count];
+    strcpy(define->name, name);
+    define->value = val;
+
+    program_context.count++;
+
+    return ERROR_NOERROR;
+}
+
+/* program_get_numeric
+ *
+ * Purpose:
+ *     Get the value of a numeric variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val:  Reference value of the variable.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_get_numeric(const char * name, numeric_t * val)
+{
+    for (uint8_t i = 0; i < program_context.count; i++)
+    {
+        if (strcmp(program_context.defines[i].name, name) == 0)
+        {
+            *val = program_context.defines[i].value;
+            return ERROR_NOERROR;
+        }
+    }
+
+    return ERROR_UNDEFINED_VAR;
 }

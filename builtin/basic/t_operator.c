@@ -22,7 +22,7 @@ int t_operator_parse(tok_t ** dst_ptr, const char ** input_ptr)
     operator_t op;
 
     const char * input = *input_ptr;
-    char * dst = *dst_ptr;
+    tok_t * dst = *dst_ptr;
 
     char c = *input;
 
@@ -93,6 +93,8 @@ const tok_t * t_operator_list(const tok_t * toks)
     {
         putchar('+');
     }
+
+    putchar(' ');
 
     return toks;
 }
