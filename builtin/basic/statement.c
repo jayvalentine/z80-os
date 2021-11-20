@@ -9,6 +9,7 @@
 #include "t_string.h"
 #include "t_keyword.h"
 #include "t_numeric.h"
+#include "t_operator.h"
 
 /* Tokenize a substring of a statement,
  * returning a pointer to the next byte to be filled
@@ -18,6 +19,9 @@ static error_t statement_tokenize_string(tok_t ** dst_ptr, const char ** input_p
 {
     /* Is this a string? */
     if (t_string_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
+
+    /* Operator? */
+    if (t_operator_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
 
     /* Is it numeric? */
     if (t_numeric_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
