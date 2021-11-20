@@ -60,6 +60,8 @@ error_t statement_tokenize(tok_t * stmt, const char * input)
 
     /* Final terminating character. */
     *stmt = TOK_TERMINATOR;
+
+    return ERROR_NOERROR;
 }
 
 tok_size_t statement_size(const tok_t * stmt)

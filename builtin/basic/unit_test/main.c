@@ -25,6 +25,8 @@ int test_numeric_size();
 
 int test_eval_numeric();
 
+int test_eval_numeric_negative();
+
 int test_eval_addition();
 
 
@@ -44,6 +46,8 @@ int main(void)
     RUN_TEST(test_numeric_size);
 
     RUN_TEST(test_eval_numeric);
+
+    RUN_TEST(test_eval_numeric_negative);
 
     RUN_TEST(test_eval_addition);
 
