@@ -34,6 +34,20 @@ uint8_t opstack_pop(opstack_t * opstack, operator_t * op)
     return 1;
 }
 
+void opstack_pop_all(tok_t ** dst_ptr, opstack_t * opstack)
+{
+    tok_t * dst = *dst_ptr;
+    while (opstack->count > 0)
+    {
+        *dst = TOK_OPERATOR;
+        dst++;
+        opstack_pop(opstack, dst);
+        dst++;
+    }
+
+    *dst_ptr = dst;
+}
+
 uint8_t numstack_push(numstack_t * numstack, numeric_t num)
 {
     if (numstack->count == NUMSTACK_MAX) return 0;
@@ -87,13 +101,7 @@ error_t eval_numeric(tok_t * dst, const tok_t * src)
         else if (tok == TOK_OPERATOR)
         {
             /* Pop all operators off the stack. */
-            while (opstack.count > 0)
-            {
-                *output_ptr = TOK_OPERATOR;
-                output_ptr++;
-                opstack_pop(&opstack, output_ptr);
-                output_ptr++;
-            }
+            opstack_pop_all(&output_ptr, &opstack);
 
             operator_t op = *(src+1);
             opstack_push(&opstack, op);
@@ -103,13 +111,7 @@ error_t eval_numeric(tok_t * dst, const tok_t * src)
     }
 
     /* Now pop all operators off the stack. */
-    while (opstack.count > 0)
-    {
-        *output_ptr = TOK_OPERATOR;
-        output_ptr++;
-        opstack_pop(&opstack, output_ptr);
-        output_ptr++;
-    }
+    opstack_pop_all(&output_ptr, &opstack);
 
     *output_ptr = TOK_TERMINATOR;
 
