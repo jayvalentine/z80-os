@@ -140,3 +140,23 @@ const tok_t * t_numeric_list(const tok_t * toks)
 
     return toks;
 }
+
+/* t_numeric_put
+ *
+ * Purpose:
+ *     Write a numeric (int) to the given token stream.
+ * 
+ * Parameters:
+ *     toks: Token stream to write to.
+ *     num:  Numeric value to write.
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void t_numeric_put(tok_t * toks, numeric_t num)
+{
+    *toks = TOK_NUMERIC;
+    toks++;
+    numeric_t * num_ptr = (numeric_t *)toks;
+    *num_ptr = num;
+}

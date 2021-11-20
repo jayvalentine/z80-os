@@ -1,10 +1,12 @@
 #include <stdio.h>
 
+int test_failed;
+
 #define RUN_TEST(test_name)             \
     if (test_name())                    \
     {                                   \
         printf("\n" #test_name " X (line %d)\n", failed_line);   \
-        return 1;                       \
+        test_failed = 1;                \
     }                                   \
     else printf(".")
 
@@ -16,9 +18,10 @@ int <%= t %>();
 
 int main(void)
 {
+    test_failed = 0;
 <% tests.each do |t| %>
     RUN_TEST(<%= t %>);
 <% end %>
     printf("\n");
-    return 0;
+    return test_failed;
 }

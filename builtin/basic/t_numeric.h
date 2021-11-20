@@ -20,6 +20,20 @@ typedef int16_t numeric_t;
  */
 numeric_t t_numeric_get(const tok_t * toks);
 
+/* t_numeric_put
+ *
+ * Purpose:
+ *     Write a numeric (int) to the given token stream.
+ * 
+ * Parameters:
+ *     toks: Token stream to write to.
+ *     num:  Numeric value to write.
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void t_numeric_put(tok_t * toks, numeric_t num);
+
 /* t_numeric_size
  * Purpose:
  *     Return the size of a numeric in memory.

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define NUM_TOKS 4
+#define NUM_TOKS 5
 
 #define TOK_TERMINATOR 0x00
 #define TOK_STRING 0x01
