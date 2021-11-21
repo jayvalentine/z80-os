@@ -148,8 +148,67 @@ error_t do_goto(const tok_t * toks)
 
 error_t do_for(const tok_t * toks)
 {
-    /* TODO: Implement. */
-    return ERROR_SYNTAX;
+    /* Get some info about the for loop. */
+    /* Syntax is FOR <VAR> = <NUM> TO <NUM> */
+    
+    /* Get variable name. */
+    char varname[VARNAME_BUF_SIZE];
+    t_variable_get(varname, toks+1);
+    toks += t_defs_size(toks);
+
+    /* Next should be EQUALS. */
+    toks += t_defs_size(toks);
+
+    /* Now NUMERIC. */
+    numeric_t start = t_numeric_get(toks+1);
+    toks += t_defs_size(toks);
+
+    /* Now TO. */
+    toks += t_defs_size(toks);
+
+    /* Finally limit NUMERIC. */
+    numeric_t limit = t_numeric_get(toks+1);
+    toks += t_defs_size(toks);
+
+    /* Get top of return stack to see if we're
+     * already in the loop or not. */
+    program_return_t tos;
+    program_pop_return(&tos);
+
+    /* If the variable in the FOR matches
+     * the variable in TOS, then we're already
+     * in the loop. */
+    if (strcmp(tos.varname, varname) == 0)
+    {
+        numeric_t current_val;
+        program_get_numeric(varname, &current_val);
+        program_set_numeric(varname, current_val + 1);
+    }
+    else
+    {
+        program_set_numeric(varname, start);
+
+        /* Push TOS back onto stack -
+         * it's nothing to do with this loop. */
+        program_push_return(&tos);
+    }
+
+    /* Now check if we've hit the limit. */
+    numeric_t current_val;
+    program_get_numeric(varname, &current_val);
+    if (current_val >= limit)
+    {
+        program_set_next_lineno(tos.lineno);
+    }
+    else
+    {
+        program_return_t new_tos;
+        new_tos.lineno = program_current_lineno();
+        strcpy(new_tos.varname, varname);
+        program_push_return(&new_tos);
+    }
+
+    return ERROR_NOERROR;
 }
 
 error_t do_to(const tok_t * toks)

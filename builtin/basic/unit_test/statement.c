@@ -151,8 +151,7 @@ int test_interpret_for_entry()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
 
     ASSERT_EQUAL_INT(456, ret1.lineno);
-    ASSERT_EQUAL_UINT('I', ret1.varname[0]);
-    ASSERT_EQUAL_UINT('\0', ret1.varname[1]);
+    ASSERT(strcmp("I", ret1.varname) == 0);
 
     /* Program stack should have the for added. */
     program_return_t ret2;
@@ -160,8 +159,5 @@ int test_interpret_for_entry()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e5);
 
     ASSERT_EQUAL_INT(123, ret2.lineno);
-    ASSERT_EQUAL_UINT('V', ret2.varname[0]);
-    ASSERT_EQUAL_UINT('A', ret2.varname[1]);
-    ASSERT_EQUAL_UINT('R', ret2.varname[2]);
-    ASSERT_EQUAL_UINT('\0', ret2.varname[3]);
+    ASSERT(strcmp("VAR", ret2.varname) == 0);
 }

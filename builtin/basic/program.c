@@ -356,6 +356,8 @@ error_t program_push_return(program_return_t * ret)
     uint8_t i = program_return_stack.count;
     memcpy(&program_return_stack.stack[i], ret, sizeof(program_return_t));
     program_return_stack.count++;
+
+    return ERROR_NOERROR;
 }
 
 /* program_pop_return
@@ -374,4 +376,6 @@ error_t program_pop_return(program_return_t * ret)
     program_return_stack.count--;
     uint8_t i = program_return_stack.count;
     memcpy(ret, &program_return_stack.stack[i], sizeof(program_return_t));
+
+    return ERROR_NOERROR;
 }

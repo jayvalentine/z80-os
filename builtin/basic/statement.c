@@ -141,10 +141,7 @@ error_t statement_interpret(const tok_t * stmt)
 
         /* Assignment. Check that the next token is equals. */
         char varname[VARNAME_BUF_SIZE];
-
-        size_t n = *stmt;
-        memcpy(varname, stmt+1, n);
-        varname[n] = '\0';
+        t_variable_get(varname, stmt);
 
         stmt += t_variable_size(stmt);
         if (*stmt != TOK_OPERATOR) return ERROR_SYNTAX;

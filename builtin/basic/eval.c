@@ -106,9 +106,7 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
         {
             /* Construct variable name string. */
             char varname[VARNAME_BUF_SIZE];
-            tok_size_t size = *(src+1);
-            memcpy(varname, (src+2), size);
-            varname[size] = '\0';
+            t_variable_get(varname, src+1);
 
             /* Get variable value. */
             numeric_t val;
