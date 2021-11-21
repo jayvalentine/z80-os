@@ -121,6 +121,8 @@ error_t do_print_variable(const tok_t * toks)
 
     /* Print the variable. */
     printf("%d", val);
+
+    return ERROR_NOERROR;
 }
 
 error_t do_print(const tok_t * toks)
