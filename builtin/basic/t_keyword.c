@@ -42,6 +42,10 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "TO",
         KEYWORD_TO
+    },
+    {
+        "NEXT",
+        KEYWORD_NEXT
     }
 };
 
@@ -225,6 +229,34 @@ error_t do_to(const tok_t * toks)
     return ERROR_SYNTAX;
 }
 
+error_t do_next(const tok_t * toks)
+{
+    /* Get variable name. */
+    char varname[VARNAME_BUF_SIZE];
+    t_variable_get(varname, toks+1);
+
+    /* Pop return value off stack.
+     * This should have been set by a FOR. */
+    program_return_t ret;
+    error_t e = program_pop_return(&ret);
+    if (e != ERROR_NOERROR) return e;
+
+    /* Check it's the right variable! */
+    if (strcmp(varname, ret.varname) != 0) return ERROR_SYNTAX;
+
+    numeric_t dest = ret.lineno;
+
+    /* Push a new value onto the stack. */
+    ret.lineno = program_current_lineno();
+    e = program_push_return(&ret);
+    if (e != ERROR_NOERROR) return e;
+
+    /* GOTO the loop start. */
+    program_set_next_lineno(dest);
+
+    return ERROR_NOERROR;
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
@@ -234,7 +266,8 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_end,
     do_goto,
     do_for,
-    do_to
+    do_to,
+    do_next
 };
 
 error_t t_keyword_interpret(kw_code kw, const tok_t * toks)

@@ -7,7 +7,7 @@
 
 #include "t_defs.h"
 
-#define NUM_KEYWORDS 8
+#define NUM_KEYWORDS 9
 
 #define KEYWORD_UNDEFINED 0
 
@@ -21,6 +21,7 @@
 #define KEYWORD_GOTO 6
 #define KEYWORD_FOR 7
 #define KEYWORD_TO 8
+#define KEYWORD_NEXT 9
 
 typedef uint8_t kw_code;
 

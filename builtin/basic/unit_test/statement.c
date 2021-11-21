@@ -327,3 +327,48 @@ int test_interpret_for_missing_to()
 
     return 0;
 }
+
+int test_interpret_next()
+{
+    program_new();
+
+    program_set_numeric("I", 3);
+
+    program_return_t ret_start;
+    ret_start.lineno = 123;
+    strcpy(ret_start.varname, "I");
+    program_push_return(&ret_start);
+
+    const char * input = "NEXT I";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
+
+    ASSERT_EQUAL_INT(123, program_next_lineno());
+
+    numeric_t val;
+    error_t e3 = program_get_numeric("I", &val);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
+
+    ASSERT_EQUAL_INT(3, val);
+
+    /* Program stack should have the for added. */
+    program_return_t ret1;
+    error_t e4 = program_pop_return(&ret1);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
+
+    ASSERT_EQUAL_INT(456, ret1.lineno);
+    ASSERT(strcmp("I", ret1.varname) == 0);
+
+    /* Only one entry in stack. */
+    program_return_t ret2;
+    error_t e5 = program_pop_return(&ret2);
+    ASSERT_EQUAL_UINT(ERROR_RETSTACK_EMPTY, e5);
+
+    return 0;
+}
