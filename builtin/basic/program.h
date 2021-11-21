@@ -77,7 +77,7 @@ int program_current_lineno(void);
  * Returns:
  *     Integer line number.
  */
-int program_next_lineno(void);
+numeric_t program_next_lineno(void);
 
 /* program_set_next_lineno
  *

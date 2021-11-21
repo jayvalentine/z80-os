@@ -160,4 +160,119 @@ int test_interpret_for_entry()
 
     ASSERT_EQUAL_INT(123, ret2.lineno);
     ASSERT(strcmp("VAR", ret2.varname) == 0);
+
+    return 0;
+}
+
+int test_interpret_for_continue()
+{
+    program_new();
+    program_set_numeric("I", 1);
+
+    program_return_t ret_start;
+    ret_start.lineno = 210;
+    strcpy(ret_start.varname, "I");
+
+    program_push_return(&ret_start);
+
+    const char * input = "FOR I=1 TO 4";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 130;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
+
+    numeric_t val;
+    error_t e3 = program_get_numeric("I", &val);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
+
+    ASSERT_EQUAL_INT(2, val);
+
+    /* Program stack should have the for added. */
+    program_return_t ret1;
+    error_t e4 = program_pop_return(&ret1);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
+
+    ASSERT_EQUAL_INT(130, ret1.lineno);
+    ASSERT(strcmp("I", ret1.varname) == 0);
+
+    return 0;
+}
+
+int test_interpret_for_hit_limit()
+{
+    program_new();
+    program_set_numeric("I", 3);
+
+    program_return_t ret_start;
+    ret_start.lineno = 210;
+    strcpy(ret_start.varname, "I");
+
+    program_push_return(&ret_start);
+
+    const char * input = "FOR I=1 TO 4";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 130;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
+
+    numeric_t val;
+    error_t e3 = program_get_numeric("I", &val);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
+
+    ASSERT_EQUAL_INT(4, val);
+
+    /* Program stack should be empty. */
+    program_return_t ret1;
+    error_t e4 = program_pop_return(&ret1);
+    ASSERT_EQUAL_UINT(ERROR_RETSTACK_EMPTY, e4);
+    
+    /* Next line number to execute should be 211. */
+    numeric_t next_lineno = program_next_lineno();
+    ASSERT_EQUAL_INT(211, next_lineno);
+
+    return 0;
+}
+
+int test_interpret_entry_empty_stack()
+{
+    program_new();
+
+    const char * input = "FOR I=1 TO 4";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
+
+    numeric_t val;
+    error_t e3 = program_get_numeric("I", &val);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
+
+    ASSERT_EQUAL_INT(1, val);
+
+    /* Program stack should have the for added. */
+    program_return_t ret1;
+    error_t e4 = program_pop_return(&ret1);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
+
+    ASSERT_EQUAL_INT(456, ret1.lineno);
+    ASSERT(strcmp("I", ret1.varname) == 0);
+
+    /* Only one entry in stack. */
+    program_return_t ret2;
+    error_t e5 = program_pop_return(&ret2);
+    ASSERT_EQUAL_UINT(ERROR_RETSTACK_EMPTY, e5);
+
+    return 0;
 }

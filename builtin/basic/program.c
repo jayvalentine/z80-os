@@ -266,7 +266,7 @@ void program_set_next_lineno(int lineno)
  * Returns:
  *     Integer line number.
  */
-int program_next_lineno(void)
+numeric_t program_next_lineno(void)
 {
     return next_lineno;
 }
@@ -373,6 +373,8 @@ error_t program_push_return(program_return_t * ret)
  */
 error_t program_pop_return(program_return_t * ret)
 {
+    if (program_return_stack.count == 0) return ERROR_RETSTACK_EMPTY;
+
     program_return_stack.count--;
     uint8_t i = program_return_stack.count;
     memcpy(ret, &program_return_stack.stack[i], sizeof(program_return_t));

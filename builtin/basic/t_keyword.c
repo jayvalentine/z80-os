@@ -173,7 +173,7 @@ error_t do_for(const tok_t * toks)
     /* Get top of return stack to see if we're
      * already in the loop or not. */
     program_return_t tos;
-    program_pop_return(&tos);
+    error_t e_onstack = program_pop_return(&tos);
 
     /* If the variable in the FOR matches
      * the variable in TOS, then we're already
@@ -188,9 +188,9 @@ error_t do_for(const tok_t * toks)
     {
         program_set_numeric(varname, start);
 
-        /* Push TOS back onto stack -
+        /* Push TOS back onto stack (if there was one) -
          * it's nothing to do with this loop. */
-        program_push_return(&tos);
+        if (e_onstack == ERROR_NOERROR) program_push_return(&tos);
     }
 
     /* Now check if we've hit the limit. */
@@ -198,7 +198,7 @@ error_t do_for(const tok_t * toks)
     program_get_numeric(varname, &current_val);
     if (current_val >= limit)
     {
-        program_set_next_lineno(tos.lineno);
+        program_set_next_lineno(tos.lineno+1);
     }
     else
     {
