@@ -11,6 +11,7 @@
 #define TOK_NUMERIC 0x03
 #define TOK_OPERATOR 0x04
 #define TOK_VARIABLE 0x05
+#define TOK_SEPARATOR 0x06
 
 /* Type representing a token in a program. */
 typedef uint8_t tok_t;
@@ -23,5 +24,8 @@ typedef tok_t (*t_size_t)(const tok_t *);
 
 const tok_t * t_defs_list(const tok_t * toks);
 tok_size_t t_defs_size(const tok_t * toks);
+
+/* Parse a separator from the input stream. */
+int t_sep_parse(tok_t ** dst_ptr, const char ** input_ptr);
 
 #endif

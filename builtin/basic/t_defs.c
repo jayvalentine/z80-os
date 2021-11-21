@@ -8,6 +8,23 @@
 #include "t_operator.h"
 #include "t_variable.h"
 
+/* Parse a separator from the input stream. */
+int t_sep_parse(tok_t ** dst_ptr, const char ** input_ptr)
+{
+    tok_t * dst = *dst_ptr;
+    const char * input = *input_ptr;
+
+    if (*input != ',') return 0;
+
+    *dst = TOK_SEPARATOR;
+    dst++; input++;
+
+    *dst_ptr = dst;
+    *input_ptr = input;
+
+    return 1;
+}
+
 const tok_t * t_terminator_list(const tok_t * toks)
 {
     puts("\r\n");

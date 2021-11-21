@@ -372,3 +372,40 @@ int test_interpret_next()
 
     return 0;
 }
+
+int test_tokenize_with_sep()
+{
+    const char * input = "\"HELLO\",NAME";
+    const char * orig_input = input;
+
+    tok_t dst_buf[40];
+    
+    tok_t * dst = dst_buf;
+    tok_t * orig_dst = dst;
+
+    error_t e = statement_tokenize(dst_buf, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    ASSERT_EQUAL_UINT(TOK_STRING, dst_buf[0]);
+    ASSERT_EQUAL_UINT(5, dst_buf[1]);
+
+    ASSERT_EQUAL_UINT('H', dst_buf[2]);
+    ASSERT_EQUAL_UINT('E', dst_buf[3]);
+    ASSERT_EQUAL_UINT('L', dst_buf[4]);
+    ASSERT_EQUAL_UINT('L', dst_buf[5]);
+    ASSERT_EQUAL_UINT('O', dst_buf[6]);
+
+    ASSERT_EQUAL_UINT(TOK_SEPARATOR, dst_buf[7]);
+
+    ASSERT_EQUAL_UINT(TOK_VARIABLE, dst_buf[8]);
+    ASSERT_EQUAL_UINT(4, dst_buf[9]);
+
+    ASSERT_EQUAL_UINT('N', dst_buf[10]);
+    ASSERT_EQUAL_UINT('A', dst_buf[11]);
+    ASSERT_EQUAL_UINT('M', dst_buf[12]);
+    ASSERT_EQUAL_UINT('E', dst_buf[13]);
+
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, dst_buf[14]);
+
+    return 0;
+}

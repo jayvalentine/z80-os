@@ -19,6 +19,9 @@
  */
 static error_t statement_tokenize_string(tok_t ** dst_ptr, const char ** input_ptr)
 {
+    /* Separator? */
+    if (t_sep_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
+    
     /* Is this a string? */
     if (t_string_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
 
