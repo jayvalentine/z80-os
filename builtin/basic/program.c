@@ -24,8 +24,8 @@ tok_t program_region[4096];
 
 tok_t * program_end_ptr;
 const tok_t * program_stmt_ptr;
-int current_lineno;
-int next_lineno;
+numeric_t current_lineno;
+numeric_t next_lineno;
 
 #define PROGSTATE_RUNNING 0
 #define PROGSTATE_READY 1
@@ -49,6 +49,21 @@ typedef struct _CONTEXT_T
 } context_t;
 
 context_t program_context;
+
+#define RETURN_STACK_LIMIT 8
+
+/* The return stack.
+ * Each entry is an object containing:
+ * A linenumber
+ * A variable name if applicable
+ */
+typedef struct _PROGRAM_RETURN_STACK_T
+{
+    uint8_t count;
+    program_return_t stack[RETURN_STACK_LIMIT];
+} program_return_stack_t;
+
+program_return_stack_t program_return_stack;
 
 /* program_end
  *
@@ -85,6 +100,9 @@ void program_new(void)
     {
         program_context.defines[i].name[0] = '\0';
     }
+
+    /* Clear the return stack. */
+    program_return_stack.count = 0;
 }
 
 error_t program_insert(const tok_t * toks)
@@ -320,4 +338,40 @@ error_t program_get_numeric(const char * name, numeric_t * val)
     }
 
     return ERROR_UNDEFINED_VAR;
+}
+
+/* program_push_return
+ *
+ * Purpose:
+ *     Push a value onto the program's return stack.
+ * 
+ * Parameters:
+ *     ret: Reference to program_return_t object.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_push_return(program_return_t * ret)
+{
+    uint8_t i = program_return_stack.count;
+    memcpy(&program_return_stack.stack[i], ret, sizeof(program_return_t));
+    program_return_stack.count++;
+}
+
+/* program_pop_return
+ *
+ * Purpose:
+ *     Pop a value from the program's return stack.
+ * 
+ * Parameters:
+ *     ret: Reference to program_return_t object to populate.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_pop_return(program_return_t * ret)
+{
+    program_return_stack.count--;
+    uint8_t i = program_return_stack.count;
+    memcpy(ret, &program_return_stack.stack[i], sizeof(program_return_t));
 }

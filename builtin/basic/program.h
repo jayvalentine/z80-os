@@ -8,6 +8,16 @@
 #include "t_numeric.h"
 #include "t_variable.h"
 
+/* Type of an entry in the program return stack.
+ * lineno: Line number to return to.
+ * varname: Associated variable (first character '\0' if N/A).
+ */
+typedef struct _PROGRAM_RETURN_T
+{
+    numeric_t lineno;
+    char varname[VARNAME_BUF_SIZE];
+} program_return_t;
+
 /* program_end
  *
  * Purpose:
@@ -109,5 +119,31 @@ error_t program_set_numeric(const char * name, numeric_t val);
  *     Error, if any.
  */
 error_t program_get_numeric(const char * name, numeric_t * val);
+
+/* program_push_return
+ *
+ * Purpose:
+ *     Push a value onto the program's return stack.
+ * 
+ * Parameters:
+ *     ret: Reference to program_return_t object.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_push_return(program_return_t * ret);
+
+/* program_pop_return
+ *
+ * Purpose:
+ *     Pop a value from the program's return stack.
+ * 
+ * Parameters:
+ *     ret: Reference to program_return_t object to populate.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_pop_return(program_return_t * ret);
 
 #endif
