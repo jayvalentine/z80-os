@@ -31,6 +31,12 @@ const tok_t * t_terminator_list(const tok_t * toks)
     return toks;
 }
 
+const tok_t * t_separator_list(const tok_t * toks)
+{
+    puts(", ");
+    return toks;
+}
+
 tok_size_t t_terminator_size(const tok_t * toks)
 {
     return 0;
@@ -39,6 +45,11 @@ tok_size_t t_terminator_size(const tok_t * toks)
 tok_size_t t_keyword_size(const tok_t * toks)
 {
     return 1;
+}
+
+tok_size_t t_separator_size(const tok_t * toks)
+{
+    return 0;
 }
 
 tok_size_t t_string_size(const tok_t * toks)
@@ -56,7 +67,8 @@ t_list_t t_list[NUM_TOKS] =
     t_keyword_list,
     t_numeric_list,
     t_operator_list,
-    t_variable_list
+    t_variable_list,
+    t_separator_list
 };
 
 const tok_t * t_defs_list(const tok_t * toks)
@@ -74,7 +86,8 @@ t_size_t t_size[NUM_TOKS] =
     t_keyword_size,
     t_numeric_size,
     t_operator_size,
-    t_variable_size
+    t_variable_size,
+    t_separator_size
 };
 
 tok_size_t t_defs_size(const tok_t * toks)

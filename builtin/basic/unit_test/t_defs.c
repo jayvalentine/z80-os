@@ -16,6 +16,8 @@ int test_parse_sep()
     ASSERT_EQUAL_INT(1, success);
     ASSERT_EQUAL_UINT(TOK_SEPARATOR, dst_buf[0]);
 
+    ASSERT_EQUAL_UINT(1, t_defs_size(orig_dst));
+
     ASSERT(dst == orig_dst+1);
     ASSERT(input == orig_input+1);
 
