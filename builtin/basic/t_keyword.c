@@ -33,6 +33,14 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "GOTO",
         KEYWORD_GOTO
+    },
+    {
+        "FOR",
+        KEYWORD_FOR
+    },
+    {
+        "TO",
+        KEYWORD_TO
     }
 };
 
@@ -138,6 +146,18 @@ error_t do_goto(const tok_t * toks)
     return ERROR_NOERROR;
 }
 
+error_t do_for(const tok_t * toks)
+{
+    /* TODO: Implement. */
+    return ERROR_SYNTAX;
+}
+
+error_t do_to(const tok_t * toks)
+{
+    /* Shouldn't ever be interpreted! */
+    return ERROR_SYNTAX;
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
@@ -145,7 +165,9 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_new,
     do_run,
     do_end,
-    do_goto
+    do_goto,
+    do_for,
+    do_to
 };
 
 error_t t_keyword_interpret(kw_code kw, const tok_t * toks)
