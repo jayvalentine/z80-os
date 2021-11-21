@@ -131,7 +131,7 @@ error_t program_get_numeric(const char * name, numeric_t * val);
  * Returns:
  *     Error, if any.
  */
-error_t program_push_return(program_return_t * ret);
+error_t program_push_return(const program_return_t * ret);
 
 /* program_pop_return
  *

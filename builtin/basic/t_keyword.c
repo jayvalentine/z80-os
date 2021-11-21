@@ -93,13 +93,9 @@ int t_keyword_parse(tok_t ** dst_ptr, const char ** input_ptr)
     return 0;
 }
 
-error_t do_print(const tok_t * toks)
+error_t do_print_string(const tok_t * toks)
 {
-    /* Next token must be a string. */
-    if (*toks != TOK_STRING) return ERROR_SYNTAX;
-    toks++;
-
-    /* Now size of the string. */
+    /* Size of the string. */
     tok_size_t size = *toks;
     toks++;
 
@@ -109,6 +105,50 @@ error_t do_print(const tok_t * toks)
         char c = *toks;
         toks++;
         putchar(c);
+    }
+
+    return ERROR_NOERROR;
+}
+
+error_t do_print_variable(const tok_t * toks)
+{
+    char varname[VARNAME_BUF_SIZE];
+    t_variable_get(varname, toks);
+
+    numeric_t val;
+    error_t e = program_get_numeric(varname, &val);
+    if (e != ERROR_NOERROR) return e;
+
+    /* Print the variable. */
+    printf("%d", val);
+}
+
+error_t do_print(const tok_t * toks)
+{
+    while (1)
+    {
+        /* First token in pair must be a string
+         * or a variable.
+         */
+        if (*toks == TOK_STRING)
+        {
+            error_t e = do_print_string(toks+1);
+            if (e != ERROR_NOERROR) return e;
+        }
+        else if (*toks == TOK_VARIABLE)
+        {
+            error_t e = do_print_variable(toks+1);
+            if (e != ERROR_NOERROR) return e;
+        }
+        else return ERROR_SYNTAX;
+
+        toks += t_defs_size(toks);
+
+        /* Next token must either be a separator or a terminator. */
+        if (*toks == TOK_TERMINATOR) break;
+
+        if (*toks != TOK_SEPARATOR) return ERROR_SYNTAX;
+        toks += 1;
     }
 
     puts("\r\n");

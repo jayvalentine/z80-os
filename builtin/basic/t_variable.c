@@ -114,6 +114,6 @@ void t_variable_get(char * varname, const tok_t * toks)
 {
     tok_size_t size = *toks;
     toks++;
-    memcpy(varname, toks, size);
+    memcpy(varname, (const char *)toks, size);
     varname[size] = '\0';
 }

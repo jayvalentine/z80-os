@@ -351,10 +351,10 @@ error_t program_get_numeric(const char * name, numeric_t * val)
  * Returns:
  *     Error, if any.
  */
-error_t program_push_return(program_return_t * ret)
+error_t program_push_return(const program_return_t * ret)
 {
     uint8_t i = program_return_stack.count;
-    memcpy(&program_return_stack.stack[i], ret, sizeof(program_return_t));
+    memcpy((char *)&program_return_stack.stack[i], (const char *)ret, sizeof(program_return_t));
     program_return_stack.count++;
 
     return ERROR_NOERROR;
@@ -377,7 +377,7 @@ error_t program_pop_return(program_return_t * ret)
 
     program_return_stack.count--;
     uint8_t i = program_return_stack.count;
-    memcpy(ret, &program_return_stack.stack[i], sizeof(program_return_t));
+    memcpy((char *)ret, (char *)&program_return_stack.stack[i], sizeof(program_return_t));
 
     return ERROR_NOERROR;
 }
