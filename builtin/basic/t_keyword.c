@@ -7,6 +7,7 @@
 #include "t_defs.h"
 #include "t_keyword.h"
 #include "t_numeric.h"
+#include "t_operator.h"
 
 const Keyword_T keywords[NUM_KEYWORDS] =
 {
@@ -52,7 +53,7 @@ int t_keyword_parse(tok_t ** dst_ptr, const char ** input_ptr)
     const char * input = *input_ptr;
     tok_t * dst = *dst_ptr;
 
-    while (*input != ' ' && *input != '\0')
+    while (*input >= 'A' && *input <= 'Z')
     {
         kw_str[len] = *input;
         input++;
@@ -153,20 +154,27 @@ error_t do_for(const tok_t * toks)
     
     /* Get variable name. */
     char varname[VARNAME_BUF_SIZE];
+    if (*toks != TOK_VARIABLE) return ERROR_SYNTAX;
     t_variable_get(varname, toks+1);
     toks += t_defs_size(toks);
 
     /* Next should be EQUALS. */
+    if (*toks != TOK_OPERATOR) return ERROR_SYNTAX;
+    if (*(toks+1) != OP_EQUAL) return ERROR_SYNTAX;
     toks += t_defs_size(toks);
 
     /* Now NUMERIC. */
+    if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
     numeric_t start = t_numeric_get(toks+1);
     toks += t_defs_size(toks);
 
     /* Now TO. */
+    if (*toks != TOK_KEYWORD) return ERROR_SYNTAX;
+    if (*(toks+1) != KEYWORD_TO) return ERROR_SYNTAX;
     toks += t_defs_size(toks);
 
     /* Finally limit NUMERIC. */
+    if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
     numeric_t limit = t_numeric_get(toks+1);
     toks += t_defs_size(toks);
 
