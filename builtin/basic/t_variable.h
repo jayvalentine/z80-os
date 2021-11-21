@@ -48,5 +48,19 @@ tok_size_t t_variable_size(const tok_t * toks);
  */
 const tok_t * t_variable_list(const tok_t * toks);
 
+/* t_variable_get
+ *
+ * Purpose:
+ *     Get a variable name from the given token stream.
+ * 
+ * Parameters:
+ *     var:    Buffer for variable name string.
+ *     toks:   Variable token stream.
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void t_variable_get(char * varname, const tok_t * toks);
+
 #endif
 

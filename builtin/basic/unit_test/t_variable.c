@@ -3,6 +3,8 @@
 #include "t_variable.h"
 #include "t_defs.h"
 
+#include <string.h>
+
 int test_variable_parse_c()
 {
     const char * input = "C";
@@ -70,6 +72,46 @@ int test_variable_parse_something()
 
     ASSERT(dst == orig_dst+6);
     ASSERT(input == orig_input+9);
+
+    return 0;
+}
+
+int test_variable_get_some()
+{
+    const char * input = "SOMETHING";
+    const char * orig_input = input;
+
+    tok_t dst_buf[11];
+    
+    tok_t * dst = dst_buf;
+    tok_t * orig_dst = dst;
+
+    int success = t_variable_parse(&dst, &input);
+    ASSERT_EQUAL_INT(1, success);
+
+    char varname[VARNAME_BUF_SIZE];
+    t_variable_get(varname, orig_dst+1);
+    ASSERT(strcmp("SOME", varname) == 0);
+
+    return 0;
+}
+
+int test_variable_get_i()
+{
+    const char * input = "I";
+    const char * orig_input = input;
+
+    tok_t dst_buf[11];
+    
+    tok_t * dst = dst_buf;
+    tok_t * orig_dst = dst;
+
+    int success = t_variable_parse(&dst, &input);
+    ASSERT_EQUAL_INT(1, success);
+
+    char varname[VARNAME_BUF_SIZE];
+    t_variable_get(varname, orig_dst+1);
+    ASSERT(strcmp("I", varname) == 0);
 
     return 0;
 }
