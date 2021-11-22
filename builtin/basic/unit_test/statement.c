@@ -373,6 +373,47 @@ int test_interpret_next()
     return 0;
 }
 
+int test_interpret_next_wrongvar()
+{
+    program_new();
+
+    program_set_numeric("I", 3);
+
+    program_return_t ret_start;
+    ret_start.lineno = 123;
+    strcpy(ret_start.varname, "I");
+    program_push_return(&ret_start);
+
+    const char * input = "NEXT J";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
+
+    return 0;
+}
+
+int test_interpret_next_notvar()
+{
+    program_new();
+
+    const char * input = "NEXT 4";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
+
+    return 0;
+}
+
 int test_tokenize_with_sep()
 {
     const char * input = "\"HELLO\",NAME";

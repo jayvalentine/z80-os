@@ -281,6 +281,10 @@ error_t do_next(const tok_t * toks)
      * This should have been set by a FOR. */
     program_return_t ret;
     error_t e = program_pop_return(&ret);
+
+    /* If we get an empty-stack error then we have */
+    /* a NEXT without a FOR. */
+    if (e == ERROR_RETSTACK_EMPTY) return ERROR_SYNTAX;
     if (e != ERROR_NOERROR) return e;
 
     /* Check it's the right variable! */
