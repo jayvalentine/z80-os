@@ -286,7 +286,7 @@ namespace 'build' do
     end
 
     desc "Build all"
-    task "all" => ["loader", "boot", "kernel", "command"]
+    task "all" => ["loader", "boot", "kernel", "command"] + Dir.glob("builtin/*").map { |builtin| "builtin:#{File.basename(builtin)}" }
 end
 
 namespace 'install' do
