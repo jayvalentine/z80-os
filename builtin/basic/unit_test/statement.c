@@ -450,3 +450,35 @@ int test_tokenize_with_sep()
 
     return 0;
 }
+
+int test_interpret_gosub()
+{
+    program_new();
+
+    const char * input = "GOSUB 500";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
+
+    ASSERT_EQUAL_INT(500, program_next_lineno());
+
+    /* Program stack should have the GOSUB return. */
+    program_return_t ret1;
+    error_t e4 = program_pop_return(&ret1);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
+
+    ASSERT_EQUAL_INT(456, ret1.lineno);
+    ASSERT(strcmp("", ret1.varname) == 0);
+
+    /* Only one entry in stack. */
+    program_return_t ret2;
+    error_t e5 = program_pop_return(&ret2);
+    ASSERT_EQUAL_UINT(ERROR_RETSTACK_EMPTY, e5);
+
+    return 0;
+}

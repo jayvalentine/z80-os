@@ -46,6 +46,10 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "NEXT",
         KEYWORD_NEXT
+    },
+    {
+        "GOSUB",
+        KEYWORD_GOSUB
     }
 };
 
@@ -275,7 +279,7 @@ error_t do_next(const tok_t * toks)
 {
     /* Should be followed by a variable. */
     if (*toks != TOK_VARIABLE) return ERROR_SYNTAX;
-    
+
     /* Get variable name. */
     char varname[VARNAME_BUF_SIZE];
     t_variable_get(varname, toks+1);
@@ -306,6 +310,25 @@ error_t do_next(const tok_t * toks)
     return ERROR_NOERROR;
 }
 
+error_t do_gosub(const tok_t * toks)
+{
+    /* Get line number from token stream. */
+    numeric_t next_lineno = t_numeric_get(toks+1);
+    
+    /* Push current line number onto stack. */
+    program_return_t ret;
+    ret.lineno = program_current_lineno();
+    ret.varname[0] = '\0';
+
+    /* Push return location onto stack. */
+    program_push_return(&ret);
+
+    /* Transfer control to destination line. */
+    program_set_next_lineno(next_lineno);
+    
+    return ERROR_NOERROR;
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
@@ -316,7 +339,8 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_goto,
     do_for,
     do_to,
-    do_next
+    do_next,
+    do_gosub
 };
 
 error_t t_keyword_interpret(kw_code kw, const tok_t * toks)
