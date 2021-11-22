@@ -41,7 +41,13 @@ def compile(output_name, source_files, include_dirs, defines, crt, origin)
     cmd += "-o #{output_name} "
     cmd += source_files.join(" ")
 
-    return system(cmd)
+    success = system(cmd)
+
+    size = File.size(output_name)
+    size_kb = size / 1024.0
+    puts "#{output_name}: #{size_kb.round(1)}KB"
+
+    return success
 end
 
 # Helper function for running unit tests.
