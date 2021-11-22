@@ -32,7 +32,7 @@ void main(void)
         char * mem = &_tail + 512;
 
         /* Only read up to 0xf000, to avoid trashing system variables. */
-        file_read(mem, &file, (size_t)(0xf000 - (size_t)mem));
+        file_read((ubyte *)mem, &file, (size_t)(0xf000 - (size_t)mem));
 
         puts("Done.\n\r");
 
