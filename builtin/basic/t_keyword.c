@@ -273,6 +273,9 @@ error_t do_to(const tok_t * toks)
 
 error_t do_next(const tok_t * toks)
 {
+    /* Should be followed by a variable. */
+    if (*toks != TOK_VARIABLE) return ERROR_SYNTAX;
+    
     /* Get variable name. */
     char varname[VARNAME_BUF_SIZE];
     t_variable_get(varname, toks+1);
