@@ -50,6 +50,10 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "GOSUB",
         KEYWORD_GOSUB
+    },
+    {
+        "RETURN",
+        KEYWORD_RETURN
     }
 };
 
@@ -314,7 +318,7 @@ error_t do_gosub(const tok_t * toks)
 {
     /* Check that next token is a line number. */
     if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
-    
+
     /* Get line number from token stream. */
     numeric_t next_lineno = t_numeric_get(toks+1);
     
@@ -332,6 +336,19 @@ error_t do_gosub(const tok_t * toks)
     return ERROR_NOERROR;
 }
 
+error_t do_return(const tok_t * toks)
+{
+    /* Pop top value off stack. */
+    program_return_t ret;
+    error_t e = program_pop_return(&ret);
+    if (e != ERROR_NOERROR) return e;
+
+    /* Transfer control to return line. */
+    program_set_next_lineno(ret.lineno);
+    
+    return ERROR_NOERROR;
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
@@ -343,7 +360,8 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_for,
     do_to,
     do_next,
-    do_gosub
+    do_gosub,
+    do_return
 };
 
 error_t t_keyword_interpret(kw_code kw, const tok_t * toks)

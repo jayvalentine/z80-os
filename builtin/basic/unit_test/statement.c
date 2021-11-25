@@ -499,3 +499,49 @@ int test_interpret_gosub_invalid_lineno()
 
     return 0;
 }
+
+int test_interpret_return()
+{
+    program_new();
+
+    program_return_t ret_start;
+    ret_start.lineno = 123;
+    ret_start.varname[0] = '\0';
+    program_push_return(&ret_start);
+
+    const char * input = "RETURN";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
+
+    ASSERT_EQUAL_INT(123, program_next_lineno());
+
+    /* Program stack should be empty. */
+    program_return_t ret1;
+    error_t e4 = program_pop_return(&ret1);
+    ASSERT_EQUAL_UINT(ERROR_RETSTACK_EMPTY, e4);
+
+    return 0;
+}
+
+int test_interpret_return_empty_stack()
+{
+    program_new();
+
+    const char * input = "RETURN";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_RETSTACK_EMPTY, e2);
+
+    return 0;
+}
