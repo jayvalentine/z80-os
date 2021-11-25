@@ -146,4 +146,19 @@ error_t program_push_return(const program_return_t * ret);
  */
 error_t program_pop_return(program_return_t * ret);
 
+/* program_alloc
+ *
+ * Purpose:
+ *     Allocates space in the program region for some
+ *     data.
+ * 
+ * Parameters:
+ *     size: Size of data region to allocate.
+ * 
+ * Returns:
+ *     Pointer to allocation object:
+ *     <TOK_ALLOC> <size> <allocated space>
+ */
+tok_t * program_alloc(tok_size_t size);
+
 #endif

@@ -132,3 +132,20 @@ int test_program_set_variable_twice()
 
     return 0;
 }
+
+int test_program_alloc()
+{
+    program_new();
+
+    tok_t * a = program_alloc(5);
+
+    ASSERT_EQUAL_UINT(TOK_ALLOC, a[0]);
+    ASSERT_EQUAL_UINT(5, a[1]);
+    ASSERT_EQUAL_UINT(0, a[2]);
+    ASSERT_EQUAL_UINT(0, a[3]);
+    ASSERT_EQUAL_UINT(0, a[4]);
+    ASSERT_EQUAL_UINT(0, a[5]);
+    ASSERT_EQUAL_UINT(0, a[6]);
+
+    return 0;
+}

@@ -12,6 +12,7 @@
 #define TOK_OPERATOR 0x04
 #define TOK_VARIABLE 0x05
 #define TOK_SEPARATOR 0x06
+#define TOK_ALLOC 0x07
 
 /* Type representing a token in a program. */
 typedef uint8_t tok_t;
