@@ -397,5 +397,15 @@ error_t program_pop_return(program_return_t * ret)
  */
 tok_t * program_alloc(tok_size_t size)
 {
-    return NULL;
+    tok_t * allocated = program_end_ptr;
+
+    *program_end_ptr = TOK_ALLOC;
+    program_end_ptr++;
+
+    *program_end_ptr = size;
+    program_end_ptr++;
+
+    program_end_ptr += size;
+
+    return allocated;
 }
