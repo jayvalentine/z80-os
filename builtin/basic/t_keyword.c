@@ -312,6 +312,9 @@ error_t do_next(const tok_t * toks)
 
 error_t do_gosub(const tok_t * toks)
 {
+    /* Check that next token is a line number. */
+    if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
+    
     /* Get line number from token stream. */
     numeric_t next_lineno = t_numeric_get(toks+1);
     

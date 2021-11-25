@@ -482,3 +482,20 @@ int test_interpret_gosub()
 
     return 0;
 }
+
+int test_interpret_gosub_invalid_lineno()
+{
+    program_new();
+
+    const char * input = "GOSUB FOO";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    current_lineno = 456;
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
+
+    return 0;
+}
