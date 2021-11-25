@@ -519,7 +519,7 @@ int test_interpret_return()
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
-    ASSERT_EQUAL_INT(123, program_next_lineno());
+    ASSERT_EQUAL_INT(124, program_next_lineno());
 
     /* Program stack should be empty. */
     program_return_t ret1;

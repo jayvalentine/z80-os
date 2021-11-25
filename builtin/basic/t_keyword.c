@@ -348,7 +348,7 @@ error_t do_return(const tok_t * toks)
     if (e != ERROR_NOERROR) return e;
 
     /* Transfer control to return line. */
-    program_set_next_lineno(ret.lineno);
+    program_set_next_lineno(ret.lineno+1);
     
     return ERROR_NOERROR;
 }
