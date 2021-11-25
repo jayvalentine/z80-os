@@ -54,6 +54,10 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "RETURN",
         KEYWORD_RETURN
+    },
+    {
+        "DIM",
+        KEYWORD_DIM
     }
 };
 
@@ -349,6 +353,28 @@ error_t do_return(const tok_t * toks)
     return ERROR_NOERROR;
 }
 
+error_t do_dim(const tok_t * toks)
+{
+    /* Variable name */
+    char varname[VARNAME_BUF_SIZE];
+    t_variable_get(varname, toks+1);
+    toks += t_defs_size(toks);
+
+    /* Operator ( */
+    toks += t_defs_size(toks);
+
+    /* Number. */
+    toks += t_defs_size(toks);
+
+    /* Operator ) */
+    toks += t_defs_size(toks);
+
+    /* Create a new array of the right size. */
+    program_create_array(varname, 4);
+
+    return ERROR_NOERROR;
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
@@ -361,7 +387,8 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_to,
     do_next,
     do_gosub,
-    do_return
+    do_return,
+    do_dim
 };
 
 error_t t_keyword_interpret(kw_code kw, const tok_t * toks)

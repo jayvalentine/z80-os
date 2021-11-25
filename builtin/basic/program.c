@@ -32,11 +32,17 @@ numeric_t next_lineno;
 
 uint8_t program_state;
 
-typedef struct _CONTEXT_NUMERIC_T
+typedef union _VAR_VALUE_T
+{
+    numeric_t val;
+    tok_t * ptr;
+} var_value_t;
+
+typedef struct _CONTEXT_VAR_T
 {
     char name[VARNAME_BUF_SIZE];
-    numeric_t value;
-} context_numeric_t;
+    var_value_t value;
+} context_var_t;
 
 
 #define MAX_NUMERICS 16
@@ -45,7 +51,7 @@ typedef struct _CONTEXT_T
 {
     uint8_t count;
 
-    context_numeric_t defines[MAX_NUMERICS];
+    context_var_t defines[MAX_NUMERICS];
 } context_t;
 
 context_t program_context;
@@ -295,7 +301,7 @@ error_t program_set_numeric(const char * name, numeric_t val)
     {
         if (strcmp(program_context.defines[i].name, name) == 0)
         {
-            program_context.defines[i].value = val;
+            program_context.defines[i].value.val = val;
             return ERROR_NOERROR;
         }
     }
@@ -303,9 +309,9 @@ error_t program_set_numeric(const char * name, numeric_t val)
     /* Otherwise we're defining a new variable. */
     if (program_context.count == MAX_NUMERICS) return ERROR_TOO_MANY_VARS;
 
-    context_numeric_t * define = &program_context.defines[program_context.count];
+    context_var_t * define = &program_context.defines[program_context.count];
     strcpy(define->name, name);
-    define->value = val;
+    define->value.val = val;
 
     program_context.count++;
 
@@ -332,7 +338,7 @@ error_t program_get_numeric(const char * name, numeric_t * val)
     {
         if (strcmp(program_context.defines[i].name, name) == 0)
         {
-            *val = program_context.defines[i].value;
+            *val = program_context.defines[i].value.val;
             return ERROR_NOERROR;
         }
     }
@@ -408,4 +414,57 @@ tok_t * program_alloc(tok_size_t size)
     program_end_ptr += size;
 
     return allocated;
+}
+
+/* program_create_array
+ *
+ * Purpose:
+ *     Create a new array with the given name.
+ * 
+ * Parameters:
+ *     name: Name of new array.
+ *     size: Size of array.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_create_array(const char * name, tok_size_t size)
+{
+    tok_t * a = program_alloc(size);
+
+    context_var_t * define = &program_context.defines[program_context.count];
+    strcpy(define->name, name);
+    define->value.ptr = a;
+
+    program_context.count++;
+
+    return ERROR_NOERROR;
+}
+
+/* program_get_array
+ *
+ * Purpose:
+ *     Get the value (pointer to) an array variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val: Reference value of the array.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_get_array(const char * name, tok_t ** array)
+{
+    if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
+    
+    for (uint8_t i = 0; i < program_context.count; i++)
+    {
+        if (strcmp(program_context.defines[i].name, name) == 0)
+        {
+            *array = program_context.defines[i].value.ptr;
+            return ERROR_NOERROR;
+        }
+    }
+
+    return ERROR_UNDEFINED_VAR;
 }

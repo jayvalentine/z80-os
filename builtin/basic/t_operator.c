@@ -26,25 +26,17 @@ int t_operator_parse(tok_t ** dst_ptr, const char ** input_ptr)
 
     char c = *input;
 
-    if (c == '-')
+    switch (c)
     {
-        op = OP_MINUS;
-        input++;
+        case '-': op = OP_MINUS; break;
+        case '+': op = OP_PLUS; break;
+        case '=': op = OP_EQUAL; break;
+        case '(': op = OP_LPAREN; break;
+        case ')': op = OP_RPAREN; break;
+        default: return 0;
     }
-    else if (c == '+')
-    {
-        op = OP_PLUS;
-        input++;
-    }
-    else if (c == '=')
-    {
-        op = OP_EQUAL;
-        input++;
-    }
-    else
-    {
-        return 0;
-    }
+
+    input++;
 
     *dst = TOK_OPERATOR;
     dst++;

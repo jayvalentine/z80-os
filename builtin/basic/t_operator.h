@@ -10,6 +10,8 @@ typedef uint8_t operator_t;
 #define OP_MINUS 0x00
 #define OP_PLUS 0x01
 #define OP_EQUAL 0x02
+#define OP_LPAREN 0x03
+#define OP_RPAREN 0x04
 
 /* t_operator_parse
  *

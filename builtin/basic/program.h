@@ -120,6 +120,34 @@ error_t program_set_numeric(const char * name, numeric_t val);
  */
 error_t program_get_numeric(const char * name, numeric_t * val);
 
+/* program_create_array
+ *
+ * Purpose:
+ *     Create a new array with the given name.
+ * 
+ * Parameters:
+ *     name: Name of new array.
+ *     size: Size of array.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_create_array(const char * name, tok_size_t size);
+
+/* program_get_array
+ *
+ * Purpose:
+ *     Get the value (pointer to) an array variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val: Reference value of the array.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_get_array(const char * name, tok_t ** array);
+
 /* program_push_return
  *
  * Purpose:

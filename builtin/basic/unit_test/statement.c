@@ -545,3 +545,27 @@ int test_interpret_return_empty_stack()
 
     return 0;
 }
+
+int test_interpret_dim()
+{
+    program_new();
+
+    const char * input = "DIM X(4)";
+    tok_t dst[80];
+
+    error_t e = statement_tokenize(dst, input);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    error_t e2 = statement_interpret(dst);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
+
+    /* Get value of variable. */
+    tok_t * a;
+    error_t e3 = program_get_array("X", &a);
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
+
+    ASSERT_EQUAL_UINT(TOK_ALLOC, a[0]);
+    ASSERT_EQUAL_UINT(4, a[1]);
+
+    return 0;
+}
