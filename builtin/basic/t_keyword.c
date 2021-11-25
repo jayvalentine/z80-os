@@ -363,14 +363,25 @@ error_t do_dim(const tok_t * toks)
     /* Operator ( */
     toks += t_defs_size(toks);
 
-    /* Number. */
+    /* Size (numeric). */
+    numeric_t size = t_numeric_get(toks+1);
     toks += t_defs_size(toks);
 
     /* Operator ) */
     toks += t_defs_size(toks);
 
+    /* Check size is in range.
+     * We can allocate a maximum of 255 bytes.
+     */
+    if (size > (255 / sizeof(numeric_t)))
+    {
+        return ERROR_RANGE;
+    }
+
     /* Create a new array of the right size. */
-    program_create_array(varname, 4);
+    /* We multiply by the size of a numeric because it's an array
+     * of numerics. */
+    program_create_array(varname, size * sizeof(numeric_t));
 
     return ERROR_NOERROR;
 }
