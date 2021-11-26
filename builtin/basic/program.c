@@ -149,8 +149,16 @@ const tok_t * program_search_lineno(int lineno, const tok_t * stmt)
     const tok_t * ptr = stmt;
     while (ptr < program_end_ptr)
     {
-        /* Get numeric. */
+        /* First token should be a line number or an allocation. */
         tok_t tok_type = *ptr;
+        
+        /* Skip over it if it's an allocation. */
+        if (tok_type == TOK_ALLOC)
+        {
+            ptr += t_defs_size(ptr);
+            continue;
+        }
+
         if (tok_type != TOK_NUMERIC) return NULL;
 
         int this_lineno = t_numeric_get(ptr+1);
@@ -192,8 +200,15 @@ error_t program_run(void)
     program_state = PROGSTATE_RUNNING;
     program_stmt_ptr = program_start;
 
-    while (1)
+    while (program_stmt_ptr < program_end_ptr)
     {
+        /* Skip over it if it's an allocation. */
+        if (*program_stmt_ptr == TOK_ALLOC)
+        {
+            program_stmt_ptr += t_defs_size(program_stmt_ptr);
+            continue;
+        }
+
         const tok_t * stmt = program_stmt_ptr;
 
         /* Sanity check, should start with a line number. */

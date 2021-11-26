@@ -37,6 +37,12 @@ const tok_t * t_separator_list(const tok_t * toks)
     return toks;
 }
 
+const tok_t * t_alloc_list(const tok_t * toks)
+{
+    tok_size_t size = *toks;
+    return toks + size + 1;
+}
+
 tok_size_t t_terminator_size(const tok_t * toks)
 {
     return 0;
@@ -60,6 +66,13 @@ tok_size_t t_string_size(const tok_t * toks)
     return size + 1;
 }
 
+tok_size_t t_alloc_size(const tok_t * toks)
+{
+    tok_size_t size = *toks;
+
+    return size + 1;
+}
+
 t_list_t t_list[NUM_TOKS] =
 {
     t_terminator_list,
@@ -68,7 +81,8 @@ t_list_t t_list[NUM_TOKS] =
     t_numeric_list,
     t_operator_list,
     t_variable_list,
-    t_separator_list
+    t_separator_list,
+    t_alloc_list
 };
 
 const tok_t * t_defs_list(const tok_t * toks)
@@ -87,7 +101,8 @@ t_size_t t_size[NUM_TOKS] =
     t_numeric_size,
     t_operator_size,
     t_variable_size,
-    t_separator_size
+    t_separator_size,
+    t_alloc_size
 };
 
 tok_size_t t_defs_size(const tok_t * toks)
