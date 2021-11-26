@@ -49,6 +49,11 @@ _syscall_handler:
     push    DE
     push    BC
 
+    ; Check:
+    ; * That value in A is even.
+    bit     0, A
+    jp      nz, __invalid_syscall
+
     push    AF
     call    _status_set_syscall
     pop     AF
@@ -68,6 +73,11 @@ _syscall_handler:
     ; Execute syscall.
     ; Syscall function will need to pop DE, HL off the stack.
     jp      (HL)
+
+    ; Executed when we see an invalid syscall.
+    ; Performs a warm restart of the kernel.
+__invalid_syscall:
+    jp      $0000
 
 _syscall_common_ret:
     push    AF
