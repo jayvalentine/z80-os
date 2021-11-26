@@ -7,8 +7,9 @@ _syscall_table:
     defw    _do_swrite
     defw    _do_sread
 
-    defw    _do_dwrite
-    defw    _do_dread
+    ; DREAD, DWRITE no longer supported.
+    defw    __invalid_syscall
+    defw    __invalid_syscall
 
     defw    _do_fopen
     defw    _do_fread
@@ -250,66 +251,6 @@ _rx_buf:
 
     EXTERN  _disk_read
     EXTERN  _disk_write
-
-    defc    DISKPORT = $18
-
-    ; 2: dwrite: Write 512 bytes to disk sector.
-    ;
-    ; Parameters:
-    ; Sector number in DEBC
-    ; Location of buffer to write from in HL.
-    ;
-    ; Returns:
-    ; Nothing;
-    ;
-    ; Description:
-    ; Writes a sector to the CF-card disk,
-    ; from the buffer pointed to by HL.
-_do_dwrite:
-    pop     BC
-    pop     DE
-
-    push    HL
-    push    DE
-    push    BC
-
-    ; Write 512 bytes to CF-card.
-    call    _disk_write
-
-    pop     HL
-    pop     HL
-    pop     HL
-
-    jp      _syscall_common_ret
-
-    ; 3: dread: Read 512 bytes from disk sector.
-    ;
-    ; Parameters:
-    ; Sector number in DEBC
-    ; Location of buffer to read to in HL.
-    ;
-    ; Returns:
-    ; Nothing;
-    ;
-    ; Description:
-    ; Reads a sector from the CF-card disk,
-    ; into the buffer pointed to by HL.
-_do_dread:
-    pop     BC
-    pop     DE
-
-    push    HL
-    push    DE
-    push    BC
-
-    ; Write 512 bytes to CF-card.
-    call    _disk_read
-
-    pop     HL
-    pop     HL
-    pop     HL
-
-    jp      _syscall_common_ret
 
     EXTERN  _file_open
     EXTERN  _file_read
@@ -606,7 +547,7 @@ _do_version:
     jp      _syscall_common_ret
 
 __kernel_version:
-    defm    "0.1.5", 0
+    defm    "0.2.0", 0
 
 __test:
     defm    "CANCEL handler: %04x\n\r", 0

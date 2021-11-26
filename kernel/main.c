@@ -35,7 +35,7 @@ void main(void)
     status_init();
     
 #ifndef DEBUG
-    puts("Initialising kernel... ");
+    puts("\033[2JInitialising kernel... ");
 #endif
 
     filesystem_init();
@@ -47,7 +47,19 @@ void main(void)
      */
     cp_main();
 #else
-    puts("Done.\n\r");
+    /* Check startup flags. Warn the user if there is a problem. */
+    if (startup_flags != 0)
+    {
+        printf("\r\nError Flag: %u\r\n", (uint16_t)startup_flags);
+        puts("Press any key to continue.\r\n");
+        getchar();
+        startup_flags = 0;
+    }
+    else
+    {
+        puts("Done.\n\r");
+    }
+
     puts("Loading command processor... ");
 
     /* Load command processor into the last 8k of low-RAM. */
