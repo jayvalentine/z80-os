@@ -4,6 +4,7 @@
 
 #include <syscall.h>
 #include <test.h>
+#include <disk.h>
 
 #define DRIVE_SECTOR_COUNT 1024
 #define DRIVE_SECTOR_SIZE 512
@@ -21,7 +22,7 @@ int test_read_less_than_512_bytes()
 {
     mock_drive_init();
 
-    syscall_dwrite("HelloAndSomeGarbage", disk_info.data_region);
+    disk_write("HelloAndSomeGarbage", disk_info.data_region);
 
     FileDescriptor_T * file = &fdtable[0];
     file->mode = FMODE_READ;
@@ -62,7 +63,7 @@ int test_read_512_bytes()
 {
     mock_drive_init();
 
-    syscall_dwrite("HelloAndSomeGarbage", disk_info.data_region);
+    disk_write("HelloAndSomeGarbage", disk_info.data_region);
 
     FileDescriptor_T * file = &fdtable[0];
     file->mode = FMODE_READ;

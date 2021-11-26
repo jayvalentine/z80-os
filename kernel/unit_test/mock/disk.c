@@ -14,12 +14,12 @@ extern DiskInfo_T disk_info;
 /* Forward-declare fdtable init function. */
 void fdtable_init();
 
-void syscall_dwrite(char * buf, uint32_t sector)
+void disk_write(char * buf, uint32_t sector)
 {
     if (sector < DRIVE_SECTOR_COUNT) memcpy(drive[sector], buf, DRIVE_SECTOR_SIZE);
 }
 
-void syscall_dread(char * buf, uint32_t sector)
+void disk_read(char * buf, uint32_t sector)
 {
     if (sector < DRIVE_SECTOR_COUNT) memcpy(buf, drive[sector], DRIVE_SECTOR_SIZE);
 }
