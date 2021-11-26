@@ -8,24 +8,13 @@ class StatusTest < IntegrationTest
         compile_test_code(["kernel/integration_test/test_status_int.c"], "test_status_int.bin")
 
         # Get symbols.
-        symbols = []
         prog_symbols = Zemu::Debug.load_map("test_status_int.map")
         kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
-        prog_symbols.each do |addr, syms|
-            syms.each do |sym|
-                symbols << sym
-            end
-        end
-        kernel_symbols.each do |addr, syms|
-            syms.each do |sym|
-                symbols << sym
-            end
-        end
 
-        int_breakpoint = symbols.select { |s| s.label == "_serial_read_handler" }[0]
+        int_breakpoint = kernel_symbols.find_by_name("_serial_read_handler")
         assert !int_breakpoint.nil?, "Could not find symbol for serial read handler!"
 
-        prog_breakpoint = symbols.select { |s| s.label == "_test_func" }[0]
+        prog_breakpoint = prog_symbols.find_by_name("_test_func")
         assert !prog_breakpoint.nil?, "Could not find symbol for test function!"
 
         start_instance("test_status_int.bin")
@@ -90,24 +79,13 @@ class StatusTest < IntegrationTest
         compile_test_code(["kernel/integration_test/test_status_syscall.c"], "test_status_syscall.bin")
 
         # Get symbols.
-        symbols = []
         prog_symbols = Zemu::Debug.load_map("test_status_syscall.map")
         kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
-        prog_symbols.each do |addr, syms|
-            syms.each do |sym|
-                symbols << sym
-            end
-        end
-        kernel_symbols.each do |addr, syms|
-            syms.each do |sym|
-                symbols << sym
-            end
-        end
 
-        int_breakpoint = symbols.select { |s| s.label == "_do_swrite" }[0]
+        int_breakpoint = kernel_symbols.find_by_name("_do_swrite")
         assert !int_breakpoint.nil?, "Could not find symbol for swrite handler!"
 
-        prog_breakpoint = symbols.select { |s| s.label == "_test_func" }[0]
+        prog_breakpoint = prog_symbols.find_by_name("_test_func")
         assert !prog_breakpoint.nil?, "Could not find symbol for test function!"
 
         start_instance("test_status_syscall.bin")
