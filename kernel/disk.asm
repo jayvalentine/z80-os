@@ -5,17 +5,20 @@
     ; *****************************
 
     EXTERN  _puts
+    EXTERN  _status_set_disk
+    EXTERN  _status_clr_disk
 
     defc    DISKPORT = $18
 
     ; **************************
-    ; HIGH-LEVEL ROUTINES
+    ; PUBLIC ROUTINES
     ;
-    ; These subroutines are the high-level
-    ; driver routines that a program
-    ; uses to read/write the CF-card.
+    ; These subroutines are the public
+    ; interface to the CF-card.
     ; **************************
-
+    
+    PUBLIC  _disk_read
+    PUBLIC  _disk_write
     PUBLIC  _disk_init
 
     ; void disk_init(void)
@@ -39,24 +42,125 @@ _disk_init:
     pop     AF
     ret
 
-    ; **************************
-    ; DATA TRANSFER ROUTINES
+    ; void disk_read(char * buf, uint32_t sector)
     ;
-    ; These subroutines transfer blocks to or from
-    ; the CF-card.
+    ; Reads a sector from CF-card.
+_disk_read:
+    ; Skip over return address.
+    ld      HL, 2
+    add     HL, SP
+
+    ; Sector number in DEBC
+    ld      C, (HL)
+    inc     HL
+    ld      B, (HL)
+    inc     HL
+    ld      E, (HL)
+    inc     HL
+    ld      D, (HL)
+    inc     HL
+
+    ; Buffer in HL.
+    ld      A, (HL)
+    inc     HL
+    ld      H, (HL)
+    ld      L, A
+
+    di
+
+    call    _status_set_disk
+    
+    call    _disk_wait_cmd
+    call    _disk_set_lba
+
+    call    _disk_init_read
+
+    ; Read 512 bytes from CF-card.
+    call    _disk_read_data
+
+    call    _status_clr_disk
+
+    ei
+
+    ret
+
+    ; void disk_write(char * buf, uint32_t sector)
+    ;
+    ; Writes a sector to CF-card.
+_disk_write:
+    ; Skip over return address.
+    ld      HL, 2
+    add     HL, SP
+
+    ; Sector number in DEBC
+    ld      C, (HL)
+    inc     HL
+    ld      B, (HL)
+    inc     HL
+    ld      E, (HL)
+    inc     HL
+    ld      D, (HL)
+    inc     HL
+
+    ; Buffer in HL.
+    ld      A, (HL)
+    inc     HL
+    ld      H, (HL)
+    ld      L, A
+
+    di
+
+    call    _status_set_disk
+    
+    call    _disk_wait_cmd
+    call    _disk_set_lba
+
+    call    _disk_init_write
+
+    ; Write 512 bytes to CF-card.
+    call    _disk_write_data
+
+    call    _status_clr_disk
+
+    ei
+
+    ret
+
+    ; **************************
+    ; READ/WRITE ROUTINES
+    ;
+    ; Shorthands for reading/writing sections
+    ; from/to CF card.
     ; **************************
 
-    PUBLIC  _disk_read_data
-    PUBLIC  _disk_write_data
+    ; Initiates a read from the disk.
+_disk_init_read:
+    ; Transfer one sector
+    ld      A, $01
+    out     (DISKPORT+2), A
+
+    ; Read sector command.
+    ld      A, $20
+    out     (DISKPORT+7), A
+
+    ret
+
+    ; Initiates a write to the disk.
+_disk_init_write:
+    ; Transfer one sector
+    ld      A, $01
+    out     (DISKPORT+2), A
+
+    ; Write sector command.
+    ld      A, $30
+    out     (DISKPORT+7), A
+
+    ret
 
     ; Reads 512 bytes (one sector) from the CF card.
     ; Reads the data into the location pointed to by HL.
     ; Assumes a read command has been previously initiated.
 _disk_read_data:
-    push    AF
-    push    BC
-    push    HL
-
     call    _disk_wait_data
     call    _disk_chkerr
 
@@ -66,21 +170,12 @@ _disk_read_data:
     ; Load 512 bytes into HL.
     inir
     inir
-
-__read_data_done:
-    pop     HL
-    pop     BC
-    pop     AF
     ret
 
     ; Writes 512 bytes (one sector) to the CF card.
     ; Writes the data from the location pointed to by HL.
     ; Assumes a write command has been previously initiated.
 _disk_write_data:
-    push    AF
-    push    BC
-    push    HL
-
     call    _disk_wait_data
 
     ld      C, DISKPORT
@@ -92,11 +187,7 @@ _disk_write_data:
 
     call    _disk_wait_cmd
     call    _disk_chkerr
-
-__write_data_done:
-    pop     HL
-    pop     BC
-    pop     AF
+    
     ret
 
     ; **************************
@@ -104,8 +195,6 @@ __write_data_done:
     ;
     ; Shorthands for functionality of the CF-card.
     ; **************************
-
-    PUBLIC  _disk_set_lba
 
     ; Set the LBA for the CF-card, stored as a 28-bit value
     ; in DEBC (the top 4 bits of D are ignored).
@@ -141,10 +230,6 @@ _disk_set_lba:
     ; conditions of the CF-card.
     ; **************************
 
-    PUBLIC  _disk_wait
-    PUBLIC  _disk_wait_data
-    PUBLIC  _disk_wait_cmd
-
 _disk_wait:
     in      A, (DISKPORT+7)
     and     %10000000
@@ -174,7 +259,6 @@ _disk_wait_cmd:
     ; These subroutines check for and report
     ; errors from the CF-card.
     ; **************************
-    PUBLIC  _disk_chkerr
 
 _disk_chkerr:
     in      A, (DISKPORT+7)

@@ -234,10 +234,8 @@ _rx_buf_offs_tail:
 _rx_buf:
     defs    256
 
-    EXTERN  _disk_wait_cmd
-    EXTERN  _disk_set_lba
-    EXTERN  _disk_write_data
-    EXTERN  _disk_read_data
+    EXTERN  _disk_read
+    EXTERN  _disk_write
 
     defc    DISKPORT = $18
 
@@ -257,23 +255,16 @@ _do_dwrite:
     pop     BC
     pop     DE
 
-    ; Sector number now in DEBC, so we just need
-    ; to call the set_lba subroutine.
-    call    _disk_wait_cmd
-    call    _disk_set_lba
-
-    ; Transfer one sector
-    ld      A, $01
-    out     (DISKPORT+2), A
-
-    ; Write sector command.
-    ld      A, $30
-    out     (DISKPORT+7), A
-
-    pop     HL
+    push    HL
+    push    DE
+    push    BC
 
     ; Write 512 bytes to CF-card.
-    call    _disk_write_data
+    call    _disk_write
+
+    pop     HL
+    pop     HL
+    pop     HL
 
     jp      _syscall_common_ret
 
@@ -293,23 +284,16 @@ _do_dread:
     pop     BC
     pop     DE
 
-    ; Sector number in DEBC, so we just need
-    ; to call the set_lba subroutine.
-    call    _disk_wait_cmd
-    call    _disk_set_lba
+    push    HL
+    push    DE
+    push    BC
 
-    ; Transfer one sector
-    ld      A, $01
-    out     (DISKPORT+2), A
+    ; Write 512 bytes to CF-card.
+    call    _disk_read
 
-    ; Read sector command.
-    ld      A, $20
-    out     (DISKPORT+7), A
-    
     pop     HL
-
-    ; Read 512 bytes from CF-card.
-    call    _disk_read_data
+    pop     HL
+    pop     HL
 
     jp      _syscall_common_ret
 
@@ -608,7 +592,7 @@ _do_version:
     jp      _syscall_common_ret
 
 __kernel_version:
-    defm    "0.1.4", 0
+    defm    "0.1.5", 0
 
 __test:
     defm    "CANCEL handler: %04x\n\r", 0

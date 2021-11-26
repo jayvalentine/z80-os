@@ -1,13 +1,15 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <syscall.h>
 
 #include <include/file.h>
 #include <include/defs.h>
 
 #define CLUSTER_EOF 0xffff
 #define CLUSTER_FREE 0x0000
+
+void disk_read(char * buf, uint32_t sector);
+void disk_write(char * buf, uint32_t sector);
 
 uint16_t current_cache_sector;
 
@@ -82,7 +84,7 @@ void read_sector_cached(char * buf, uint32_t sector, bool force_load)
     /* OR... if we've forced a load. */
     if (force_load || (current_cache_sector != sector))
     {
-        syscall_dread(buf, sector);
+        disk_read(buf, sector);
         current_cache_sector = sector;
     }
 }
@@ -98,7 +100,7 @@ void fdtable_init()
 
 int filesystem_init()
 {
-    syscall_dread(temp_sector, 0);
+    disk_read(temp_sector, 0);
 
     /* General disk info. */
     disk_info.bytes_per_sector = get_uint16_t(temp_sector, 0x0b);
@@ -253,7 +255,7 @@ int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const cha
             {
                 /* We've found the file! */
                 memcpy(&temp_sector[f], (char *) dir_entry, 32);
-                syscall_dwrite(temp_sector, sector);
+                disk_write(temp_sector, sector);
                 done = TRUE;
                 break;
             }
@@ -306,7 +308,7 @@ int filesystem_mark_directory_entry_free(const char * filename)
                 /* Put 0xe5 in the first character of the filename to mark
                  * this entry as free. */
                 temp_sector[f] = (char)0xe5;
-                syscall_dwrite(temp_sector, sector);
+                disk_write(temp_sector, sector);
                 done = TRUE;
                 break;
             }
@@ -344,7 +346,7 @@ void fat_set_cluster(uint16_t cluster, uint16_t next_cluster)
     /* Read the sector and set the appropriate entry. */
     read_sector_cached(temp_sector, fat_sector, FALSE);
     set_uint16_t(temp_sector, entry, next_cluster);
-    syscall_dwrite(temp_sector, fat_sector);
+    disk_write(temp_sector, fat_sector);
 }
 
 uint16_t fat_find_free_cluster(void)
@@ -451,7 +453,7 @@ int file_create(DirectoryEntry_T * entry)
             {
                 /* Yes, copy file entry and write back to disk. */
                 memcpy(&temp_sector[f], (char *)entry, 32);
-                syscall_dwrite(temp_sector, sector);
+                disk_write(temp_sector, sector);
                 return 0;
             }
         }
@@ -764,7 +766,7 @@ int file_readsector(char * ptr, int fd)
     uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
 
     /* Don't cache the sector - we're unlikely to read it again. */
-    syscall_dread(ptr, sector);
+    disk_read(ptr, sector);
 
     /* Increment size. fpos_within_sector doesn't change because we've read an entire sector. */
     file->fpos += disk_info.bytes_per_sector;
@@ -797,7 +799,7 @@ int file_writesector(char * ptr, size_t offset, size_t n, int fd)
 
     /* Overwrite bytes in memory, write back to disk. */
     memcpy(temp_sector + offset, ptr, n);
-    syscall_dwrite(temp_sector, sector);
+    disk_write(temp_sector, sector);
 
     /* Increment size. fpos_within_sector doesn't change because we've read an entire sector. */
     file->fpos += n;
