@@ -325,11 +325,12 @@ error_t do_gosub(const tok_t * toks)
 
     /* Get line number from token stream. */
     numeric_t next_lineno = t_numeric_get(toks+1);
+    numeric_t current_lineno = program_current_lineno();
     
     /* Push current line number onto stack. */
     program_return_t ret;
-    ret.lineno = program_current_lineno();
-    ret.varname[0] = '\0';
+    memset(ret.varname, 0, VARNAME_BUF_SIZE);
+    ret.lineno = current_lineno;
 
     /* Push return location onto stack. */
     program_push_return(&ret);
