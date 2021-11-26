@@ -28,6 +28,8 @@ char input[256];
 typedef void (*cp_main_t)(void);
 #define cp_main ((cp_main_t)0x6000)
 
+uint8_t startup_flags = 0;
+
 void main(void)
 {
     status_init();

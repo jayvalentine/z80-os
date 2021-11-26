@@ -74,9 +74,13 @@ _syscall_handler:
     ; Syscall function will need to pop DE, HL off the stack.
     jp      (HL)
 
+    EXTERN  _startup_flags
+
     ; Executed when we see an invalid syscall.
     ; Performs a warm restart of the kernel.
 __invalid_syscall:
+    ld      A, $01
+    ld      (_startup_flags), A
     jp      $0000
 
 _syscall_common_ret:
