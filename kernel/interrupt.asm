@@ -25,22 +25,17 @@ _interrupt_handler:
     
     ; Character received?
     bit     0, A
-    jp      z, __interrupt_skip1
-
-    call    _serial_read_handler
-    jp      __interrupt_handle_ret
-__interrupt_skip1:
+    jp      nz, __serial_read_handler
 
     ; Ready to transmit character?
     bit     1, A
-    jp      z, __interrupt_skip2
+    jp      nz, __serial_write_handler
 
-    call    _serial_write_handler
-    jp      __interrupt_handle_ret
+    ; Not a 6850 interrupt.
 __interrupt_skip2:
 
     ; Not any of the known causes.
-    call    _unknown_interrupt
+    jp      __unknown_interrupt
 
 __interrupt_handle_ret:
     call    _status_clr_int
@@ -60,7 +55,7 @@ __interrupt_handler_end:
 
     EXTERN  _serial_current_mode
 
-_serial_read_handler:
+__serial_read_handler:
     ; Save interrupt return address.
     push    HL
 
@@ -76,18 +71,18 @@ _serial_read_handler:
     
     ; $18 (CANCEL) - triggers SIG_CANCEL
     cp      $18
-    jp      nz, _serial_read_byte
+    jp      nz, __serial_read_byte
 
     ; Handle special characters only if in interactive mode.
     ld      C, A
     ld      A, (_serial_current_mode)
     cp      0
-    jp      z, _serial_signal_cancel
+    jp      z, __serial_signal_cancel
     
     ; Need the byte, so restore A.
     ld      A, C
 
-_serial_read_byte:
+__serial_read_byte:
     ; Store received character.
     ld      (HL), A
 
@@ -96,22 +91,24 @@ _serial_read_byte:
     inc     (HL)
 
     pop     HL
-    ret
+    
+    jp      __interrupt_handle_ret
 
-_serial_signal_cancel:
+__serial_signal_cancel:
     exx
     ei
     pop     HL
     call    _signal_cancel
     di
     exx
-    ret
+    
+    jp      __interrupt_handle_ret
 
     EXTERN  _tx_buf
     EXTERN  _tx_buf_offs_head
     EXTERN  _tx_buf_offs_tail
 
-_serial_write_handler:
+__serial_write_handler:
     ; Get current head and tail of buffer.
     ld      A, (_tx_buf_offs_tail)
     ld      E, A
@@ -125,7 +122,8 @@ _serial_write_handler:
 
     ld      A, 0b10010110
     out     (UART_PORT_CONTROL), A
-    ret
+    
+    jp      __interrupt_handle_ret
 
 __tx:
     ; Otherwise, we've got something to send.
@@ -142,7 +140,7 @@ __tx:
     ld      HL, _tx_buf_offs_tail
     inc     (HL)
 
-    ret
+    jp      __interrupt_handle_ret
 
-_unknown_interrupt:
-    ret
+__unknown_interrupt:
+    jp      __interrupt_handle_ret

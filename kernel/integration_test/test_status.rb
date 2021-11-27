@@ -11,7 +11,7 @@ class StatusTest < IntegrationTest
         prog_symbols = Zemu::Debug.load_map("test_status_int.map")
         kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
 
-        int_breakpoint = kernel_symbols.find_by_name("_serial_read_handler")
+        int_breakpoint = kernel_symbols.find_by_name("__serial_read_handler")
         assert !int_breakpoint.nil?, "Could not find symbol for serial read handler!"
 
         prog_breakpoint = prog_symbols.find_by_name("_test_func")
