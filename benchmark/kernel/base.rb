@@ -90,14 +90,23 @@ class KernelBenchmark
     
     def bench(num)
         total = 0
+        min = 100_000_000
+        max = 0
+
         num.times do
-            total += yield
+            val = yield
+            total += val
+
+            min = val if val < min
+            max = val if val > max
         end
 
         avg = total.to_f / num.to_f
         avg = avg.round(2)
+        min = min.round(2)
+        max = max.round(2)
 
-        avg
+        [avg, min, max]
     end
 
     def benchmarks
@@ -108,19 +117,31 @@ class KernelBenchmark
                 compile_test_code([File.join(BENCHMARKS, "#{m}.c")], "#{m}.bin")
 
                 @instance = start_instance("#{m}.bin")
-                result = send(m)
+                avg, min, max = send(m)
                 @instance.quit
 
-                table[m] = result
+                table[m] = [avg, min, max]
             end
         end
 
-        headings = %w(benchmark result)
         puts("")
-        puts(headings.map { |h| "%-30s" % h }.join(""))
+        
+        headings = %w(benchmark avg min max)
+        headings_str = "%-30s" % headings[0]
+        headings[1..].each do |h|
+            headings_str += "%-10s" % h
+        end
+
+        puts(headings_str)
         puts("-" * 60)
+
         table.each do |b, r|
-            puts("%-30s%-30s" % [b, r.to_s])
+            row = "%-30s" % b
+            r.each do |v|
+                row += "%-10s" % v.to_s
+            end
+
+            puts(row)
         end
     end
 end
