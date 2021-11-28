@@ -345,9 +345,13 @@ end
 namespace 'benchmark' do
     desc "Run kernel benchmarks"
     task 'kernel' => "build:kernel_debug" do
-        require_relative 'benchmark/kernel/interrupt.rb'
-        benchmarks()
-        undef :benchmarks
+        Dir.glob("benchmark/kernel/*.rb").each do |b|
+            require_relative "#{b}"
+            if defined? benchmarks
+                benchmarks()
+                undef :benchmarks
+            end
+        end
     end
 end
 
