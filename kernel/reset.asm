@@ -62,3 +62,10 @@ _start:
     ld      A, 0b01111111
     out     ($80), A
     halt
+
+    ; 256-byte aligned buffer.
+    PUBLIC  _tx_buf
+    
+    defs    0x0100 - ASMPC
+_tx_buf:
+    defs    256

@@ -103,6 +103,8 @@ _syscall_common_ret:
     ; SYSCALL DEFINITIONS
     ; *****************************
 
+    EXTERN   _tx_buf
+
     ; 0: swrite: Write character to serial port.
     ;
     ; Parameters:
@@ -122,35 +124,43 @@ _do_swrite:
     push    DE
     push    BC
 
-__swrite_wait_available_loop:
-    ; This needs to be an atomic operation; Disable interrupts.
-    di
-
     ; Preserve character to send because we're going to need
     ; L.
     ld      B, L
 
-    ld      A, (_tx_buf_offs_head)
-    ld      E, A
-    ld      A, (_tx_buf_offs_tail)
+__swrite_wait_available_loop:
+    ; This needs to be an atomic operation; Disable interrupts.
+    di
+
+    ld      HL, (_tx_buf_tail)
+    ex      DE, HL
+    ld      HL, (_tx_buf_head)
+
+    ; Tail in DE, head in HL.
 
     ; If head is one less than tail,
     ; we need to wait until that isn't the case.
 __swrite_is_available:
-    inc     E
-    cp      E
-    jp      nz, __swrite_continue
+    inc     L
 
+    ; Only need to compare lower half.
+    ; Buffer is 256-byte aligned.
+    ld      A, E
+    cp      L
+    jp      nz, __swrite_continue
+    
     ei
     nop
     jp      __swrite_wait_available_loop
 
 __swrite_continue:
-    ; Otherwise decrement E and continue.
-    dec     E
+    ; Otherwise decrement L and continue.
+    dec     L
 
-    ; If head and tail are equal, we need to enable interrupts before appending to the buffer.
-    cp      E
+    ; If head and tail are equal, we need to enable
+    ; interrupts before appending to the buffer.
+    ld      A, E
+    cp      L
     jp      nz, __swrite_append
 
     ; Enable TX interrupts
@@ -158,18 +168,11 @@ __swrite_continue:
     out     (UART_PORT_CONTROL), A
 
 __swrite_append:
-    ; Calculate offset into buffer.
-    ld      HL, _tx_buf
-    ld      D, 0
-    add     HL, DE
-
-    ; Write into buffer.
+    ; Write into buffer. Increment lower half of head.
+    ; This causes wraparound automatically.
     ld      (HL), B
-
-__swrite_increment:
-    ; Increment head. Because the offset is a single byte, wraparound happens automatically.
-    ld      HL, _tx_buf_offs_head
-    inc     (HL)
+    inc     L
+    ld      (_tx_buf_head), HL
 
 __swrite_done:
     ei
@@ -178,17 +181,13 @@ __swrite_done:
     pop     DE
     jp      _syscall_common_ret
 
-    PUBLIC  _tx_buf_offs_head
-    PUBLIC  _tx_buf_offs_tail
-    PUBLIC  _tx_buf
+    PUBLIC  _tx_buf_head
+    PUBLIC  _tx_buf_tail
 
-_tx_buf_offs_head:
-    defb    0
-_tx_buf_offs_tail:
-    defb    0
-
-_tx_buf:
-    defs    256
+_tx_buf_head:
+    defw    _tx_buf
+_tx_buf_tail:
+    defw    _tx_buf
 
     ; 1: sread: Read character from serial port.
     ;

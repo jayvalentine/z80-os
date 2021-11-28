@@ -105,40 +105,38 @@ __serial_signal_cancel:
     jp      __interrupt_handle_ret
 
     EXTERN  _tx_buf
-    EXTERN  _tx_buf_offs_head
-    EXTERN  _tx_buf_offs_tail
+    EXTERN  _tx_buf_head
+    EXTERN  _tx_buf_tail
 
 __serial_write_handler:
     ; Get current head and tail of buffer.
-    ld      A, (_tx_buf_offs_tail)
-    ld      E, A
+    ld      HL, (_tx_buf_head)
+    ex      DE, HL
+    ld      HL, (_tx_buf_tail)
 
-    ld      A, (_tx_buf_offs_head)
-
-    ; If equal, we've got nothing to transmit.
-    ; In this case, we disable tx interrupts and return.
+    ; Head in DE, tail in HL.
+    ; Compare to check if they're equal.
+    ; Only need to compare lower half
+    ; due to alignment.
+    ld      A, L
     cp      E
     jp      nz, __tx
 
+    ; If equal, we've got nothing to transmit.
+    ; In this case, we disable tx interrupts and return.
     ld      A, 0b10010110
     out     (UART_PORT_CONTROL), A
     
     jp      __interrupt_handle_ret
 
 __tx:
-    ; Otherwise, we've got something to send.
-    ; Calculate buffer offset.
-    ld      HL, _tx_buf
-    ld      D, 0
-    add     HL, DE
-
     ; Load character and send.
     ld      A, (HL)
     out     (UART_PORT_DATA), A
 
     ; Increment tail.
-    ld      HL, _tx_buf_offs_tail
-    inc     (HL)
+    inc     L
+    ld      (_tx_buf_tail), HL
 
     jp      __interrupt_handle_ret
 
