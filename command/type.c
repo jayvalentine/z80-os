@@ -3,7 +3,7 @@
 
 #include "type.h"
 
-#define TYPE_BUF_SIZE 128
+#define TYPE_BUF_SIZE 512
 
 int command_type(char ** argv, size_t argc)
 {
@@ -39,8 +39,6 @@ int command_type(char ** argv, size_t argc)
 
             type_buf[end_index] = '\0';
             puts(type_buf);
-
-            for (int i = 0; i < 2000; i++);
         }
 
         syscall_fclose(fd);

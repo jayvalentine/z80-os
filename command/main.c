@@ -127,7 +127,7 @@ void main()
     /* Green text on black background. */
     puts("\033[32m");
 
-    puts("ZEBRA Command Processor (v0.1.1)\n\r");
+    puts("ZEBRA Command Processor (v0.1.2)\n\r");
     printf("ZEBRA Kernel version: v%s\r\n", syscall_version());
     puts("Copyright (C) 2020 Jay Valentine\n\r\n\r");
 
