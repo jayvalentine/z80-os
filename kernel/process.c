@@ -7,7 +7,7 @@ typedef int (*Command_T)(char **, size_t);
 
 #define user_ram(addr) ((char *)addr)
 
-#define PROGRAM_KB_LIMIT 28
+#define PROGRAM_KB_LIMIT (28 * 1024)
 
 #define PHDR_SIZE 2
 
@@ -65,14 +65,8 @@ int process_load(uintptr_t * address, const char * filename)
     char * user_ram_ptr = user_ram(base_addr);
 
     /* Otherwise read the contents of the file
-     * and write to user RAM.
-     * We load 1kb at a time. */
-    for (int i = 0; i < PROGRAM_KB_LIMIT; i++)
-    {
-        size_t bytes = file_read(user_ram_ptr, 1024, fd);
-        if (bytes != 1024) break;
-        user_ram_ptr += 1024;
-    }
+     * and write to user RAM. */
+    size_t bytes = file_read(user_ram_ptr, PROGRAM_KB_LIMIT, fd);
 
     /* Update address. Return success. */
     *address = (uintptr_t)base_addr;
