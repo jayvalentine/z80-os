@@ -37,6 +37,54 @@ class SIOTest < IntegrationTest
         assert_equal expected, output_string, "Did not get expected serial output"
     end
 
+    # Tests that calling the swrite syscall does not result in overflow
+    # in the character buffer.
+    def test_swrite_no_overflow
+        compile_test_code(["kernel/integration_test/test_swrite_no_overflow.c"], "test_swrite_no_overflow.bin")
+
+        start_instance("test_swrite_no_overflow.bin")
+
+        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        swrite_breakpoint = kernel_symbols.find_by_name("__swrite_is_available").address
+
+        # We expect to start executing at 0x6000,
+        # where the command-processor would reside normally.
+        @instance.break 0x6000, :program
+        
+        # Run, and expect to hit the breakpoint.
+        @instance.continue
+
+        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
+        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
+        
+        @instance.break swrite_breakpoint, :program
+
+        count = 0
+
+        100000.times do
+            # Then continue until we hit breakpoint.
+            @instance.continue
+        
+            assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
+            assert_equal swrite_breakpoint, @instance.registers["PC"], "Breakpoint at wrong address."
+        
+            # Check value of HL.
+            hl = @instance.registers["HL"]
+            assert (hl >= 0x100), "Head underflow: %04x" % hl
+            assert (hl < 0x200), "Head overflow: %04x" % hl
+
+            # Check no writes outside of the buffer.
+            assert_equal 0xf3, @instance.memory(0x200)
+
+            if count == 100
+                @instance.serial_gets(1)
+                count = 0
+            end
+
+            count += 1
+        end
+    end
+
     # Tests that calling the sread syscall reads characters from the serial output.
     def test_sread
         compile_test_code(["kernel/integration_test/test_sread.c"], "test_sread.bin")
