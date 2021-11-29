@@ -108,14 +108,57 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
             char varname[VARNAME_BUF_SIZE];
             t_variable_get(varname, src+1);
 
-            /* Get variable value. */
-            numeric_t val;
-            error_t e = program_get_numeric(varname, &val);
-            if (e != ERROR_NOERROR) return e;
+            /* Get next token. */
+            const tok_t * next_tok = src + t_defs_size(src);
 
-            /* Write value to output. */
-            t_numeric_put(output_ptr, val);
-            output_ptr += 3;
+            /* Is it a left paren?
+             * If so this is an array access.
+             * Otherwise, it's a normal variable.
+             */
+            if (*next_tok == TOK_OPERATOR && *(next_tok + 1) == OP_LPAREN)
+            {
+                /* Skip over variable and left paren. */
+                src += t_defs_size(src);
+                src += t_defs_size(src);
+
+                /* Now we should have a numeric.
+                 * This is the array index. */
+                if (*src != TOK_NUMERIC) return ERROR_SYNTAX;
+
+                numeric_t index = t_numeric_get(src + 1);
+                src += t_defs_size(src);
+
+                /* Check we have a closing paren. */
+                if (*src != TOK_OPERATOR) return ERROR_SYNTAX;
+                if (*(src+1) != OP_RPAREN) return ERROR_SYNTAX;
+
+                /* Get the array. */
+                tok_t * arr;
+                program_get_array(varname, &arr);
+                numeric_t * arr_num = (numeric_t *)(arr+2);
+
+                /* Bounds checking of index. */
+                tok_size_t array_size = *(arr + 1);
+                if (index < 1) return ERROR_RANGE;
+                if ((index*sizeof(numeric_t)) > array_size) return ERROR_RANGE;
+
+                /* Get the value at the given index in the array. */
+                numeric_t array_value = arr_num[index-1];
+
+                t_numeric_put(output_ptr, array_value);
+                output_ptr += 3;
+            }
+            else
+            {
+                /* Get variable value. */
+                numeric_t val;
+                error_t e = program_get_numeric(varname, &val);
+                if (e != ERROR_NOERROR) return e;
+
+                /* Write value to output. */
+                t_numeric_put(output_ptr, val);
+                output_ptr += 3;
+            }
         }
         else if (tok == TOK_OPERATOR)
         {

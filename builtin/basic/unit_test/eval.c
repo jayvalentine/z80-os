@@ -233,3 +233,141 @@ int test_eval_variable_negation()
 
     return 0;
 }
+
+int test_eval_array_access_first()
+{
+    program_new();
+
+    /* Set up context. */
+    program_create_array("ARR", 10);
+    tok_t * arr;
+    program_get_array("ARR", &arr);
+    numeric_t * arr_num = (numeric_t *)(arr + 2);
+    arr_num[0] = 42;
+
+    const char * input = "ARR(1)";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    numeric_t num;
+    error_t err = eval_numeric(&num, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
+    ASSERT_EQUAL_INT(42, num);
+
+    return 0;
+}
+
+int test_eval_array_access_last()
+{
+    program_new();
+
+    /* Set up context. */
+    program_create_array("BOB", 24);
+    tok_t * arr;
+    program_get_array("BOB", &arr);
+    numeric_t * arr_num = (numeric_t *)(arr + 2);
+    arr_num[11] = 9;
+
+    const char * input = "BOB(12)";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    numeric_t num;
+    error_t err = eval_numeric(&num, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
+    ASSERT_EQUAL_INT(9, num);
+
+    return 0;
+}
+
+int test_eval_array_access_mid()
+{
+    program_new();
+
+    /* Set up context. */
+    program_create_array("FOO", 12);
+    tok_t * arr;
+    program_get_array("FOO", &arr);
+    numeric_t * arr_num = (numeric_t *)(arr + 2);
+    arr_num[2] = 22;
+
+    const char * input = "FOO(3)";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    numeric_t num;
+    error_t err = eval_numeric(&num, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
+    ASSERT_EQUAL_INT(22, num);
+
+    return 0;
+}
+
+int test_eval_array_access_outofrange_end()
+{
+    program_new();
+
+    /* Set up context. */
+    program_create_array("BOB", 24);
+    tok_t * arr;
+    program_get_array("BOB", &arr);
+    numeric_t * arr_num = (numeric_t *)(arr + 2);
+    arr_num[11] = 9;
+
+    const char * input = "BOB(13)";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    numeric_t num;
+    error_t err = eval_numeric(&num, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_RANGE, err);
+
+    return 0;
+}
+
+int test_eval_array_access_outofrange_begin()
+{
+    program_new();
+
+    /* Set up context. */
+    program_create_array("BOB", 6);
+    tok_t * arr;
+    program_get_array("BOB", &arr);
+    numeric_t * arr_num = (numeric_t *)(arr + 2);
+    arr_num[11] = 9;
+
+    const char * input = "BOB(0)";
+    tok_t dst_buf[128];
+    tok_t * dst = dst_buf;
+
+    error_t e = statement_tokenize(dst, input);
+
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
+
+    numeric_t num;
+    error_t err = eval_numeric(&num, &dst_buf[0]);
+
+    ASSERT_EQUAL_UINT(ERROR_RANGE, err);
+
+    return 0;
+}
