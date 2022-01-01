@@ -3,74 +3,47 @@ require_relative '../../zemu/lib/zemu'
 # Status LEDs object
 #
 # Represents the status LEDs on the z80 computer.
-class StatusLedPort < Zemu::Config::IOPort
+class StatusLedPort < Zemu::Config::BusDevice
     def initialize
         super
 
-        when_setup do
-<<-EOF
-#include <stdio.h>
+        @display = true
+        @register = 0
+    end
 
-const char * #{name}_labels[8] = { #{labels.map { |x| "\"#{x}\"" }.join(", ")} };
-zuint8 #{name}_reg_value = 0;
+    def set_display(state)
+        @display = state
+    end
 
-zuint8 zemu_io_#{name}_value(void)
-{
-    return #{name}_reg_value;
-}
-EOF
-        end
+    def io_write(port, value)
+        if (port == io_port) && @display
+            @register = value
 
-        # Cannot read from port, but we need
-        # to return a value.
-        when_read do
-<<-EOF
-if (port == #{port}) return 0;
-EOF
-        end
+            8.times do |i|
+                s = "%-4s" % labels[i]
+                print(s)
+            end
+            print("\n")
 
-        # Write just prints the new
-        # value of the LEDs to stdout.
-        when_write do
-<<-EOF
-if (port == #{port})
-{
-    #{name}_reg_value = value;
+            8.times do |i|
+                if (value & 0x80) == 0x80
+                    print("0   ")
+                else
+                    print("1   ")
+                end
 
-#ifndef TEST
-    for (int i = 0; i < 8; i++)
-    {
-        printf("%-4s", #{name}_labels[i]);
-    }
-    printf("\\n");
-    for (int i = 0; i < 8; i++)
-    {
-        if (value & 0x80) printf("1   ");
-        else printf("0   ");
-        value <<= 1;
-    }
-    printf("\\n\\n");
-#endif
-}
-EOF
-        end
-
-        when_clock do
+                value = value << 1
+            end
+            print("\n\n")
         end
     end
 
-    def functions
-        [
-            {
-                "name" => "zemu_io_#{name}_value".to_sym,
-                "args" => [],
-                "return" => :uint8
-            }
-        ]
+    def register
+        @register
     end
 
     def params
-        %w(name port labels)
+        super + %w(io_port labels)
     end
 end
 
@@ -79,7 +52,7 @@ end
 # Represents a serial connection between the emulated CPU
 # and the host machine, with input and output mapped to Z80 I/O
 # ports.
-class Serial6850 < Zemu::Config::IOPort
+class Serial6850 < Zemu::Config::BusDevice
     # Constructor.
     #
     # Takes a block in which the parameters of the serial port
@@ -100,80 +73,72 @@ class Serial6850 < Zemu::Config::IOPort
     def initialize
         super
 
-        when_setup do
-            "#include <stdio.h>\n" +
-            "zuint8 io_#{name}_tx;\n" +
-            "zuint8 io_#{name}_rx;\n" +
-            "zuint8 io_#{name}_status;\n" +
-            "zuint8 io_#{name}_control;\n" +
-            "zboolean int_#{name}_tx = FALSE;\n" +
-            "zboolean int_#{name}_rx = FALSE;\n" +
-            "\n" +
-            "zusize zemu_io_#{name}_buffer_size(void)\n" +
-            "{\n" +
-            "    if (io_#{name}_status & 0x02) return 0;\n" +
-            "    else return 1;\n" +
-            "}\n" +
-            "\n" +
-            "void zemu_io_#{name}_master_puts(zuint8 val)\n" +
-            "{\n" +
-            "    io_#{name}_rx = val;\n" +
-            "    io_#{name}_status |= 0x01;\n" +
-            "    int_#{name}_rx = TRUE;\n" +
-            "}\n" +
-            "\n" +
-            "zuint8 zemu_io_#{name}_master_gets(void)\n" +
-            "{\n" +
-            "    io_#{name}_status |= 0x02;\n" +
-            "    return io_#{name}_tx;\n" +
-            "}\n"
+        @buffer_rx = []
+        @buffer_tx = []
+
+        @status = 0
+        @control = 0
+        @int_rx = false
+    end
+
+    def transmitted_count
+        @buffer_tx.size
+    end
+
+    def get_byte()
+        @status |= 0x02
+        return @buffer_tx.shift()
+    end
+
+    def put_byte(b)
+        @buffer_rx = [b]
+        @status |= 0x01
+        @int_rx = true
+    end
+
+    def io_read(port)
+        if port == data_port
+            @status &= ~0x01
+            @int_rx = false
+            return @buffer_rx.shift()
+        elsif port == control_port
+            return @status
         end
 
-        when_read do
-            "if (port == #{data_port})\n" +
-            "{\n" +
-            "    io_#{name}_status &= ~0x01;\n" +
-            "    int_#{name}_rx = FALSE;\n" +
-            "    return io_#{name}_rx;\n" +
-            "}\n" +
-            "else if (port == #{control_port})\n" +
-            "{\n" +
-            "    return io_#{name}_status;\n" +
-            "}\n"
-        end
+        nil
+    end
 
-        when_write do
-            "if (port == #{data_port})\n" +
-            "{\n" +
-            "    io_#{name}_status &= ~0x02;\n" +
-            "    io_#{name}_tx = value;\n" +
-            "}\n" +
-            "else if (port == #{control_port})\n" +
-            "{\n" +
-            "    if ((value & 0x03) == 0x03) io_#{name}_status = 0x02;\n" +
-            "    else io_#{name}_control = value;\n" +
-            "}\n"
-        end
-
-        when_clock do
-            "if ((io_#{name}_control & 0x20) && (io_#{name}_status & 0x02)) int_#{name}_tx = TRUE;\n" +
-            "else int_#{name}_tx = FALSE;\n" +
-            "if (int_#{name}_rx || int_#{name}_tx) { io_#{name}_status |= 0x80; zemu_io_int_on(instance); }\n" +
-            "else { io_#{name}_status &= ~0x80; zemu_io_int_off(instance); }\n"
+    def io_write(port, value)
+        if port == data_port
+            @status &= ~0x02
+            @buffer_tx = [value]
+        elsif port == control_port
+            if ((value & 0x03) == 0x03)
+                @status = 0x02
+            else
+                @control = value
+            end
         end
     end
 
-    # Defines FFI API which will be available to the instance wrapper if this IO device is used.
-    def functions
-        [
-            {"name" => "zemu_io_#{name}_master_puts".to_sym, "args" => [:uint8], "return" => :void},
-            {"name" => "zemu_io_#{name}_master_gets".to_sym, "args" => [], "return" => :uint8},
-            {"name" => "zemu_io_#{name}_buffer_size".to_sym, "args" => [], "return" => :uint64}
-        ]
+    def clock(cycles)
+        if ((@control & 0x20) == 0x20) && ((@status & 0x02) == 0x02)
+            int_tx = true
+        else
+            int_tx = false
+        end
+
+        if @int_rx || int_tx
+            @status |= 0x80
+            interrupt(true)
+        else
+            @status &= ~0x80
+            interrupt(false)
+        end
     end
 
-    # Valid parameters for a SerialPort, along with those
-    # defined in [Zemu::Config::IOPort].
+    # Valid parameters for a Serial6850, along with those
+    # defined in [Zemu::Config::BusDevice].
     def params
         super + %w(data_port control_port)
     end
@@ -238,7 +203,7 @@ def zemu_config
 
         add_io (StatusLedPort.new do
             name "status"
-            port 0x80
+            io_port 0x80
             labels %w(X X X X X SYS INT MEM)
         end)
     end
