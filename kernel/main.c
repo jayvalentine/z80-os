@@ -25,6 +25,7 @@
 #include <include/process.h>
 #include <include/memory.h>
 #include <include/scheduler.h>
+#include <include/serial.h>
 
 extern SysInfo_T sysinfo;
 
@@ -43,6 +44,8 @@ void main(void)
 
     filesystem_init();
     signal_init();
+
+    serial_init();
 
     /* Get number of RAM banks. */
     //uint16_t banks = ram_bank_test();

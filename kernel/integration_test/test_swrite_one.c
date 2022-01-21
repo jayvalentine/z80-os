@@ -4,6 +4,6 @@
 
 int main()
 {
-    puts("hello, world!");
+    putchar('F');
     return 0;
 }

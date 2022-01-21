@@ -29,10 +29,6 @@ _interrupt_handler:
     bit     0, A
     jp      nz, __serial_read_handler
 
-    ; Ready to transmit character?
-    bit     1, A
-    jp      nz, __serial_write_handler
-
     ; Not a 6850 interrupt.
 __interrupt_skip2:
     ; Is this a timer interrupt?
@@ -113,42 +109,6 @@ __serial_signal_cancel:
     
     jp      __interrupt_handle_ret
 
-    EXTERN  _tx_buf
-    EXTERN  _tx_buf_head
-    EXTERN  _tx_buf_tail
-
-__serial_write_handler:
-    ; Get current head and tail of buffer.
-    ld      HL, (_tx_buf_head)
-    ex      DE, HL
-    ld      HL, (_tx_buf_tail)
-
-    ; Head in DE, tail in HL.
-    ; Compare to check if they're equal.
-    ; Only need to compare lower half
-    ; due to alignment.
-    ld      A, L
-    cp      E
-    jp      nz, __tx
-
-    ; If equal, we've got nothing to transmit.
-    ; In this case, we disable tx interrupts and return.
-    ld      A, 0b10010110
-    out     (UART_PORT_CONTROL), A
-    
-    jp      __interrupt_handle_ret
-
-__tx:
-    ; Load character and send.
-    ld      A, (HL)
-    out     (UART_PORT_DATA), A
-
-    ; Increment tail.
-    inc     L
-    ld      (_tx_buf_tail), HL
-
-    jp      __interrupt_handle_ret
-
     EXTERN  _scheduler_tick
     EXTERN  _ram_bank_set
 
@@ -193,4 +153,25 @@ __unknown_interrupt:
     PUBLIC  _interrupt_enable
 _interrupt_enable:
     ei
+    ret
+
+    ; void interrupt_disable(void)
+    PUBLIC  _interrupt_disable
+_interrupt_disable:
+    di
+    ret
+
+    ; void interrupt_tx_enable(void)
+    PUBLIC  _interrupt_tx_enable
+_interrupt_tx_enable:
+    ; Enable TX interrupts
+    ld      A, 0b10110110
+    out     (UART_PORT_CONTROL), A
+    ret
+
+    ; void interrupt_tx_disable(void)
+    PUBLIC  _interrupt_tx_disable
+_interrupt_tx_disable:
+    ld      A, 0b10010110
+    out     (UART_PORT_CONTROL), A
     ret

@@ -43,7 +43,7 @@ _start:
     ; Configure UART.
     ; UART will run at 57600baud with a 3.6864MHz clock.
     ; Word length of 8 bits + 1 stop.
-    ; Interrupts enabled on RX, initially disabled on TX.
+    ; Interrupts enabled on RX, disabled on TX.
     ld      A, 0b10010110
     out     (UART_PORT_CONTROL), A
     
@@ -61,10 +61,3 @@ _start:
     ld      A, 0b01111111
     out     ($80), A
     halt
-
-    ; 256-byte aligned buffer.
-    PUBLIC  _tx_buf
-    
-    defs    0x0100 - ASMPC
-_tx_buf:
-    defs    256

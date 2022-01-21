@@ -9,60 +9,43 @@ class SIOTest < IntegrationTest
 
         start_instance("test_swrite.bin")
 
-        expected = "hello, world!";
-        
-        # Get output string.
         output_string = ""
-        expected.size.times do
-            # Then continue for 2000 cycles.
+
+        12.times do
+            # Get output character.
             @instance.continue 2000
         
             # Should not have halted or hit breakpoint.
-            assert !@instance.halted?, "Program halted unexpectedly."
-            assert !@instance.break?, "Program hit breakpoint unexpectedly."
+            assert !@instance.halted?, "Program halted unexpectedly"
+            assert !@instance.break?, "Program hit break unexpectedly"
 
             output_string += @instance.serial_gets(1)
         end
 
-        assert_equal expected, output_string, "Did not get expected serial output"
+        # Final run, should hit halt.
+        @instance.continue 2000
+        output_string += @instance.serial_gets(1)
+        @instance.continue 2000
+        
+        assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
+
+        assert_equal "hello, world!", output_string, "Did not get expected serial output"
     end
 
-    # Tests that calling the swrite syscall does not result in overflow
-    # in the character buffer.
-    def test_swrite_no_overflow
-        compile_test_code(["kernel/integration_test/test_swrite_no_overflow.c"], "test_swrite_no_overflow.bin")
+    # Tests that calling the swrite syscall can write a single character to the serial output.
+    def test_swrite_one
+        compile_test_code(["kernel/integration_test/test_swrite_one.c"], "test_swrite_one.bin")
 
-        start_instance("test_swrite_no_overflow.bin")
+        start_instance("test_swrite_one.bin")
 
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
-        swrite_breakpoint = kernel_symbols.find_by_name("__swrite_is_available").address
-
-        @instance.break swrite_breakpoint, :program
-
-        count = 0
-
-        100000.times do
-            # Then continue until we hit breakpoint.
-            @instance.continue
+        @instance.continue 2000
         
-            assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-            assert_equal swrite_breakpoint, @instance.registers["PC"], "Breakpoint at wrong address."
-        
-            # Check value of HL.
-            hl = @instance.registers["HL"]
-            assert (hl >= 0x100), "Head underflow: %04x" % hl
-            assert (hl < 0x200), "Head overflow: %04x" % hl
+        # Should have halted.
+        assert @instance.halted?, "Program should have halted."
 
-            # Check no writes outside of the buffer.
-            assert_equal 0xf3, @instance.memory(0x200)
+        output_string = @instance.serial_gets(1)
 
-            if count == 100
-                @instance.serial_gets(1)
-                count = 0
-            end
-
-            count += 1
-        end
+        assert_equal "F", output_string, "Did not get expected serial output"
     end
 
     # Tests that calling the sread syscall reads characters from the serial output.

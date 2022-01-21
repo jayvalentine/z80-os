@@ -111,91 +111,29 @@ _syscall_common_ret:
     ; SYSCALL DEFINITIONS
     ; *****************************
 
-    EXTERN   _tx_buf
+    EXTERN  _driver_6850_tx
 
-    ; 0: swrite: Write character to serial port.
+    ; 0: swrite: Write bytes to serial port.
     ;
     ; Parameters:
-    ; L     - Byte character to send.
+    ; DE - Pointer to byte buffer.
+    ; BC - Count.
     ;
     ; Returns:
     ; Nothing.
     ;
     ; Description:
-    ; Busy-waits until serial port is ready to transmit, then
-    ; writes the given character to the serial port.
+    ; Writes the specified number of bytes
+    ; to the serial port.
 _do_swrite:
+    call    _driver_6850_tx
+
+    ; Restore BC, DE, HL
     pop     BC
     pop     DE
     pop     HL
 
-    push    DE
-    push    BC
-
-    ; Preserve character to send because we're going to need
-    ; L.
-    ld      B, L
-
-__swrite_wait_available_loop:
-    ; This needs to be an atomic operation; Disable interrupts.
-    di
-
-    ld      HL, (_tx_buf_tail)
-    ex      DE, HL
-    ld      HL, (_tx_buf_head)
-
-    ; Tail in DE, head in HL.
-
-    ; If head is one less than tail,
-    ; we need to wait until that isn't the case.
-__swrite_is_available:
-    inc     L
-
-    ; Only need to compare lower half.
-    ; Buffer is 256-byte aligned.
-    ld      A, E
-    cp      L
-    jp      nz, __swrite_continue
-    
-    ei
-    nop
-    jp      __swrite_wait_available_loop
-
-__swrite_continue:
-    ; Otherwise decrement L and continue.
-    dec     L
-
-    ; If head and tail are equal, we need to enable
-    ; interrupts before appending to the buffer.
-    ld      A, E
-    cp      L
-    jp      nz, __swrite_append
-
-    ; Enable TX interrupts
-    ld      A, 0b10110110
-    out     (UART_PORT_CONTROL), A
-
-__swrite_append:
-    ; Write into buffer. Increment lower half of head.
-    ; This causes wraparound automatically.
-    ld      (HL), B
-    inc     L
-    ld      (_tx_buf_head), HL
-
-__swrite_done:
-    ei
-
-    pop     BC
-    pop     DE
     jp      _syscall_common_ret
-
-    PUBLIC  _tx_buf_head
-    PUBLIC  _tx_buf_tail
-
-_tx_buf_head:
-    defw    _tx_buf
-_tx_buf_tail:
-    defw    _tx_buf
 
     ; 1: sread: Read character from serial port.
     ;
