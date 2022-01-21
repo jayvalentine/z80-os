@@ -564,7 +564,7 @@ __sysinfo_numbanks:
     defw    0
 
 __kernel_version:
-    defm    "0.3.0", 0
+    defm    "0.4.0", 0
 
 __test:
     defm    "CANCEL handler: %04x\n\r", 0
