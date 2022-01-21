@@ -8,13 +8,13 @@ class SerialBenchmarks < KernelBenchmark
         int_swrite_start = kernel_symbols.find_by_name("_do_swrite").address
         int_swrite_end = kernel_symbols.find_by_name("_syscall_common_ret").address
 
-        # We expect to start executing at 0x6000,
+        # We expect to start executing at 0x8000,
         # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
+        @instance.break 0x8000, :program
         
         # Run, and expect to hit the breakpoint.
         @instance.continue
-        @instance.remove_break 0x6000, :program
+        @instance.remove_break 0x8000, :program
 
         # Set a breakpoint at the start and end of the ISR.
         @instance.break int_swrite_start, :program

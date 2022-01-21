@@ -22,7 +22,7 @@ _syscall_table:
     defw    _do_fentries
     defw    _do_fentry
 
-    defw    _do_pexec
+    defw    _do_pspawn
 
     defw    _do_sighandle
 
@@ -32,7 +32,11 @@ _syscall_table:
 
     defw    _do_smode
 
-    defw    _do_version
+    defw    _do_sysinfo
+
+    defw    _do_pstate
+    defw    _do_pexit
+    defw    _do_pexitcode
 
     PUBLIC  _syscall_handler
 
@@ -45,6 +49,8 @@ _syscall_table:
     ; using offset provided in A, then executes the function at
     ; that address.
 _syscall_handler:
+    di
+
     ; Save HL, DE, BC
     push    HL
     push    DE
@@ -96,6 +102,8 @@ _syscall_common_ret:
     pop     BC
     pop     HL
     pop     AF
+
+    ei
 
     ret
 
@@ -212,12 +220,14 @@ _do_sread:
     ld      E, A
 
     ; Wait for char in buffer.
+    ei
 __sread_wait:
     ld      A, (_rx_buf_offs_tail)
     cp      E
 
     ; If head and tail are equal, there's no data in buffer.
     jp      z, __sread_wait
+    di
 
 __sread_available:
     ; Calculate offset into buffer.
@@ -428,21 +438,21 @@ _do_fentry:
     
     jp      _syscall_common_ret
 
-    EXTERN  _process_exec
+    EXTERN  _process_spawn
     EXTERN  _signal_sethandler
 
-    ; 12: pexec: Execute loaded executable image.
+    ; 12: pspawn: Spawn new process for loaded executable image.
     ;
     ; Parameters:
     ; BC - argc
     ; DE - argv
-    ; HL - address
+    ; HL - process descriptor
     ;
     ; Returns:
-    ; (int) exit code of executable.
-_do_pexec:
+    ; (int) success code.
+_do_pspawn:
     ; HL, BC and DE are on top of stack.
-    call    _process_exec
+    call    _process_spawn
 
     ; Restore BC, DE, but not HL (return value).
     pop     BC
@@ -490,7 +500,6 @@ _do_fdelete:
     ; 15: pload: Load an executable
     ;
     ; Parameters:
-    ; DE - pointer to address
     ; BC - pointer to filename
     ;
     ; Returns:
@@ -516,9 +525,6 @@ _do_pload:
     ; Returns:
     ; Nothing.
 _do_smode:
-    ; Needs to be an atomic operation.
-    di
-
     ; BC already on TOS.
     call    _serial_mode
 
@@ -526,27 +532,101 @@ _do_smode:
     pop     DE
     pop     HL
 
-    ei
-
     jp      _syscall_common_ret
 
-    ; 17: version: Get version string of kernel.
+    ; 17: sysinfo: Get info about kernel.
     ;
     ; Parameters:
     ; None.
     ;
     ; Returns:
-    ; Pointer to version in HL.
-_do_version:
+    ; Pointer to sysinfo struct in HL.
+_do_sysinfo:
     pop     BC
     pop     DE
     pop     HL
 
-    ld      HL, __kernel_version
+    ld      HL, _sysinfo
     jp      _syscall_common_ret
 
+    PUBLIC  _sysinfo
+
+    EXTERN  _scheduler_state
+
+    ; 18: pstate: Get process state
+    ;
+    ; Parameters:
+    ; BC - Process ID
+    ;
+    ; Returns:
+    ; Process state in HL.
+_do_pstate:
+    ; BC already TOS.
+    call    _scheduler_state
+
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+
+    jp      _syscall_common_ret
+
+    EXTERN  _process_exit
+
+    ; 19: pexit: Exit current process.
+    ;
+    ; Parameters:
+    ; BC: exit code.
+    ;
+    ; Returns:
+    ; Nothing.
+_do_pexit:
+    ; BC already TOS.
+    call    _process_exit
+
+    pop     BC
+    pop     DE
+    pop     HL
+
+    ; This syscall doesn't return.
+    ; Set return address to the loop function
+    ; and return.
+    ld      HL, __pexit_loop
+    push    HL
+
+    jp      _syscall_common_ret
+
+
+__pexit_loop:
+    jp      __pexit_loop
+
+    EXTERN  _scheduler_exitcode
+
+    ; 20: pexitcode: Get exit code of given process.
+    ;
+    ; Parameters:
+    ; BC: PID.
+    ;
+    ; Returns:
+    ; Exit code.
+_do_pexitcode:
+    ; BC already TOS.
+    call    _scheduler_exitcode
+
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+
+    jp      _syscall_common_ret
+
+_sysinfo:
+    defw    __kernel_version
+__sysinfo_numbanks:
+    defw    0
+
 __kernel_version:
-    defm    "0.2.3", 0
+    defm    "0.3.0", 0
 
 __test:
     defm    "CANCEL handler: %04x\n\r", 0

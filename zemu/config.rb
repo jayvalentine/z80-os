@@ -1,23 +1,150 @@
 require_relative '../../zemu/lib/zemu'
 
-# Status LEDs object
-#
-# Represents the status LEDs on the z80 computer.
-class StatusLedPort < Zemu::Config::BusDevice
+class Displayable < Zemu::Config::BusDevice
     def initialize
         super
 
         @display = true
+    end
+
+    def display_on
+        @display = true
+    end
+    
+    def display_off
+        @display = false
+    end
+
+    def log(msg)
+        if @display
+            puts msg
+        end
+    end
+end
+
+# Banked RAM
+# Memory object.
+class BankedMemory < Displayable
+    # Constructor.
+    def initialize
+        @current_bank = 0
+
+        # 2D array containing memory banks.
+        @contents = []
+        256.times do |b|
+            @contents << []
+        end
+
+        super
+
+        # For each bank, pad out to the right
+        # number of bytes.
+        banks.times do |b|
+            bank_size = @contents[b].size
+            (size - bank_size).times do
+                @contents[b] << padding
+            end
+        end
+    end
+
+    def bank
+        @current_bank
+    end
+
+    # Gets or sets an array of bytes representing the initial state
+    # of this memory block.
+    def contents(bank, *args)
+        if args.size == 0
+            @contents[bank]
+        else
+            @contents[bank] = args[0].clone()
+        end
+    end
+
+    # Is this memory read-only?
+    def readonly?
+        false
+    end
+
+    # Memory bus read handler.
+    #
+    # Handles read access via the memory bus to this device.
+    #
+    # @param addr The address being accessed.
+    #
+    # Returns the value read, or nil if no value
+    # (e.g. if address falls outside range for this device).
+    def mem_read(addr)
+        # Return value in memory's contents if the address
+        # falls within range.
+        if (addr >= address) && (addr < (address + size))
+            offset = addr - address
+            value = @contents[@current_bank][offset]
+            return value
+        end
+
+        # Otherwise return nil - address does not correspond
+        # to this memory block.
+        nil
+    end
+
+    # Memory bus write handler.
+    #
+    # Handles write access via the memory bus to this device.
+    #
+    # @param addr The address being accessed.
+    # @param value The value being written.
+    def mem_write(addr, value)
+        # If address falls within range, set value in
+        # memory contents.
+        if (addr >= address) && (addr < (address + size))
+            offset = addr - address
+            @contents[@current_bank][offset] = value
+        end
+    end
+
+    # IO write handler.
+    def io_write(port, value)
+        if port == bank_select
+            @current_bank = value % banks
+            log "Bank set to #{@current_bank}"
+        end
+    end
+
+    # Valid parameters for this object.
+    # Should be extended by subclasses but NOT REPLACED.
+    def params
+        super + %w(address size banks padding bank_select)
+    end
+
+    # Reads the contents of a file in binary format and
+    # returns them as an array.
+    def from_binary(file)
+        return File.open(file, "rb") do |f|
+            bin = []
+
+            f.each_byte { |b| bin << b }
+
+            bin
+        end
+    end
+end
+
+# Status LEDs object
+#
+# Represents the status LEDs on the z80 computer.
+class StatusLedPort < Displayable
+    def initialize
+        super
+
         @register = 0
     end
 
-    def set_display(state)
-        @display = state
-    end
-
     def io_write(port, value)
-        if (port == io_port) && @display
+        if (port == io_port)
             @register = value
+
+            return if !@display
 
             8.times do |i|
                 s = "%-4s" % labels[i]
@@ -44,6 +171,45 @@ class StatusLedPort < Zemu::Config::BusDevice
 
     def params
         super + %w(io_port labels)
+    end
+end
+
+class Timer < Displayable
+    def initialize
+        super
+
+        @clock_period = 1.0 / 3_686_400
+        @count = period
+
+        @interrupt = false
+    end
+
+    def params
+        super + %w(io_port period)
+    end
+
+    def io_read(port)
+        if port == io_port
+            if @interrupt
+                log "Timer reset"
+                @interrupt = false
+                @count = period
+                return 1
+            else
+                return 0
+            end
+        end
+    end
+
+    def clock(cycles)
+        if (@count > 0)
+            @count -= (@clock_period * cycles)
+        elsif !@interrupt && @count <= 0
+            log "Timer trigger"
+            @interrupt = true
+        end
+
+        interrupt(@interrupt)
     end
 end
 
@@ -152,9 +318,9 @@ def pad(array, size, value)
     end
 end
 
-def zemu_config
+def zemu_config(instance_name, binary, disk)
     conf = Zemu::Config.new do
-        name "zemu_debug_interactive"
+        name instance_name
 
         clock_speed 3_686_400
         serial_delay 0.001
@@ -162,28 +328,42 @@ def zemu_config
         add_memory (Zemu::Config::RAM.new do
             name "ram_kernel"
             address 0x0000
-            size    0x6000
+            size    0x8000
             
             # Pad with halts so we detect out-of-bounds accesses.
-            contents pad(from_binary("kernel_debug.bin"), 0x2000, 0x76)
+            contents pad(from_binary("kernel_debug.bin"), 0x8000, 0x76)
         end)
 
-        add_memory (Zemu::Config::RAM.new do
-            name "ram_cp"
-            address 0x6000
-            size    0x2000
-            
-            # Pad with halts so we detect out-of-bounds accesses.
-            contents pad(from_binary("command.bin"), 0x2000, 0x76)
-        end)
-
-        add_memory (Zemu::Config::RAM.new do
-            name "ram_user"
+        add_memory (BankedMemory.new do
+            name "banked_ram"
             address 0x8000
             size    0x8000
 
-            # Pad with halts so we detect out-of-bounds accesses.
-            contents pad([], 0x8000, 0x76)
+            banks 16
+            bank_select 0x30
+
+            padding 0x76
+
+            contents 0, from_binary(binary)
+            contents(0)[0x7fff] = 0xf7
+            contents(0)[0x7ffe] = 0xec
+            
+            contents(0)[0x77ff] = 0x00
+            contents(0)[0x77fe] = 0x00
+            contents(0)[0x77fd] = 0x00
+            contents(0)[0x77fc] = 0x00
+
+            contents(0)[0x77fb] = 0x00
+            contents(0)[0x77fa] = 0x00
+
+            contents(0)[0x77f9] = 0x80
+            contents(0)[0x77f8] = 0x00
+        end)
+
+        add_device (Timer.new do
+            name "timer"
+            io_port 0x10
+            period 0.02
         end)
 
         add_io (Serial6850.new do
@@ -198,7 +378,7 @@ def zemu_config
             sector_size 512
             num_sectors 131072
 
-            initialize_from "disk_copy.bin"
+            initialize_from disk
         end)
 
         add_io (StatusLedPort.new do
@@ -212,7 +392,7 @@ def zemu_config
 end
 
 def zemu_start
-    config = zemu_config()
+    config = zemu_config("debug", "command.bin", "disk_copy.bin")
 
     Zemu.start_interactive(config, print_serial: false)
 end

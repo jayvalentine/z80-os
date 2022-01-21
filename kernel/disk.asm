@@ -66,8 +66,6 @@ _disk_read:
     ld      H, (HL)
     ld      L, A
 
-    di
-
     call    _status_set_disk
     
     call    _disk_wait_cmd
@@ -79,8 +77,6 @@ _disk_read:
     call    _disk_read_data
 
     call    _status_clr_disk
-
-    ei
 
     ret
 
@@ -108,8 +104,6 @@ _disk_write:
     ld      H, (HL)
     ld      L, A
 
-    di
-
     call    _status_set_disk
     
     call    _disk_wait_cmd
@@ -121,8 +115,6 @@ _disk_write:
     call    _disk_write_data
 
     call    _status_clr_disk
-
-    ei
 
     ret
 

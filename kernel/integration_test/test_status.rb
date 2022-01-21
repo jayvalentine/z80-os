@@ -19,29 +19,20 @@ class StatusTest < IntegrationTest
 
         start_instance("test_status_int.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Interrupt status bit should be unset.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111111, status, "Status LED unexpectedly set!"
 
         # Set a breakpoint for the test function.
         @instance.break prog_breakpoint.address, :program
         
         # Continue until we hit the breakpoint.
-        @instance.continue
+        @instance.continue 1000000
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal prog_breakpoint.address, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Interrupt status bit should still be unset.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111111, status, "Status LED unexpectedly set!"
 
         # Remove the program breakpoint, set a breakpoint in the ISR.
@@ -52,24 +43,24 @@ class StatusTest < IntegrationTest
         @instance.serial_puts "H"
 
         # Continue, we should hit the ISR breakpoint.
-        @instance.continue
+        @instance.continue 1000000
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal int_breakpoint.address, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Interrupt status bit should now be set.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111101, status, "Status LED not set!"
 
         # Set breakpoint on program.
         @instance.break prog_breakpoint.address, :program
         
         # Continue until we hit the breakpoint.
-        @instance.continue
+        @instance.continue 1000000
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal prog_breakpoint.address, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Interrupt status bit should now be unset.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111111, status, "Status LED still set after exiting ISR!"
     end
 
@@ -90,29 +81,20 @@ class StatusTest < IntegrationTest
 
         start_instance("test_status_syscall.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Syscall status bit should be unset.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111111, status, "Status LED unexpectedly set!"
 
         # Set a breakpoint for the test function.
         @instance.break prog_breakpoint.address, :program
         
         # Continue until we hit the breakpoint.
-        @instance.continue
+        @instance.continue 1000000
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal prog_breakpoint.address, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Syscall status bit should still be unset.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111111, status, "Status LED unexpectedly set!"
 
         # Remove the program breakpoint, set a breakpoint in the syscall routine.
@@ -120,24 +102,24 @@ class StatusTest < IntegrationTest
         @instance.break int_breakpoint.address, :program
 
         # Continue, we should hit the syscall breakpoint.
-        @instance.continue
+        @instance.continue 1000000
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal int_breakpoint.address, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Syscall status bit should now be set.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111011, status, "Status LED not set!"
 
         # Set breakpoint on program.
         @instance.break prog_breakpoint.address, :program
         
         # Continue until we hit the breakpoint.
-        @instance.continue
+        @instance.continue 1000000
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal prog_breakpoint.address, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Syscall status bit should now be unset.
-        status = @instance.zemu_io_status_value
+        status = @instance.device("status").register
         assert_equal 0b11111111, status, "Status LED still set after exiting ISR!"
     end
 end

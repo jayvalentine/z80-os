@@ -13,7 +13,7 @@ class IntegrationTest < Minitest::Test
         cmd += "-O2 -SO2 "
         cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
-        cmd += "-Cl\"-r0x6000\" "
+        cmd += "-Cl\"-r0x8000\" "
         cmd += "-crt0 kernel/integration_test/reset.asm "
         cmd += "-lstdlib "
         cmd += "-m "
@@ -24,7 +24,7 @@ class IntegrationTest < Minitest::Test
 
         assert success, "Failed to build test code!"
 
-        system("z88dk-dis -o 0x6000 #{output_name} > #{output_name}.diss")
+        system("z88dk-dis -o 0x8000 #{output_name} > #{output_name}.diss")
     end
 
     def compile_user_code(address, test_files, output_name)
@@ -35,7 +35,7 @@ class IntegrationTest < Minitest::Test
         cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
         cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
         cmd += "-Cl\"-r#{address_string}\" "
-        cmd += "-crt0 #{CRT0} "
+        cmd += "-crt0 #{PROCESS_CRT0} "
         cmd += "-lstdlib "
         cmd += "-m "
         cmd += "-o #{output_name} "
@@ -55,73 +55,40 @@ class IntegrationTest < Minitest::Test
         disk_file_name = "#{binary_name}_disk.bin"
         FileUtils.cp "kernel/integration_test/disk.img", disk_file_name
 
-        conf = Zemu::Config.new do
-            name "zemu_#{binary_name}"
-    
-            clock_speed 3_686_400
-            serial_delay 0.001
-    
-            add_memory (Zemu::Config::RAM.new do
-                name "ram_kernel"
-                address 0x0000
-                size    0x6000
-                
-                # Pad with halts so we detect out-of-bounds accesses.
-                contents pad(from_binary("kernel_debug.bin"), 0x2000, 0x76)
-            end)
-
-            add_memory (Zemu::Config::RAM.new do
-                name "ram_cp"
-                address 0x6000
-                size    0x2000
-                
-                # Pad with halts so we detect out-of-bounds accesses.
-                contents pad(from_binary(binary), 0x2000, 0x76)
-            end)
-    
-            add_memory (Zemu::Config::RAM.new do
-                name "ram_user"
-                address 0x8000
-                size    0x8000
-
-                # Pad with halts so we detect out-of-bounds accesses.
-                contents pad([], 0x8000, 0x76)
-            end)
-    
-            add_io (Serial6850.new do
-                name "serial"
-                control_port 0x00
-                data_port 0x01
-            end)
-
-            add_io (Zemu::Config::BlockDrive.new do
-                name "drive"
-                base_port 0x18
-                sector_size 512
-                num_sectors 131072
-
-                initialize_from disk_file_name
-            end)
-
-            add_io (StatusLedPort.new do
-                name "status"
-                port 0x80
-                labels %w(X X X X X SYS INT MEM)
-            end)
-        end
+        conf = zemu_config(binary_name, binary, disk_file_name)
 
         @instance = Zemu.start(conf, TEST: 1)
+        @instance.device("status").display_off
+        @instance.device("timer").display_off
+        @instance.device("banked_ram").display_off
+
+        # We expect to start executing at 0x8000,
+        # where the system process would reside normally.
+        @instance.break 0x8000, :program
+        
+        # Run, and expect to hit the breakpoint.
+        @instance.continue 2000000
+        
+        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
+        assert_equal 0x8000, @instance.registers["PC"], "Breakpoint at wrong address (%04x)" % @instance.registers["PC"]
+        assert_equal 0, @instance.device("banked_ram").bank, "wrong RAM bank!"
+
+        @instance.remove_break 0x8000, :program
+
+        # Set breakpoint at 0x0000 to catch unintentional resets.
+        @instance.break 0x0000, :program
     end
 
     def load_user_program(address, program)
+        offset = address - 0x8000
         File.open(program, "rb") do |f|
-            # Load maximum of 2k
+            # Load maximum of 256 bytes
             2048.times do
                 b = f.getbyte
                 break if b.nil?
 
-                @instance.set_memory(address, b)
-                address += 1
+                @instance.device("banked_ram").contents(0)[offset] = b
+                offset += 1
             end
         end
     end
@@ -132,7 +99,7 @@ class IntegrationTest < Minitest::Test
 
     def print_stack
         sp = @instance.registers["SP"]
-        8.times do |i|
+        16.times do |i|
             offset = i * 2
             lo_addr = sp + offset
             hi_addr = lo_addr + 1

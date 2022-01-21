@@ -1,6 +1,8 @@
     ; Definitions
     defc    UART_PORT_DATA = 0b00000001
     defc    UART_PORT_CONTROL = 0b00000000
+
+    defc    TIMER_CONTROL = $10
     
     PUBLIC  _interrupt_handler
 
@@ -33,7 +35,14 @@ _interrupt_handler:
 
     ; Not a 6850 interrupt.
 __interrupt_skip2:
+    ; Is this a timer interrupt?
+    in      A, (TIMER_CONTROL)
+    cp      1
+    jp      nz, __interrupt_skip3
 
+    jp      __timer_handler
+
+__interrupt_skip3:
     ; Not any of the known causes.
     jp      __unknown_interrupt
 
@@ -140,5 +149,48 @@ __tx:
 
     jp      __interrupt_handle_ret
 
+    EXTERN  _scheduler_tick
+    EXTERN  _ram_bank_set
+
+__timer_handler:
+    ; Switch to user register set and stack all registers.
+    exx
+    ex      AF, AF'
+    push    AF
+    push    HL
+    push    DE
+    push    BC
+    push    IX
+    push    IY
+
+    ld      ($fffe), SP
+
+    ; Call the scheduler to allocate another process.
+    call    _scheduler_tick
+    call    _ram_bank_set
+
+    ld      SP, ($fffe)
+
+    ; Now unstack all registers and switch back
+    ; to system register set.
+    pop     IY
+    pop     IX
+    pop     BC
+    pop     DE
+    pop     HL
+    pop     AF
+    ex      AF, AF'
+    exx
+
+    ; Return from the interrupt.
+__timer_handler_end:
+    jp      __interrupt_handle_ret
+
 __unknown_interrupt:
     jp      __interrupt_handle_ret
+
+    ; void interrupt_enable(void)
+    PUBLIC  _interrupt_enable
+_interrupt_enable:
+    ei
+    ret

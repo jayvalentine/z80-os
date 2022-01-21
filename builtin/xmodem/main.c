@@ -14,6 +14,7 @@ int user_main(char ** argv, size_t argc)
     if (argc != 1)
     {
         puts("Usage: xmodem <file>\r\n");
+        return 1;
     }
 
     int fd = syscall_fopen(argv[0], FMODE_WRITE);

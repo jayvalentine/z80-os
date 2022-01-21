@@ -21,32 +21,43 @@
 #include <include/status.h>
 #include <include/file.h>
 #include <include/signal.h>
+#include <include/ram.h>
+#include <include/process.h>
+#include <include/memory.h>
+#include <include/scheduler.h>
+
+extern SysInfo_T sysinfo;
 
 char input[256];
 
-/* Entry point for command-processor. */
-typedef void (*cp_main_t)(void);
-#define cp_main ((cp_main_t)0x6000)
-
 uint8_t startup_flags = 0;
+
+typedef void (*proc_t)(void);
+
+void interrupt_enable(void);
+void debug_process_run(void);
 
 void main(void)
 {
     status_init();
-    
-#ifndef DEBUG
-    puts("\033[2JInitialising kernel... ");
-#endif
 
     filesystem_init();
     signal_init();
 
-#ifdef DEBUG
-    /* Just call the program in the command processor memory
-     * directly, it will have been loaded by the test.
-     */
-    cp_main();
-#else
+    /* Get number of RAM banks. */
+    //uint16_t banks = ram_bank_test();
+    uint16_t banks = 16;
+    sysinfo.numbanks = banks;
+    ram_bank_set(15);
+
+    memory_init(banks);
+    process_init();
+
+    scheduler_init();
+
+    interrupt_enable();
+
+#ifndef DEBUG
     /* Check startup flags. Warn the user if there is a problem. */
     if (startup_flags != 0)
     {
@@ -62,33 +73,25 @@ void main(void)
 
     puts("Loading command processor... ");
 
-    /* Load command processor into the last 8k of low-RAM. */
-    void * cp_addr = 0x6000;
+    /* Load command processor into the first bank of user RAM. */
+    void * cp_addr = 0x8000;
 
-    int fd = syscall_fopen("COMMAND.BIN", FMODE_READ);
+    int pd = process_load("COMMAND.EXE");
 
-    if (fd == E_FILENOTFOUND)
+    if (pd == E_FILENOTFOUND)
     {
-        puts("Error: COMMAND.BIN not found.\n\r");
+        puts("Error: COMMAND.EXE not found.\n\r");
         return;
     }
 
-    if (fd < 0)
+    if (pd < 0)
     {
-        puts("Unknown error opening COMMAND.BIN.\n\r");
+        printf("Unknown error loading COMMAND.EXE: %d\n\r", pd);
         return;
     }
 
-    size_t bytes = syscall_fread(cp_addr, 0x2000, fd);
-    syscall_fclose(fd);
-
-    if (bytes == 0)
-    {
-        puts("Error reading COMMAND.BIN.\n\r");
-        return;
-    }
-
-    printf("Read %u bytes.\n\r", bytes);
-    cp_main();
+    int e = process_spawn(pd, NULL, 0);
 #endif
+
+    while (1) {}
 }

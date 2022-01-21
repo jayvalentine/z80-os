@@ -890,7 +890,9 @@ size_t file_write(char * ptr, size_t n, int fd)
 
 size_t file_read(char * ptr, size_t n, int fd)
 {
+#ifndef UNIT_TEST
     if (((uint16_t)ptr) < 0x6000) return 0;
+#endif
 
     /* Guard against an obviously invalid descriptor, that would cause
      * us to index out of the fdtable. */

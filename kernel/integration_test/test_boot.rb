@@ -8,16 +8,6 @@ class BootTest < IntegrationTest
         end
 
         start_instance("test_boot.bin")
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
     end
 
     def test_boot_invalid_syscall
@@ -30,16 +20,6 @@ class BootTest < IntegrationTest
 
         # Startup flags should be 0.
         assert_equal 0x00, @instance.memory(sflags_addr)
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Startup flags should still be 0.
         assert_equal 0x00, @instance.memory(sflags_addr)

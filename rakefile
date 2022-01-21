@@ -17,7 +17,7 @@ def compile(output_name, source_files, include_dirs, defines, crt, origin)
     origin_string = "0x%04X" % origin
 
     cmd = "zcc "
-    cmd += "+#{CONFIG} -compiler-sccz80 "
+    cmd += "+#{CONFIG} -compiler-sccz80 --opt-code-speed=all "
 
     cmd += "-O2 -SO2 "
 
@@ -103,6 +103,7 @@ def unit_test(directory)
 
     cmd = "gcc "
     cmd += "-g -O1 "
+    cmd += "-DUNIT_TEST "
     cmd += "-I#{directory} "
     cmd += "-I#{directory}/unit_test/mock "
     cmd += "-o #{exe_name}.exe "
@@ -246,13 +247,13 @@ namespace 'build' do
         # Include every source file but reset.asm, which is the startup code.
         src = (Dir.glob("command/*.asm") + Dir.glob("command/*.c")) - ["command/reset.asm"]
 
-        success = compile("command.bin", src, [], [], "command/reset.asm", 0x6000)
+        success = compile("command.bin", src, [], [], PROCESS_CRT0, 0x8000)
 
         if success
-            system("z88dk-dis -o 0x6000 command.bin > command.diss")
+            system("z88dk-dis -o 0x8000 command.bin > command.diss")
 
-            # Make sure that the command processor image is no more than 8Kb in size.
-            limit = 8 * 1024
+            # Make sure that the command processor image is no more than 32Kb in size.
+            limit = 32 * 1024
             bin = File.read("command.bin", mode: "rb")
             abort("Command processor image is too large: size is #{bin.size} (#{limit} expected)") if bin.size > limit
         end
@@ -273,7 +274,7 @@ namespace 'build' do
         task "builtin:#{builtin_name}" => ['lib:stdlib'] do
             src = (Dir.glob("#{builtin}/*.asm") + Dir.glob("#{builtin}/*.c"))
 
-            success = compile("#{builtin_name}.bin", src, [], [], "#{LIB}/crt0.asm", origin)
+            success = compile("#{builtin_name}.bin", src, [], [], PROCESS_CRT0, origin)
 
             if success
                 system("z88dk-dis -o #{origin_string} #{builtin_name}.bin > #{builtin_name}.diss")

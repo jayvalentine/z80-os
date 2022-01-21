@@ -15,9 +15,6 @@ int main()
     syscall_fwrite(file, 7, fd);
     syscall_fclose(fd);
 
-    uint16_t address = 0x9876;
-
-    int success = syscall_pload(&address, "testprog.exe");
-    if (address != 0x9876) return 1;
+    int success = syscall_pload("testprog.exe");
     return success;
 }

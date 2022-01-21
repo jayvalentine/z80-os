@@ -25,12 +25,9 @@ int main()
     syscall_fwrite(file, 2050, fd);
     syscall_fclose(fd);
 
-    uint16_t address = 0x0000;
+    int pd = syscall_pload("testprog.exe");
 
-    int success = syscall_pload(&address, "testprog.exe");
-
-    if (success != 0) return 1;
-    if (address != 0x8000) return 2;
+    if (pd != 1) return 1;
 
     return 0;
 }

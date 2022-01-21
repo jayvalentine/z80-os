@@ -119,8 +119,9 @@ Inbuilt_T * get_command(const char * s)
     return NULL;
 }
 
-void main()
+void user_main()
 {
+    SysInfo_T * sysinfo = syscall_sysinfo();
     /* Clear screen, cursor to top-left. */
     puts("\033[2J\033[1;1H");
 
@@ -128,8 +129,12 @@ void main()
     puts("\033[32m");
 
     puts("ZEBRA Command Processor (v0.1.2)\n\r");
-    printf("ZEBRA Kernel version: v%s\r\n", syscall_version());
+    printf("ZEBRA Kernel version: v%s\r\n", sysinfo->version);
     puts("Copyright (C) 2020 Jay Valentine\n\r\n\r");
+
+    puts("System Information:\r\n");
+    uint16_t user_mem_kb = sysinfo->numbanks * 32;
+    printf("    %uKB user memory (%u banks)\r\n", user_mem_kb, sysinfo->numbanks);
 
     zebra_display();
 
@@ -161,22 +166,20 @@ void main()
             program[cmd_len] = '.';
             memcpy(&program[cmd_len+1], "EXE", 4);
 
-            uint16_t load_address;
+            int pd = syscall_pload(program);
 
-            int load_result = syscall_pload(&load_address, program);
-
-            if (load_result == E_FILENOTFOUND)
+            if (pd == E_FILENOTFOUND)
             {
                 printf("%s could not be found.\n\r", program);
             }
-            else if (load_result < 0)
+            else if (pd < 0)
             {
-                printf("Error occurred loading program %s: %d\n\r", program, load_result);
+                printf("Error occurred loading program %s: %d\n\r", program, pd);
             }
             else
             {
                 syscall_sighandle(&cancel, 0);
-                exitcode = syscall_pexec(load_address, argv, argc);
+                exitcode = syscall_pexec(pd, argv, argc);
             }
         }
         else

@@ -9,16 +9,6 @@ class SIOTest < IntegrationTest
 
         start_instance("test_swrite.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         expected = "hello, world!";
         
         # Get output string.
@@ -47,16 +37,6 @@ class SIOTest < IntegrationTest
         kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
         swrite_breakpoint = kernel_symbols.find_by_name("__swrite_is_available").address
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-        
         @instance.break swrite_breakpoint, :program
 
         count = 0
@@ -91,16 +71,6 @@ class SIOTest < IntegrationTest
 
         start_instance("test_sread.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Send serial string.
         input_string = "hello"
         
@@ -109,8 +79,8 @@ class SIOTest < IntegrationTest
             # Send character.
             @instance.serial_puts(input_string[i])
 
-            # Then continue for 2000 cycles.
-            @instance.continue 2000
+            # Then continue for 5000 cycles.
+            @instance.continue 5000
         end
 
         # Should have halted.
@@ -125,16 +95,6 @@ class SIOTest < IntegrationTest
         compile_test_code(["kernel/integration_test/test_sbreak.c"], "test_sbreak.bin")
 
         start_instance("test_sbreak.bin")
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Run for a little bit - we expect not to halt.
         @instance.continue 10000
@@ -157,16 +117,6 @@ class SIOTest < IntegrationTest
         compile_test_code(["kernel/integration_test/test_smode_binmode.c"], "test_smode_binmode.bin")
 
         start_instance("test_smode_binmode.bin")
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Run for a little bit - we expect not to halt.
         @instance.continue 10000

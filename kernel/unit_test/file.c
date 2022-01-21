@@ -10,8 +10,6 @@
 #define DRIVE_SECTOR_SIZE 512
 #define DRIVE_SECTORS_PER_CLUSTER 8
 
-extern int failed_line;
-
 extern FileDescriptor_T fdtable[FILE_LIMIT];
 extern DiskInfo_T disk_info;
 

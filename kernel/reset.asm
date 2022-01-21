@@ -29,7 +29,7 @@ _interrupt_entry:
 
 _start:
     ; Initialise stack.
-    ld      SP, $ffff
+    ld      SP, $7fff
 
     ld      A, 0b11111101
     out     ($80), A
@@ -49,9 +49,8 @@ _start:
     
     call    _disk_init
 
-    ; Enable interrupts, mode 1.
+    ; Interrupt mode 1.
     im      1
-    ei
 
     ld      A, 0b11111111
     out     ($80), A

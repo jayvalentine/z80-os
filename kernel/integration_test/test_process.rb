@@ -3,30 +3,21 @@ require_relative 'base'
 
 class ProcessTest < IntegrationTest
     # Tests:
-    # * That calling pexec syscall executes code in user memory.
+    # * That calling pexec syscall executes a new process in user memory.
     def test_pexec_simple
         compile_test_code(["kernel/integration_test/test_pexec_simple.c"], "test_pexec_simple.bin")
 
         start_instance("test_pexec_simple.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Then continue. The test code executes the pexec system call
-        # so we should hit a breakpoint at 0x8000.
+        # so we should hit a breakpoint at 0x8000, bank 1.
         @instance.break 0x8000, :program
-
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
+        
+        @instance.continue 1000000
+        
+        assert @instance.break?, "Did not hit breakpoint (at address %04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
         assert_equal 0x8000, @instance.registers["PC"], "Breakpoint at wrong address."
+        assert_equal 1, @instance.device("banked_ram").bank
     end
 
     # Tests:
@@ -38,24 +29,15 @@ class ProcessTest < IntegrationTest
 
         start_instance("test_pexec_different_address.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Then continue. The test code executes the pexec system call
-        # so we should hit a breakpoint at 0xd000.
+        # so we should hit a breakpoint at 0xd000, bank 1
         @instance.break 0xd000, :program
 
-        @instance.continue
+        @instance.continue 1000000
 
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
+        assert @instance.break?, "Did not hit breakpoint (at address %04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
         assert_equal 0xd000, @instance.registers["PC"], "Breakpoint at wrong address."
+        assert_equal 1, @instance.device("banked_ram").bank
     end
 
     # Tests:
@@ -68,32 +50,24 @@ class ProcessTest < IntegrationTest
         compile_user_code(0xd000, ["kernel/integration_test/test_pexec_different_address_with_args_user.c"], "test_pexec_different_address_with_args_user.bin")
 
         start_instance("test_pexec_different_address_with_args.bin")
-        load_user_program(0xd000, "test_pexec_different_address_with_args_user.bin")
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
+        load_user_program(0xc000, "test_pexec_different_address_with_args_user.bin")
         
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Then continue. The test code executes the pexec system call
-        # so we should hit a breakpoint at 0xd000.
+        # so we should hit a breakpoint at 0xd000, bank 1.
         @instance.break 0xd000, :program
 
-        @instance.continue
+        @instance.continue 10000000
 
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal 0xd000, @instance.registers["PC"], "Breakpoint at wrong address."
+        assert_equal 1, @instance.device("banked_ram").bank
 
         # Then continue until halt. User program should return 0.
         # Test program will return whatever the user program returns.
         @instance.continue 1000000
         assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x0000, @instance.registers["HL"]
+        assert_equal 0x8008, @instance.registers["PC"], "Halted at wrong address (%04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
+        assert_equal 0x0000, @instance.registers["HL"], "wrong return value"
     end
 
     # Tests:
@@ -103,48 +77,30 @@ class ProcessTest < IntegrationTest
         compile_user_code(0x8000, ["kernel/integration_test/test_pexec_args_user.c"], "test_pexec_args_user.bin")
 
         start_instance("test_pexec_args.bin")
-        load_user_program(0x8000, "test_pexec_args_user.bin")
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
+        load_user_program(0xc000, "test_pexec_args_user.bin")
 
         # Then continue. The test code executes the pexec system call
-        # so we should hit a breakpoint at 0x8000.
+        # so we should hit a breakpoint at 0x8000, bank 1.
         @instance.break 0x8000, :program
 
-        @instance.continue
+        @instance.continue 10000000
 
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
         assert_equal 0x8000, @instance.registers["PC"], "Breakpoint at wrong address."
+        assert_equal 1, @instance.device("banked_ram").bank
 
         # Then continue until halt. User program should return 0.
         # Test program will return whatever the user program returns.
         @instance.continue 1000000
         assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x0000, @instance.registers["HL"]
+        assert_equal 0x8008, @instance.registers["PC"], "Halted at wrong address (%04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
+        assert_equal 0x0000, @instance.registers["HL"], "wrong return value"
     end
 
     def test_pload_simple
         compile_test_code(["kernel/integration_test/test_pload_simple.c"], "test_pload_simple.bin")
 
         start_instance("test_pload_simple.bin")
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Then continue until halt.
         # By this point the file should have been loaded at 0x8000.
@@ -153,11 +109,11 @@ class ProcessTest < IntegrationTest
         assert_equal 0x0000, @instance.registers["HL"]
         
         # Assert contents of memory.
-        assert_equal 0xa5, @instance.memory(0x8000)
-        assert_equal 0xb6, @instance.memory(0x8001)
-        assert_equal 0xc7, @instance.memory(0x8002)
-        assert_equal 0xd8, @instance.memory(0x8003)
-        assert_equal 0xe9, @instance.memory(0x8004)
+        assert_equal 0xa5, @instance.device("banked_ram").contents(1)[0x0000]
+        assert_equal 0xb6, @instance.device("banked_ram").contents(1)[0x0001]
+        assert_equal 0xc7, @instance.device("banked_ram").contents(1)[0x0002]
+        assert_equal 0xd8, @instance.device("banked_ram").contents(1)[0x0003]
+        assert_equal 0xe9, @instance.device("banked_ram").contents(1)[0x0004]
     end
 
     def test_pload_large
@@ -165,19 +121,10 @@ class ProcessTest < IntegrationTest
 
         start_instance("test_pload_large.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Then continue until halt.
         # By this point the file should have been loaded at 0x8000.
         @instance.continue 10000000
+
         assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
         assert_equal 0x0000, @instance.registers["HL"]
         
@@ -188,7 +135,7 @@ class ProcessTest < IntegrationTest
             128.times do |j|
                 address = 0x8000 + base + j
                 expected = i+10
-                actual = @instance.memory(address)
+                actual = @instance.device("banked_ram").contents(1)[base + j]
                 assert_equal expected, actual, "Mismatch at address %04x (expected %d, got %d)" % [address, expected, actual]
             end
             base += 128
@@ -200,16 +147,6 @@ class ProcessTest < IntegrationTest
 
         start_instance("test_pload_different_address.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Then continue until halt.
         # By this point the file should have been loaded at 0xd000.
         @instance.continue 1000000
@@ -217,33 +154,23 @@ class ProcessTest < IntegrationTest
         assert_equal 0x0000, @instance.registers["HL"]
         
         # Assert contents of memory.
-        assert_equal 0x76, @instance.memory(0x8000)
-        assert_equal 0x76, @instance.memory(0x8001)
-        assert_equal 0x76, @instance.memory(0x8002)
-        assert_equal 0x76, @instance.memory(0x8003)
-        assert_equal 0x76, @instance.memory(0x8004)
+        assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0000]
+        assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0001]
+        assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0002]
+        assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0003]
+        assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0004]
 
-        assert_equal 0x11, @instance.memory(0xd000)
-        assert_equal 0x22, @instance.memory(0xd001)
-        assert_equal 0x33, @instance.memory(0xd002)
-        assert_equal 0x44, @instance.memory(0xd003)
-        assert_equal 0x55, @instance.memory(0xd004)
+        assert_equal 0x11, @instance.device("banked_ram").contents(1)[0x5000]
+        assert_equal 0x22, @instance.device("banked_ram").contents(1)[0x5001]
+        assert_equal 0x33, @instance.device("banked_ram").contents(1)[0x5002]
+        assert_equal 0x44, @instance.device("banked_ram").contents(1)[0x5003]
+        assert_equal 0x55, @instance.device("banked_ram").contents(1)[0x5004]
     end
 
     def test_pload_invalid_addr
         compile_test_code(["kernel/integration_test/test_pload_invalid_addr.c"], "test_pload_invalid_addr.bin")
 
         start_instance("test_pload_invalid_addr.bin")
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Then continue until halt.
         # File should not have been loaded and the test code should return E_INVALIDPAGE.
@@ -264,16 +191,6 @@ class ProcessTest < IntegrationTest
 
         start_instance("test_pload_invalid_header.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Then continue until halt.
         # File should not have been loaded and the test code should return E_INVALIDHEADER.
         @instance.continue 1000000
@@ -281,11 +198,11 @@ class ProcessTest < IntegrationTest
         assert_equal 0xfff5, @instance.registers["HL"] # -11 (E_INVALIDHEADER)
         
         # Assert contents of memory.
-        assert 0x12 != @instance.memory(0x8000)
-        assert 0x34 != @instance.memory(0x8001)
-        assert 0x56 != @instance.memory(0x8002)
-        assert 0x78 != @instance.memory(0x8003)
-        assert 0x9a != @instance.memory(0x8004)
+        assert 0x12 != @instance.device("banked_ram").contents(1)[0x0000]
+        assert 0x34 != @instance.device("banked_ram").contents(1)[0x0001]
+        assert 0x56 != @instance.device("banked_ram").contents(1)[0x0002]
+        assert 0x78 != @instance.device("banked_ram").contents(1)[0x0003]
+        assert 0x9a != @instance.device("banked_ram").contents(1)[0x0004]
     end
 
     def test_pload_wrong_size_header
@@ -293,20 +210,86 @@ class ProcessTest < IntegrationTest
 
         start_instance("test_pload_wrong_size_header.bin")
 
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x6000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x6000, @instance.registers["PC"], "Breakpoint at wrong address."
-
         # Then continue until halt.
         # File should not have been loaded and the test code should return E_INVALIDHEADER.
         @instance.continue 1000000
         assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
         assert_equal 0xfff5, @instance.registers["HL"] # -11 (E_INVALIDHEADER)
+    end
+
+    # Tests:
+    # * That the pspawn syscall allows for running two processes concurrently.
+    def test_pspawn_simple
+        compile_test_code(["kernel/integration_test/test_pspawn_simple.c"], "test_pspawn_simple.bin")
+
+        start_instance("test_pspawn_simple.bin")
+
+        # Then continue. Both processes should run concurrently
+        # so we should eventually see the expected values in memory.
+        #
+        # The spawned process runs forever so we are definitely
+        # testing for concurrency.
+        @instance.continue 500000
+        assert !@instance.halted?, "Hit unexpected HALT (bank %d, addr %04x)" % [@instance.device("banked_ram").bank, @instance.registers["PC"]]
+        assert !@instance.break?, "Hit unexpected BREAK"
+
+        # Get symbols.
+        prog_symbols = Zemu::Debug.load_map("test_pspawn_simple.map")
+        val_addr = prog_symbols.find_by_name("_ret").address
+        
+        assert_equal 0, @instance.device("banked_ram").contents(0)[val_addr - 0x8000]
+
+        assert_equal 99, @instance.device("banked_ram").contents(1)[0x4014]
+        assert_equal 100, @instance.device("banked_ram").contents(1)[0x4015]
+        assert_equal 101, @instance.device("banked_ram").contents(1)[0x4016]
+        assert_equal 102, @instance.device("banked_ram").contents(1)[0x4017]
+        assert_equal 103, @instance.device("banked_ram").contents(1)[0x4018]
+
+        assert_equal 23, @instance.device("banked_ram").contents(0)[0x5123]
+        assert_equal 34, @instance.device("banked_ram").contents(0)[0x5124]
+        assert_equal 45, @instance.device("banked_ram").contents(0)[0x5125]
+        assert_equal 56, @instance.device("banked_ram").contents(0)[0x5126]
+        assert_equal 67, @instance.device("banked_ram").contents(0)[0x5127]
+    end
+
+    # Tests:
+    # * That the pspawn syscall allows for spawning two processes concurrently.
+    def test_pspawn_two_processes
+        compile_test_code(["kernel/integration_test/test_pspawn_two_processes.c"], "test_pspawn_two_processes.bin")
+
+        start_instance("test_pspawn_two_processes.bin")
+
+        # Get symbols.
+        prog_symbols = Zemu::Debug.load_map("test_pspawn_two_processes.map")
+        val_addr = prog_symbols.find_by_name("_ret").address
+
+        # Then continue. Both processes should run concurrently
+        # so we should eventually see the expected values in memory.
+        #
+        # The spawned process runs forever so we are definitely
+        # testing for concurrency.
+        @instance.continue 1000000
+        assert !@instance.halted?, "Hit unexpected HALT (bank %d, addr %04x, ret %d)" % [@instance.device("banked_ram").bank, @instance.registers["PC"], @instance.device("banked_ram").contents(0)[val_addr - 0x8000]]
+        assert !@instance.break?, "Hit unexpected BREAK"
+
+        assert_equal 0, @instance.device("banked_ram").contents(0)[val_addr - 0x8000]
+
+        assert_equal 99, @instance.device("banked_ram").contents(1)[0x4014]
+        assert_equal 100, @instance.device("banked_ram").contents(1)[0x4015]
+        assert_equal 101, @instance.device("banked_ram").contents(1)[0x4016]
+        assert_equal 102, @instance.device("banked_ram").contents(1)[0x4017]
+        assert_equal 103, @instance.device("banked_ram").contents(1)[0x4018]
+
+        assert_equal 99, @instance.device("banked_ram").contents(2)[0x4014]
+        assert_equal 100, @instance.device("banked_ram").contents(2)[0x4015]
+        assert_equal 101, @instance.device("banked_ram").contents(2)[0x4016]
+        assert_equal 102, @instance.device("banked_ram").contents(2)[0x4017]
+        assert_equal 103, @instance.device("banked_ram").contents(2)[0x4018]
+
+        assert_equal 23, @instance.device("banked_ram").contents(0)[0x5123]
+        assert_equal 34, @instance.device("banked_ram").contents(0)[0x5124]
+        assert_equal 45, @instance.device("banked_ram").contents(0)[0x5125]
+        assert_equal 56, @instance.device("banked_ram").contents(0)[0x5126]
+        assert_equal 67, @instance.device("banked_ram").contents(0)[0x5127]
     end
 end
