@@ -97,6 +97,33 @@ class IntegrationTest < Minitest::Test
         @instance.quit unless @instance.nil?
     end
 
+    def get_int16(addr)
+        lo = @instance.memory(addr)
+        hi = @instance.memory(addr + 1)
+        (hi << 8) | lo
+    end
+
+    def get_int8(addr)
+        @instance.memory(addr)
+    end
+
+    def schedule_table
+        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        addr = kernel_symbols.find_by_name("_schedule_table").address
+
+        16.times do |i|
+            base = addr + (i * 5)
+            state = get_int8(base)
+            pid = get_int16(base+1)
+            exitcode = get_int16(base+3)
+
+            puts "SCHEDULE TABLE #{i}"
+            puts "    STATE: %d" % state
+            puts "    PID:   %d" % pid
+            puts "    EXIT:  %d" % exitcode
+        end
+    end
+
     def print_stack
         sp = @instance.registers["SP"]
         16.times do |i|
