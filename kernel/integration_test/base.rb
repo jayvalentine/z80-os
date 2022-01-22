@@ -7,45 +7,59 @@ require_relative '../../../z80-libraries/vars.rb'
 require_relative '../../zemu/config'
 
 class IntegrationTest < Minitest::Test
+    def compile(test_files, output_name, crt0, address)
+        address_string = "%04x" % address
+
+        object_files = []
+        test_files.each do |t|
+            if t.end_with? ".asm"
+                obj = File.basename(t, ".asm") + ".rel"
+                
+                cmd = "sdasz80 -plosgffw "
+                cmd += "#{obj} "
+                cmd += t
+                success = system(cmd)
+                assert success, "Failed to assemble #{t}"
+                
+                object_files << obj
+            else
+                obj = File.basename(t, ".c") + ".rel"
+                
+                cmd = "sdcc -mz80 -c "
+                cmd += "-I#{LIB_INCLUDE} "
+                cmd += "-o #{obj} "
+                cmd += t
+                success = system(cmd)
+                assert success, "Failed to compile #{t}"
+                FileUtils.rm("#{File.basename(t, ".c")}.asm")
+                
+                object_files << obj
+            end
+        end
+        
+        cmd = "sdcc -mz80 --no-std-crt0 "
+        cmd += "-Wl-b_CODE=0x%04x " % address
+        cmd += "-Wl-b_DATA=0x%04x " % (address + 0x1000)
+        cmd += "-o #{File.basename(output_name, ".bin")}.hex "
+        cmd += "-L #{LIB} "
+        cmd += crt0 + " "
+        cmd += object_files.join(" ")
+        cmd += " stdlib.lib"
+        
+        success = system("#{cmd} > link.log 2>&1")
+        
+        assert success, "Failed to link test code!:\n#{cmd}\n#{File.read("link.log")}"
+        
+        system("objcopy --gap-fill 0x76 --pad-to 0xf000 -Iihex -Obinary #{File.basename(output_name, ".bin")}.hex #{output_name}")
+        system("z88dk-dis -o 0x#{address_string} #{output_name} > #{output_name}.diss")
+    end
+    
     def compile_test_code(test_files, output_name)
-        cmd = "zcc "
-        cmd += "+#{CONFIG} -compiler-sccz80 "
-        cmd += "-O2 -SO2 "
-        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
-        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
-        cmd += "-Cl\"-r0x8000\" "
-        cmd += "-crt0 kernel/integration_test/reset.asm "
-        cmd += "-lstdlib "
-        cmd += "-m "
-        cmd += "-o #{output_name} "
-        cmd += test_files.join(" ")
-
-        success = system(cmd)
-
-        assert success, "Failed to build test code!"
-
-        system("z88dk-dis -o 0x8000 #{output_name} > #{output_name}.diss")
+        compile(test_files, output_name, "kernel/integration_test/reset.rel", 0x8000)
     end
 
     def compile_user_code(address, test_files, output_name)
-        address_string = "0x%04X" % address
-        cmd = "zcc "
-        cmd += "+#{CONFIG} -compiler-sccz80 "
-        cmd += "-O2 -SO2 "
-        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
-        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
-        cmd += "-Cl\"-r#{address_string}\" "
-        cmd += "-crt0 #{PROCESS_CRT0} "
-        cmd += "-lstdlib "
-        cmd += "-m "
-        cmd += "-o #{output_name} "
-        cmd += test_files.join(" ")
-
-        success = system(cmd)
-
-        assert success, "Failed to build user program (#{output_name})!"
-
-        system("z88dk-dis -o #{address_string} #{output_name} > #{output_name}.diss")
+        compile(test_files, output_name, "#{LIB}/process_crt0.rel", address)
     end
 
     def start_instance(binary)
@@ -107,9 +121,29 @@ class IntegrationTest < Minitest::Test
         @instance.memory(addr)
     end
 
+    def get_string(addr)
+        s = ""
+        while (c = @instance.memory(addr)) != 0
+            s += c.chr()
+            addr += 1
+        end
+        s
+    end
+
+    def get_array(addr, size)
+        s = ""
+        while size > 0
+            c = @instance.memory(addr)
+            s += c.chr()
+            addr += 1
+            size -= 1
+        end
+        s
+    end
+
     def schedule_table
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
-        addr = kernel_symbols.find_by_name("_schedule_table").address
+        #kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        addr = 0x6473
 
         16.times do |i|
             base = addr + (i * 5)
@@ -124,8 +158,9 @@ class IntegrationTest < Minitest::Test
         end
     end
 
-    def print_stack
+    def get_stack
         sp = @instance.registers["SP"]
+        stack = []
         16.times do |i|
             offset = i * 2
             lo_addr = sp + offset
@@ -135,12 +170,8 @@ class IntegrationTest < Minitest::Test
             hi = @instance.memory(hi_addr)
 
             val = (hi << 8) | lo
-            
-            mem_val_lo = @instance.memory(val)
-            mem_val_hi = @instance.memory(val+1)
-            mem_val = (mem_val_hi << 8) | mem_val_lo
-
-            puts ("SP+#{offset}\t%04x (%04x)" % [val, mem_val])
+            stack << val
         end
+        stack
     end
 end

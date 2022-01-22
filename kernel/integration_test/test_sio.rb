@@ -88,7 +88,7 @@ class SIOTest < IntegrationTest
 
         # Now run and expect to halt.
         @instance.continue 10000
-        assert @instance.halted?, "Program did not halt when expected."
+        assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
 
         # Check return value.
         assert_equal 0x0000, @instance.registers["HL"], "Wrong return value!"

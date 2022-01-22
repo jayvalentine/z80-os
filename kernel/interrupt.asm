@@ -1,13 +1,13 @@
     ; Definitions
-    defc    UART_PORT_DATA = 0b00000001
-    defc    UART_PORT_CONTROL = 0b00000000
+    .equ    UART_PORT_DATA, 0b00000001
+    .equ    UART_PORT_CONTROL, 0b00000000
 
-    defc    TIMER_CONTROL = $10
+    .equ    TIMER_CONTROL, 0x10
     
-    PUBLIC  _interrupt_handler
+    .globl  _interrupt_handler
 
-    EXTERN  _status_set_int
-    EXTERN  _status_clr_int
+    .globl  _status_set_int
+    .globl  _status_clr_int
 
 _interrupt_handler:
     di
@@ -20,21 +20,21 @@ _interrupt_handler:
     pop     HL
     push    HL ; Don't forget to restore it!
 
-    ; Is this an interrupt from the 6850?
+    ; Is this an interrupt from the #6850?
     in      A, (UART_PORT_CONTROL)
-    bit     7, A
-    jp      z, __interrupt_skip2
+    bit     #7, A
+    jp      z, #__interrupt_skip2
     
     ; Character received?
-    bit     0, A
-    jp      nz, __serial_read_handler
+    bit     #0, A
+    jp      nz, #__serial_read_handler
 
-    ; Not a 6850 interrupt.
+    ; Not a #6850 interrupt.
 __interrupt_skip2:
     ; Is this a timer interrupt?
     in      A, (TIMER_CONTROL)
-    cp      1
-    jp      nz, __interrupt_skip3
+    cp      #1
+    jp      nz, #__interrupt_skip3
 
     jp      __timer_handler
 
@@ -49,24 +49,29 @@ __interrupt_handle_ret:
     exx
     ei
 
+    .globl  __interrupt_handler_end ; Required for benchmarking.
 __interrupt_handler_end:
     reti
 
-    EXTERN  _rx_buf
-    EXTERN  _rx_buf_offs_head
-    EXTERN  _rx_buf_offs_tail
+    .globl  _rx_buf
+    .globl  _rx_buf_offs_head
+    .globl  _rx_buf_offs_tail
 
-    EXTERN  _signal_cancel
+    .globl  _signal_cancel
 
-    EXTERN  _serial_current_mode
+    .globl  _serial_current_mode
+
+    ; Needed for tests...
+    ; TODO: Find a way around this.
+    .globl  __serial_read_handler
 
 __serial_read_handler:
     ; Save interrupt return address.
     push    HL
 
     ; Get current tail of buffer.
-    ld      HL, _rx_buf
-    ld      D, 0
+    ld      HL, #_rx_buf
+    ld      D, #0
     ld      A, (_rx_buf_offs_tail)
     ld      E, A
     add     HL, DE
@@ -75,13 +80,13 @@ __serial_read_handler:
     in      A, (UART_PORT_DATA)
     
     ; $18 (CANCEL) - triggers SIG_CANCEL
-    cp      $18
+    cp      #0x18
     jp      nz, __serial_read_byte
 
     ; Handle special characters only if in interactive mode.
     ld      C, A
     ld      A, (_serial_current_mode)
-    cp      0
+    cp      #0
     jp      z, __serial_signal_cancel
     
     ; Need the byte, so restore A.
@@ -92,7 +97,7 @@ __serial_read_byte:
     ld      (HL), A
 
     ; Increment tail.
-    ld      HL, _rx_buf_offs_tail
+    ld      HL, #_rx_buf_offs_tail
     inc     (HL)
 
     pop     HL
@@ -103,15 +108,21 @@ __serial_signal_cancel:
     exx
     ei
     pop     HL
+    push    HL
+    push    HL
     call    _signal_cancel
+    pop     HL
     di
     exx
     
     jp      __interrupt_handle_ret
 
-    EXTERN  _scheduler_tick
-    EXTERN  _ram_bank_set
+    .globl  _scheduler_tick
+    .globl  _ram_bank_set
 
+    ; These two symbols need to be global for benchmarking.
+    .globl  __timer_handler
+    .globl  __timer_handler_end
 __timer_handler:
     ; Switch to user register set and stack all registers.
     exx
@@ -123,13 +134,16 @@ __timer_handler:
     push    IX
     push    IY
 
-    ld      ($fffe), SP
+    ld      (0xfffe), SP
 
     ; Call the scheduler to allocate another process.
     call    _scheduler_tick
+    push    HL
     call    _ram_bank_set
+    inc     SP
+    inc     SP
 
-    ld      SP, ($fffe)
+    ld      SP, (0xfffe)
 
     ; Now unstack all registers and switch back
     ; to system register set.
@@ -150,28 +164,28 @@ __unknown_interrupt:
     jp      __interrupt_handle_ret
 
     ; void interrupt_enable(void)
-    PUBLIC  _interrupt_enable
+    .globl  _interrupt_enable
 _interrupt_enable:
     ei
     ret
 
     ; void interrupt_disable(void)
-    PUBLIC  _interrupt_disable
+    .globl  _interrupt_disable
 _interrupt_disable:
     di
     ret
 
     ; void interrupt_tx_enable(void)
-    PUBLIC  _interrupt_tx_enable
+    .globl  _interrupt_tx_enable
 _interrupt_tx_enable:
     ; Enable TX interrupts
-    ld      A, 0b10110110
+    ld      A, #0b10110110
     out     (UART_PORT_CONTROL), A
     ret
 
     ; void interrupt_tx_disable(void)
-    PUBLIC  _interrupt_tx_disable
+    .globl  _interrupt_tx_disable
 _interrupt_tx_disable:
-    ld      A, 0b10010110
+    ld      A, #0b10010110
     out     (UART_PORT_CONTROL), A
     ret

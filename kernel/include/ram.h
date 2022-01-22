@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-#ifdef UNIT_TEST
-void ram_bank_set(uint8_t bank);
-#else
+#ifdef Z88DK
 void ram_bank_set(uint8_t bank) __z88dk_fastcall;
+#else
+void ram_bank_set(uint8_t bank);
 #endif
 
 uint16_t ram_bank_test(void);

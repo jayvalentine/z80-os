@@ -1,33 +1,6 @@
 require_relative 'base'
 
 class InterruptBenchmarks < KernelBenchmark
-    def benchmark_interrupt_tx
-        # Get symbols.
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
-
-        int_breakpoint_start = kernel_symbols.find_by_name("_interrupt_handler").address
-        int_breakpoint_end = kernel_symbols.find_by_name("__interrupt_handler_end").address
-
-        # We expect to start executing at 0x6000,
-        # where the command-processor would reside normally.
-        @instance.break 0x8000, :program
-        
-        # Run, and expect to hit the breakpoint.
-        @instance.continue
-        @instance.remove_break 0x8000, :program
-
-        # Set a breakpoint at the start and end of the ISR.
-        @instance.break int_breakpoint_start, :program
-        @instance.break int_breakpoint_end, :program
-
-        bench(1) do
-            @instance.continue 10000
-            isr_cycles = @instance.continue 10000
-            
-            isr_cycles
-        end
-    end
-
     def benchmark_interrupt_rx
         # Get symbols.
         kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")

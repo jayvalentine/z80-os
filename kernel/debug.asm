@@ -1,6 +1,6 @@
-    PUBLIC  _break_handler
+    .globl  _break_handler
 
-    EXTERN  _signal_break
+    .globl  _signal_break
 
 _break_handler:
     ; Save all registers onto stack.
@@ -26,10 +26,10 @@ _break_handler:
     ld      (_debug_args_af), HL
 
     ; Get break address into HL and store in struct.
-    ld      IX, 12
+    ld      IX, #12
     add     IX, SP
-    ld      L, (IX+0)
-    ld      H, (IX+1)
+    ld      L, 0(IX)
+    ld      H, 1(IX)
 
     dec     HL ; Decrement return address to get address of rst instruction.
     ld      (_debug_args_address), HL
@@ -39,14 +39,14 @@ _break_handler:
     push    HL
 
     ; Pass struct to break signal handler.
-    ld      HL, _debug_args
+    ld      HL, #_debug_args
     call    _signal_break
 
     ; Set return address to address of BREAK instruction.
     pop     HL
     pop     IX
-    ld      (IX+0), L
-    ld      (IX+1), H
+    ld      0(IX), L
+    ld      1(IX), H
 
     ; Pop registers off stack.
     pop     IY
@@ -63,16 +63,16 @@ _break_handler:
 
 _debug_args:
 _debug_args_address:
-    defs    2 ; Address
+    .ds     #2 ; Address
 _debug_args_af:
-    defs    2 ; AF
+    .ds     #2 ; AF
 _debug_args_bc:
-    defs    2 ; BC
+    .ds     #2 ; BC
 _debug_args_de:
-    defs    2 ; DE
+    .ds     #2 ; DE
 _debug_args_hl:
-    defs    2 ; HL
+    .ds     #2 ; HL
 _debug_args_ix:
-    defs    2 ; IX
+    .ds     #2 ; IX
 _debug_args_iy:
-    defs    2 ; IY
+    .ds     #2 ; IY

@@ -19,18 +19,16 @@ class BootTest < IntegrationTest
         sflags_addr = syms.find_by_name("_startup_flags").address
 
         # Startup flags should be 0.
-        assert_equal 0x00, @instance.memory(sflags_addr)
+        assert_equal 0x00, @instance.memory(sflags_addr), "wrong value in flags on startup"
 
-        # Startup flags should still be 0.
-        assert_equal 0x00, @instance.memory(sflags_addr)
-
-        # We then expect to reset at 0.
-        @instance.break 0x0000, :program
+        # We then expect to reset at 0x0008.
+        # This is the cold start entry point.
+        @instance.break 0x0008, :program
 
         # Continue until we hit the breakpoint.
         @instance.continue 1000
         assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x0000, @instance.registers["PC"], "Breakpoint at wrong address."
+        assert_equal 0x0008, @instance.registers["PC"], "Breakpoint at wrong address."
 
         # Startup flags should be set.
         assert_equal 0x01, @instance.memory(sflags_addr)

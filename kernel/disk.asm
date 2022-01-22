@@ -4,11 +4,11 @@
     ; Functions for accessing sectors on the CF-card.
     ; *****************************
 
-    EXTERN  _puts
-    EXTERN  _status_set_disk
-    EXTERN  _status_clr_disk
+    .globl  _puts
+    .globl  _status_set_disk
+    .globl  _status_clr_disk
 
-    defc    DISKPORT = $18
+    .equ    DISKPORT, 0x18
 
     ; **************************
     ; PUBLIC ROUTINES
@@ -17,9 +17,9 @@
     ; interface to the CF-card.
     ; **************************
     
-    PUBLIC  _disk_read
-    PUBLIC  _disk_write
-    PUBLIC  _disk_init
+    .globl  _disk_read
+    .globl  _disk_write
+    .globl  _disk_init
 
     ; void disk_init(void)
     ;
@@ -27,15 +27,15 @@
 _disk_init:
     push    AF
     call    _disk_wait
-    ld      A, $04
+    ld      A, #0x04
     out     (DISKPORT+7), A
 
     call    _disk_wait
-    ld      A, $01
+    ld      A, #0x01
     out     (DISKPORT+1), A
 
     call    _disk_wait
-    ld      A, $ef
+    ld      A, #0xef
     out     (DISKPORT+7), A
 
     call    _disk_chkerr
@@ -46,25 +46,23 @@ _disk_init:
     ;
     ; Reads a sector from CF-card.
 _disk_read:
-    ; Skip over return address.
-    ld      HL, 2
+    push    IX
+
+    ; Skip over return address and IX.
+    ld      HL, #4
     add     HL, SP
+    push    HL
+    pop     IX
 
     ; Sector number in DEBC
-    ld      C, (HL)
-    inc     HL
-    ld      B, (HL)
-    inc     HL
-    ld      E, (HL)
-    inc     HL
-    ld      D, (HL)
-    inc     HL
+    ld      C, 2(IX)
+    ld      B, 3(IX)
+    ld      E, 4(IX)
+    ld      D, 5(IX)
 
     ; Buffer in HL.
-    ld      A, (HL)
-    inc     HL
-    ld      H, (HL)
-    ld      L, A
+    ld      L, 0(IX)
+    ld      H, 1(IX)
 
     call    _status_set_disk
     
@@ -73,10 +71,12 @@ _disk_read:
 
     call    _disk_init_read
 
-    ; Read 512 bytes from CF-card.
+    ; Read #512 bytes from CF-card.
     call    _disk_read_data
 
     call    _status_clr_disk
+
+    pop     IX
 
     ret
 
@@ -84,25 +84,23 @@ _disk_read:
     ;
     ; Writes a sector to CF-card.
 _disk_write:
-    ; Skip over return address.
-    ld      HL, 2
+    push    IX
+
+    ; Skip over return address and IX.
+    ld      HL, #4
     add     HL, SP
+    push    HL
+    pop     IX
 
     ; Sector number in DEBC
-    ld      C, (HL)
-    inc     HL
-    ld      B, (HL)
-    inc     HL
-    ld      E, (HL)
-    inc     HL
-    ld      D, (HL)
-    inc     HL
+    ld      C, 2(IX)
+    ld      B, 3(IX)
+    ld      E, 4(IX)
+    ld      D, 5(IX)
 
     ; Buffer in HL.
-    ld      A, (HL)
-    inc     HL
-    ld      H, (HL)
-    ld      L, A
+    ld      L, 0(IX)
+    ld      H, 1(IX)
 
     call    _status_set_disk
     
@@ -111,11 +109,12 @@ _disk_write:
 
     call    _disk_init_write
 
-    ; Write 512 bytes to CF-card.
+    ; Write #512 bytes to CF-card.
     call    _disk_write_data
 
     call    _status_clr_disk
 
+    pop     IX
     ret
 
     ; **************************
@@ -128,11 +127,11 @@ _disk_write:
     ; Initiates a read from the disk.
 _disk_init_read:
     ; Transfer one sector
-    ld      A, $01
+    ld      A, #0x01
     out     (DISKPORT+2), A
 
     ; Read sector command.
-    ld      A, $20
+    ld      A, #0x20
     out     (DISKPORT+7), A
 
     ret
@@ -140,40 +139,40 @@ _disk_init_read:
     ; Initiates a write to the disk.
 _disk_init_write:
     ; Transfer one sector
-    ld      A, $01
+    ld      A, #0x01
     out     (DISKPORT+2), A
 
     ; Write sector command.
-    ld      A, $30
+    ld      A, #0x30
     out     (DISKPORT+7), A
 
     ret
 
-    ; Reads 512 bytes (one sector) from the CF card.
+    ; Reads #512 bytes (one sector) from the CF card.
     ; Reads the data into the location pointed to by HL.
     ; Assumes a read command has been previously initiated.
 _disk_read_data:
     call    _disk_wait_data
     call    _disk_chkerr
 
-    ld      C, DISKPORT
-    ld      B, 0
+    ld      C, #DISKPORT
+    ld      B, #0
 
-    ; Load 512 bytes into HL.
+    ; Load #512 bytes into HL.
     inir
     inir
     ret
 
-    ; Writes 512 bytes (one sector) to the CF card.
+    ; Writes #512 bytes (one sector) to the CF card.
     ; Writes the data from the location pointed to by HL.
     ; Assumes a write command has been previously initiated.
 _disk_write_data:
     call    _disk_wait_data
 
-    ld      C, DISKPORT
-    ld      B, 0
+    ld      C, #DISKPORT
+    ld      B, #0
 
-    ; Write 512 bytes from HL.
+    ; Write #512 bytes from HL.
     otir
     otir
 
@@ -188,12 +187,12 @@ _disk_write_data:
     ; Shorthands for functionality of the CF-card.
     ; **************************
 
-    ; Set the LBA for the CF-card, stored as a 28-bit value
-    ; in DEBC (the top 4 bits of D are ignored).
+    ; Set the LBA for the CF-card, stored as a #28-bit value
+    ; in DEBC (the top #4 bits of D are ignored).
 _disk_set_lba:
     push    AF
 
-    ; Set the lower 3/4ths of the LBA via registers 3-5.
+    ; Set the lower #3/4ths of the LBA via registers #3-5.
     ld      A, C
     out     (DISKPORT+3), A
     ld      A, B
@@ -201,15 +200,15 @@ _disk_set_lba:
     ld      A, E
     out     (DISKPORT+5), A
     
-    ; Special handling for register 6, as only the bottom half is used
+    ; Special handling for register #6, as only the bottom half is used
     ; for LBA.
     ld      A, D
 
     ; We only care about the bottom half of this top byte.
-    and     A, %00001111
+    and     A, #0b00001111
 
-    ; Master, LBA mode.
-    or      A, %11100000
+    ; Master, #LBA mode.
+    or      A, #0b11100000
     out     (DISKPORT+6), A
     
     pop     AF
@@ -224,24 +223,24 @@ _disk_set_lba:
 
 _disk_wait:
     in      A, (DISKPORT+7)
-    and     %10000000
-    jp      nz, _disk_wait
+    and     #0b10000000
+    jp      nz, #_disk_wait
 
     ret
 
 _disk_wait_data:
     in      A, (DISKPORT+7)
-    and     %10001000
-    xor     %00001000
-    jp      nz, _disk_wait_data
+    and     #0b10001000
+    xor     #0b00001000
+    jp      nz, #_disk_wait_data
 
     ret
 
 _disk_wait_cmd:
     in      A, (DISKPORT+7)
-    and     %11000000
-    xor     %01000000
-    jp      nz, _disk_wait_cmd
+    and     #0b11000000
+    xor     #0b01000000
+    jp      nz, #_disk_wait_cmd
 
     ret
 
@@ -254,10 +253,10 @@ _disk_wait_cmd:
 
 _disk_chkerr:
     in      A, (DISKPORT+7)
-    bit     0, A
-    jp      z, __chkerr_noerr
+    bit     #0, A
+    jp      z, #__chkerr_noerr
 
-    ld      HL, _disk_error
+    ld      HL, #_disk_error
     call    _puts
 
 __chkerr_noerr:
@@ -267,5 +266,4 @@ __chkerr_noerr:
     ; DATA
     ; **************************
 _disk_error:
-    defm    "Error in CF-card!\n\r"
-    defb    0
+    .asciz  "Error in CF-card!\n\r"

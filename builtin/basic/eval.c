@@ -84,6 +84,9 @@ uint8_t numstack_pop(numstack_t * numstack, numeric_t * num)
  */
 error_t eval_numeric(numeric_t * result, const tok_t * src)
 {
+    tok_t tok;
+    numeric_t num;
+
     opstack_t opstack;
     opstack.count = 0;
 
@@ -92,13 +95,13 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
 
     while (1)
     {
-        tok_t tok = *src;
+        tok = *src;
 
         if (tok == TOK_TERMINATOR) break;
 
         if (tok == TOK_NUMERIC)
         {
-            numeric_t num = t_numeric_get(src+1);
+            num = t_numeric_get(src+1);
             t_numeric_put(output_ptr, num);
             output_ptr += 3;
         }
@@ -184,13 +187,13 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
 
     while (1)
     {
-        tok_t tok = *output_ptr;
+        tok = *output_ptr;
 
         if (tok == TOK_TERMINATOR) break;
 
         if (tok == TOK_NUMERIC)
         {
-            numeric_t num = t_numeric_get(output_ptr+1);
+            num = t_numeric_get(output_ptr+1);
             numstack_push(&numstack, num);
         }
         else if (tok == TOK_OPERATOR)

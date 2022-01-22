@@ -1,7 +1,7 @@
 #include <syscall.h>
 #include <string.h>
 
-void user_main(char ** argv, size_t argc)
+int user_main(char ** argv, size_t argc)
 {
     if (argc != 3) return 1;
     if (strcmp("some", argv[0]) != 0) return 2;

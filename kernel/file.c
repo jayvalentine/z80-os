@@ -416,7 +416,7 @@ uint16_t fat_allocate_cluster(uint16_t cluster)
     }
 }
 
-uint16_t fat_deallocate_cluster(uint16_t cluster)
+void fat_deallocate_cluster(uint16_t cluster)
 {
     fat_set_cluster(cluster, CLUSTER_FREE);
 }
@@ -502,8 +502,6 @@ int file_open_read(FileDescriptor_T * file)
 /* Open the file with the given name and mode. */
 int file_open_write(FileDescriptor_T * file)
 {
-    int error;
-
     /* Create local directory entry. */
     DirectoryEntry_T file_entry;
 
@@ -995,10 +993,9 @@ uint16_t file_entries()
     uint16_t entries = 0;
 
     uint32_t sector = disk_info.root_region;
-    bool done = FALSE;
-
+    
     /* Try to find the file in the root directory. */
-    while (!done)
+    while (sector != disk_info.data_region)
     {
         /* Read the sector. */
         read_sector_cached(temp_sector, sector, TRUE);
@@ -1038,7 +1035,7 @@ int file_entry(char * s, uint16_t entry)
     uint16_t n = 0;
 
     /* Try to find the file in the root directory. */
-    while (TRUE)
+    while (sector != disk_info.data_region)
     {
         /* Read the sector. */
         read_sector_cached(temp_sector, sector, TRUE);

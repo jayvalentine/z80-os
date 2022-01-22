@@ -73,7 +73,7 @@ class StatusTest < IntegrationTest
         prog_symbols = Zemu::Debug.load_map("test_status_syscall.map")
         kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
 
-        int_breakpoint = kernel_symbols.find_by_name("_do_swrite")
+        int_breakpoint = kernel_symbols.find_by_name("_driver_6850_tx")
         assert !int_breakpoint.nil?, "Could not find symbol for swrite handler!"
 
         prog_breakpoint = prog_symbols.find_by_name("_test_func")

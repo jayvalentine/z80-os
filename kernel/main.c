@@ -31,7 +31,7 @@ extern SysInfo_T sysinfo;
 
 char input[256];
 
-uint8_t startup_flags = 0;
+uint8_t startup_flags;
 
 typedef void (*proc_t)(void);
 
@@ -53,7 +53,12 @@ void main(void)
     sysinfo.numbanks = banks;
     ram_bank_set(15);
 
-    memory_init(banks);
+    int e = memory_init(banks);
+    if (e != 0)
+    {
+        printf("Memory initialization error: %d\r\n", e);
+    }
+
     process_init();
 
     scheduler_init();
@@ -76,9 +81,6 @@ void main(void)
 
     puts("Loading command processor... ");
 
-    /* Load command processor into the first bank of user RAM. */
-    void * cp_addr = 0x8000;
-
     int pd = process_load("COMMAND.EXE");
 
     if (pd == E_FILENOTFOUND)
@@ -93,7 +95,7 @@ void main(void)
         return;
     }
 
-    int e = process_spawn(pd, NULL, 0);
+    int e2 = process_spawn(pd, NULL, 0);
 #endif
 
     while (1) {}

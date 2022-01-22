@@ -23,20 +23,44 @@ class KernelBenchmark
     end
 
     def compile_test_code(test_files, output_name)
-        cmd = "zcc "
-        cmd += "+#{CONFIG} -compiler-sccz80 "
-        cmd += "-O2 -SO2 "
-        cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
-        cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
-        cmd += "-Cl\"-r0x8000\" "
-        cmd += "-crt0 kernel/integration_test/reset.asm "
-        cmd += "-lstdlib "
-        cmd += "-m "
-        cmd += "-o #{output_name} "
-        cmd += test_files.join(" ")
+        test_files = ["kernel/integration_test/reset.asm"] + test_files
 
-        success = system(cmd)
-
+        object_files = []
+        test_files.each do |t|
+            if t.end_with? ".asm"
+                obj = File.basename(t, ".asm") + ".rel"
+                
+                cmd = "sdasz80 -plosgffw "
+                cmd += "#{obj} "
+                cmd += t
+                success = system(cmd)
+                
+                object_files << obj
+            else
+                obj = File.basename(t, ".c") + ".rel"
+                
+                cmd = "sdcc -mz80 -c "
+                cmd += "-I#{LIB_INCLUDE} "
+                cmd += "-o #{obj} "
+                cmd += t
+                success = system(cmd)
+                FileUtils.rm("#{File.basename(t, ".c")}.asm")
+                
+                object_files << obj
+            end
+        end
+        
+        cmd = "sdcc -mz80 --no-std-crt0 "
+        cmd += "-Wl-b_CODE=0x8000 "
+        cmd += "-Wl-b_DATA=0x9000 "
+        cmd += "-o #{File.basename(output_name, ".bin")}.hex "
+        cmd += "-L #{LIB} "
+        cmd += object_files.join(" ")
+        cmd += " stdlib.lib"
+        
+        success = system("#{cmd} > link.log 2>&1")
+        
+        system("objcopy --gap-fill 0x76 --pad-to 0xf000 -Iihex -Obinary #{File.basename(output_name, ".bin")}.hex #{output_name}")
         system("z88dk-dis -o 0x8000 #{output_name} > #{output_name}.diss")
     end
     

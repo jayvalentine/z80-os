@@ -16,10 +16,18 @@ int main()
     };
 
     int f = syscall_fopen("file.exe", FMODE_WRITE);
-    syscall_fwrite(header, 2, f);
-    syscall_fwrite(user_addr, user_size, f);
+    if (f < 0) return f;
+
+    size_t bytes = syscall_fwrite(header, 2, f);
+    if (bytes != 2) return 123;
+
+    size_t bytes2 = syscall_fwrite(user_addr, user_size, f);
+    if (bytes2 != user_size) return 124;
+
     syscall_fclose(f);
 
     int p = syscall_pload("file.exe");
+    if (p < 0) return p;
+
     return syscall_pexec(p, strs, 3);
 }

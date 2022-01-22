@@ -37,6 +37,8 @@ int memory_init(int pages)
 #ifdef DEBUG
     page_table[0] = PAGE_USED;
 #endif
+
+    return 0;
 }
 
 

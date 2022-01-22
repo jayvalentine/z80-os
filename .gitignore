@@ -1,9 +1,20 @@
 bin/
 .vscode/
 
+**/tmp/
+
 *.bin
+*.hex
 *.exe
 *.diss
 *.map
+*.rel
+*.lst
+*.sym
+*.rst
+*.lk
+*.mem
+*.noi
+*.log
 
 **/unit_test/main.c

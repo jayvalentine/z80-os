@@ -10,44 +10,50 @@ require_relative 'zemu/config'
 
 load '../z80-libraries/tasks.rake'
 
-CLEAN.include("**/*.o", "**/*.bin", "**/*.hex", "**/*.diss", "**/*.lib", "**/*.lis", "**/*.map", "**/*.sym", "**/*.exe")
+CLEAN.include("**/*.noi", "**/*.lk", "**/*.rst", "**/*.rel", "**/*.lst", "**/*.o", "**/*.bin", "**/*.hex", "**/*.diss", "**/*.lib", "**/*.lis", "**/*.map", "**/*.sym", "**/*.exe")
 
-# Helper function to compile something with ZCC.
-def compile(output_name, source_files, include_dirs, defines, crt, origin)
-    origin_string = "0x%04X" % origin
+rule ".rel" => ".c" do |task|
+    cmd = "sdcc -c -mz80 --opt-code-speed "
+    cmd += "-o\"#{task.name}\" "
+    cmd += "-I#{File.dirname(task.source)} "
+    cmd += "-I#{LIB_INCLUDE} "
+    cmd += "-DDEBUG "
+    cmd += "#{task.source}"
+    system(cmd)
+    FileUtils.rm("#{File.dirname(task.source)}/#{File.basename(task.source, ".c")}.asm")
+end
 
-    cmd = "zcc "
-    cmd += "+#{CONFIG} -compiler-sccz80 --opt-code-speed=all "
+rule ".rel" => ".asm" do |task|
+    cmd = "sdasz80 -plosgffw "
+    cmd += "#{task.name} "
+    cmd += task.source
+    system(cmd)
+end
 
-    cmd += "-O2 -SO2 "
-
-    cmd += "-DZ88DK "
-
-    defines.each do |d|
-        cmd += "-D#{d} "
-    end
+def compile_sdcc(output_name, object_files, crt0, code_seg, data_seg)
+    cmd = "sdcc -mz80 --opt-code-speed "
+    cmd += "--no-std-crt0 "
+    cmd += "-Wl-b_CODE=0x#{code_seg.to_s(16)} "
+    cmd += "-Wl-b_DATA=0x#{data_seg.to_s(16)} "
+    cmd += "-o #{File.basename(output_name, ".bin")}.hex "
+    cmd += "-L#{LIB} "
+    cmd += "#{crt0} "
+    cmd += object_files.join(" ")
+    cmd += " stdlib.lib"
     
-    include_dirs.each do |i|
-        cmd += "-I#{i} "
+    success = system("#{cmd} > link.log 2>&1")
+
+    unless success
+        abort("Link failed:\n#{File.read("link.log")}")
     end
 
-    cmd += "-L#{LIB} -I#{LIB_INCLUDE} "
-    cmd += "-Ca\"-I#{LIB_INCLUDE}\" "
-
-    cmd += "-Cl\"-r#{origin_string}\" "
-    cmd += "-crt0 #{crt} "
-    cmd += "-lstdlib "
-    cmd += "-m "
-    cmd += "-o #{output_name} "
-    cmd += source_files.join(" ")
-
-    success = system(cmd)
-
+    system("objcopy --gap-fill 0x76 -Iihex -Obinary #{File.basename(output_name, ".bin")}.hex #{output_name}")
+    
     size = File.size(output_name)
     size_kb = size / 1024.0
     puts "#{output_name}: #{size_kb.round(1)}KB"
 
-    return success
+    true
 end
 
 # Helper function for running unit tests.
@@ -208,46 +214,45 @@ namespace 'build' do
         end
     end
 
-    desc "Build kernel image"
-    task 'kernel' => ['lib:stdlib'] do
-        # Include every source file but reset.asm, which is the startup code.
-        src = (Dir.glob("kernel/*.asm") + Dir.glob("kernel/*.c")) - ["kernel/reset.asm"]
+    kernel_dependencies = FileList.new("kernel/*.c", "kernel/*.asm") do |fl|
+        fl.exclude(/reset/)
+    end.ext(".rel")
 
-        success = compile("kernel.bin", src, ["kernel"], [], "kernel/reset.asm", 0x0000)
+    desc "Build kernel image"
+    task 'kernel' => ['lib:stdlib', 'kernel/reset.rel'] + kernel_dependencies do
+        success = compile_sdcc("kernel.bin", kernel_dependencies, 'kernel/reset.rel', 0x0060, 0x6000)
 
         if success
             system("z88dk-dis -o 0x0000 kernel.bin > kernel.diss")
 
-            # Make sure that the kernel image is no more than 23Kb in size.
-            limit = 23 * 1024
+            # Make sure that the kernel image is no more than 32Kb in size.
+            limit = 32 * 1024
             bin = File.read("kernel.bin", mode: "rb")
             abort("Kernel image is too large: size is #{bin.size} (#{limit} expected)") if bin.size > limit
         end
     end
 
     desc "Build kernel image in debug mode for tests"
-    task 'kernel_debug' => ['lib:stdlib'] do
-        # Include every source file but reset.asm, which is the startup code.
-        src = (Dir.glob("kernel/*.asm") + Dir.glob("kernel/*.c")) - ["kernel/reset.asm"]
-
-        success = compile("kernel_debug.bin", src, ["kernel"], ["DEBUG"], "kernel/reset.asm", 0x0000)
+    task 'kernel_debug' => ['lib:stdlib', 'kernel/reset.rel'] + kernel_dependencies do
+        success = compile_sdcc("kernel_debug.bin", kernel_dependencies, 'kernel/reset.rel', 0x0060, 0x6000)
 
         if success
             system("z88dk-dis -o 0x0000 kernel_debug.bin > kernel_debug.diss")
 
-            # Make sure that the kernel image is no more than 23Kb in size.
-            limit = 23 * 1024
+            # Make sure that the kernel image is no more than 32Kb in size.
+            limit = 32 * 1024
             bin = File.read("kernel_debug.bin", mode: "rb")
             abort("Kernel image is too large: size is #{bin.size} (#{limit} expected)") if bin.size > limit
         end
     end
 
-    desc "Build command processor image"
-    task 'command' => ['lib:stdlib'] do
-        # Include every source file but reset.asm, which is the startup code.
-        src = (Dir.glob("command/*.asm") + Dir.glob("command/*.c")) - ["command/reset.asm"]
+    command_dependencies = FileList.new("command/*.asm", "command/*.c") do |fl|
+        fl.exclude(/reset/)
+    end.ext("rel")
 
-        success = compile("command.bin", src, [], [], PROCESS_CRT0, 0x8000)
+    desc "Build command processor image"
+    task 'command' => ['lib:stdlib', PROCESS_CRT0_OBJ] + command_dependencies do
+        success = compile_sdcc("command.bin", command_dependencies, PROCESS_CRT0_OBJ, 0x8000, 0xd000)
 
         if success
             system("z88dk-dis -o 0x8000 command.bin > command.diss")
@@ -266,22 +271,22 @@ namespace 'build' do
         config = YAML.load_file(File.join(builtin, "config.yaml"))
 
         # Base address for the program.
-        origin = config['origin']
-        origin_string = "0x%04X" % origin
-        origin_segment = origin >> 8
+        code_seg = config['code']
+        data_seg = config['data']
+        code_seg_hdr = code_seg >> 8
+
+        builtin_dependencies = FileList.new("#{builtin}/*.asm", "#{builtin}/*.c").ext("rel")
 
         desc "Build executable for builtin program '#{builtin_name}'"
-        task "builtin:#{builtin_name}" => ['lib:stdlib'] do
-            src = (Dir.glob("#{builtin}/*.asm") + Dir.glob("#{builtin}/*.c"))
-
-            success = compile("#{builtin_name}.bin", src, [], [], PROCESS_CRT0, origin)
+        task "builtin:#{builtin_name}" => ['lib:stdlib', PROCESS_CRT0_OBJ] + builtin_dependencies do
+            success = compile_sdcc("#{builtin_name}.bin", builtin_dependencies, PROCESS_CRT0_OBJ, code_seg, data_seg)
 
             if success
                 system("z88dk-dis -o #{origin_string} #{builtin_name}.bin > #{builtin_name}.diss")
 
                 # Now make an executable from the binary.
                 File.open("#{builtin_name}.exe", "wb") do |f|
-                    f.write([0x0a, origin_segment].pack("CC"))
+                    f.write([0x0a, code_seg_hdr].pack("CC"))
                     File.open("#{builtin_name}.bin", "rb") do |f2|
                         f2.each_byte do |b|
                             f.write([b].pack("C"))
@@ -332,7 +337,7 @@ namespace 'test' do
 
     namespace 'kernel' do
         desc "Run kernel integration tests"
-        Rake::TestTask.new 'integration' => "build:kernel_debug" do |t|
+        Rake::TestTask.new 'integration' => ["build:kernel_debug", "kernel/integration_test/reset.rel", "lib:process_crt0"] do |t|
             t.test_files = FileList['kernel/integration_test/test_*.rb']
         end
 
@@ -340,6 +345,9 @@ namespace 'test' do
         task 'unit' do
             unit_test("kernel")
         end
+
+        desc "Run all kernel tests"
+        task 'all' => ['test:kernel:unit', 'test:kernel:integration']
     end
 end
 
@@ -356,6 +364,6 @@ namespace 'benchmark' do
     end
 end
 
-task "test" => ["test:kernel:unit", "test:kernel:integration"]
+task "test" => ["test:kernel:all"]
 
 task "install", [:path] => ["install:kernel", "install:command"] + Dir.glob("builtin/*").map { |builtin| "install:builtin:#{File.basename(builtin)}" }

@@ -344,7 +344,7 @@ def zemu_config(instance_name, binary, disk)
 
             padding 0x76
 
-            contents 0, from_binary(binary)
+            contents 0, pad(from_binary(binary), 0x8000, 0x76)
             contents(0)[0x7fff] = 0xf7
             contents(0)[0x7ffe] = 0xec
             

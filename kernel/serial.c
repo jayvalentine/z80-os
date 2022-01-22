@@ -19,6 +19,8 @@ void serial_init(void)
 {
     tx_buf.head = tx_buf.buf;
     tx_buf.tail = tx_buf.buf;
+
+    serial_current_mode = 0;
 }
 
 void serial_mode(uint8_t mode)

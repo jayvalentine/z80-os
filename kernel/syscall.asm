@@ -1,93 +1,67 @@
     ; Definitions
-    defc    UART_PORT_DATA = 0b00000001
-    defc    UART_PORT_CONTROL = 0b00000000
+    .equ    UART_PORT_DATA, #0b00000001
+    .equ    UART_PORT_CONTROL, #0b00000000
 
-    EXTERN  _driver_6850_tx
-    EXTERN  _serial_mode
+    .globl  _driver_6850_tx
+    .globl  _serial_mode
 
-    EXTERN  _file_open
-    EXTERN  _file_read
-    EXTERN  _file_write
-    EXTERN  _file_close
-    EXTERN  _file_delete
-    EXTERN  _file_info
-    EXTERN  _file_entries
-    EXTERN  _file_entry
+    .globl  _file_open
+    .globl  _file_read
+    .globl  _file_write
+    .globl  _file_close
+    .globl  _file_delete
+    .globl  _file_info
+    .globl  _file_entries
+    .globl  _file_entry
 
-    EXTERN  _process_spawn
-    EXTERN  _process_load
-    EXTERN  _scheduler_state
-    EXTERN  _process_exit
-    EXTERN  _scheduler_exitcode
+    .globl  _process_spawn
+    .globl  _process_load
+    .globl  _scheduler_state
+    .globl  _process_exit
+    .globl  _scheduler_exitcode
 
-    EXTERN  _signal_sethandler
-
-    ; Syscall mappings.
-    defc    _do_swrite = _driver_6850_tx
-    ; sread
-    defc    _do_smode = _serial_mode
-
-    ; dinfo
-
-    defc    _do_fopen = _file_open
-    defc    _do_fread = _file_read
-    defc    _do_fwrite = _file_write
-    defc    _do_fclose = _file_close
-    defc    _do_fdelete = _file_delete
-    defc    _do_finfo = _file_info
-    defc    _do_fentries = _file_entries
-    defc    _do_fentry = _file_entry
-
-    defc    _do_pspawn = _process_spawn
-    defc    _do_pload = _process_load
-    defc    _do_pstate = _scheduler_state
-    ; pexit
-    defc    _do_pexitcode = _scheduler_exitcode
-
-    defc    _do_sighandle = _signal_sethandler
-
-    ; sysinfo
+    .globl  _signal_sethandler
 
     ; Syscall table.
 _syscall_table:
-    defw    _do_swrite
-    defw    _do_sread
+    .word   _driver_6850_tx         ; swrite
+    .word   _do_sread               ; sread
 
-    ; DREAD, DWRITE no longer supported.
-    defw    __invalid_syscall
-    defw    __invalid_syscall
+    ; DREAD, #DWRITE no longer supported.
+    .word   __invalid_syscall
+    .word   __invalid_syscall
 
-    defw    _do_fopen
-    defw    _do_fread
-    defw    _do_fwrite
-    defw    _do_fclose
+    .word   _file_open              ; fopen
+    .word   _file_read              ; fread
+    .word   _file_write             ; fwrite
+    .word   _file_close             ; fclose
 
-    defw    _do_dinfo
-    defw    _do_finfo
+    .word   _do_dinfo               ; dinfo
+    .word   _file_info              ; finfo
 
-    defw    _do_fentries
-    defw    _do_fentry
+    .word   _file_entries           ; fentries
+    .word   _file_entry             ; fentry
 
-    defw    _do_pspawn
+    .word   _process_spawn          ; pspawn
 
-    defw    _do_sighandle
+    .word   _signal_sethandler      ; sighandle
 
-    defw    _do_fdelete
+    .word   _file_delete            ; fdelete
     
-    defw    _do_pload
+    .word   _process_load           ; pload
 
-    defw    _do_smode
+    .word   _serial_mode            ; smode
 
-    defw    _do_sysinfo
+    .word   _do_sysinfo             ; sysinfo
 
-    defw    _do_pstate
-    defw    _do_pexit
-    defw    _do_pexitcode
+    .word   _scheduler_state        ; pstate
+    .word   _do_pexit               ; pexit
+    .word   _scheduler_exitcode     ; pexitcode
 
-    PUBLIC  _syscall_handler
+    .globl  _syscall_handler
 
-    EXTERN  _status_set_syscall
-    EXTERN  _status_clr_syscall
+    .globl  _status_set_syscall
+    .globl  _status_clr_syscall
 
     ; Syscall handler.
     ;
@@ -97,23 +71,24 @@ _syscall_table:
 _syscall_handler:
     di
 
-    ; Save HL, DE, BC
+    ; Save IX, HL, DE, BC
+    push    IX
     push    HL
     push    DE
     push    BC
 
     ; Check:
     ; * That value in A is even.
-    bit     0, A
-    jp      nz, __invalid_syscall
+    bit     #0, A
+    jp      nz, #__invalid_syscall
 
     push    AF
     call    _status_set_syscall
     pop     AF
 
     ; Calculate position of word in syscall table.
-    ld      HL, _syscall_table
-    ld      D, 0
+    ld      HL, #_syscall_table
+    ld      D, #0
     ld      E, A
     add     HL, DE
     
@@ -133,6 +108,7 @@ _syscall_handler:
     pop     DE
     inc     SP
     inc     SP
+    pop     IX
 
 __syscall_ret:
     push    AF
@@ -154,16 +130,16 @@ __syscall_ret:
 __execute_syscall:
     jp      (HL)
 
-    EXTERN  _startup_flags
+    .globl  _startup_flags
 
     ; Executed when we see an invalid syscall.
     ; Performs a warm restart of the kernel.
 __invalid_syscall:
-    ld      A, $01
+    ld      A, #0x01
     ld      (_startup_flags), A
-    jp      $0000
+    rst     8
 
-    ; 1: sread: Read character from serial port.
+    ; #1: sread: Read character from serial port.
     ;
     ; Parameters:
     ; None.
@@ -188,51 +164,51 @@ __sread_wait:
     cp      E
 
     ; If head and tail are equal, there's no data in buffer.
-    jp      z, __sread_wait
+    jp      z, #__sread_wait
     di
 
 __sread_available:
     ; Calculate offset into buffer.
-    ld      HL, _rx_buf
-    ld      D, 0
+    ld      HL, #_rx_buf
+    ld      D, #0
     add     HL, DE
 
     ; Load character into A.
     ld      A, (HL)
 
     ; Increment head.
-    ld      HL, _rx_buf_offs_head
+    ld      HL, #_rx_buf_offs_head
     inc     (HL)
 
     pop     HL
     pop     DE
     ret
 
-    PUBLIC  _rx_buf_offs_head
-    PUBLIC  _rx_buf_offs_tail
-    PUBLIC  _rx_buf
+    .globl  _rx_buf_offs_head
+    .globl  _rx_buf_offs_tail
+    .globl  _rx_buf
 
 _rx_buf_offs_head:
-    defb    0
+    .byte   #0
 _rx_buf_offs_tail:
-    defb    0
+    .byte   #0
 
 _rx_buf:
-    defs    256
+    .ds     #256
 
-    EXTERN  _disk_info
+    .globl  _disk_info
 
-    ; 8: dinfo: Get information about disk.
+    ; #8: dinfo: Get information about disk.
     ;
     ; Parameters: None
     ;
     ; Returns:
     ; Pointer to disk info struct, in HL.
 _do_dinfo:
-    ld      HL, _disk_info
+    ld      HL, #_disk_info
     ret
 
-    ; 17: sysinfo: Get info about kernel.
+    ; #17: sysinfo: Get info about kernel.
     ;
     ; Parameters:
     ; None.
@@ -240,12 +216,12 @@ _do_dinfo:
     ; Returns:
     ; Pointer to sysinfo struct in HL.
 _do_sysinfo:
-    ld      HL, _sysinfo
+    ld      HL, #_sysinfo
     ret
 
-    PUBLIC  _sysinfo
+    .globl  _sysinfo
 
-    ; 19: pexit: Exit current process.
+    ; #19: pexit: Exit current process.
     ;
     ; Parameters:
     ; BC: exit code.
@@ -253,7 +229,7 @@ _do_sysinfo:
     ; Returns:
     ; Nothing.
 _do_pexit:
-    ld      HL, 2
+    ld      HL, #2
     add     HL, SP
     ld      C, (HL)
     inc     HL
@@ -266,9 +242,9 @@ _do_pexit:
     ; This syscall doesn't return.
     ; Set return address to the loop function
     ; and return.
-    ld      HL, __pexit_loop
+    ld      HL, #__pexit_loop
     push    HL
-    ld      HL, __syscall_ret
+    ld      HL, #__syscall_ret
     push    HL
 
     ret
@@ -277,12 +253,12 @@ __pexit_loop:
     jp      __pexit_loop
 
 _sysinfo:
-    defw    __kernel_version
+    .word   __kernel_version
 __sysinfo_numbanks:
-    defw    0
+    .word   #0
 
 __kernel_version:
-    defm    "0.4.0", 0
+    .asciz  "0.4.0"
 
 __test:
-    defm    "CANCEL handler: %04x\n\r", 0
+    .asciz  "CANCEL handler: #0b04x\n\r"

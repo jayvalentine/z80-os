@@ -1,3 +1,4 @@
 ---
-origin: 0x8000
+code: 0x8000
+data: 0xd000
 ---

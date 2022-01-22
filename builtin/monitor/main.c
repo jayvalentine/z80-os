@@ -162,7 +162,7 @@ void process_commands()
             }
 
             printf("Loading %s...\r\n", cmd_argv[0]);
-            syscall_pload(&last_load_address, cmd_argv[0]);
+            syscall_pload(cmd_argv[0]);
             printf("Loaded at address $%x.\r\n", last_load_address);
         }
         else if (strcmp("continue", cmd) == 0)
