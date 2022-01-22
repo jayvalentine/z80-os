@@ -1,7 +1,53 @@
     ; Definitions
     defc    UART_PORT_DATA = 0b00000001
     defc    UART_PORT_CONTROL = 0b00000000
-    
+
+    EXTERN  _driver_6850_tx
+    EXTERN  _serial_mode
+
+    EXTERN  _file_open
+    EXTERN  _file_read
+    EXTERN  _file_write
+    EXTERN  _file_close
+    EXTERN  _file_delete
+    EXTERN  _file_info
+    EXTERN  _file_entries
+    EXTERN  _file_entry
+
+    EXTERN  _process_spawn
+    EXTERN  _process_load
+    EXTERN  _scheduler_state
+    EXTERN  _process_exit
+    EXTERN  _scheduler_exitcode
+
+    EXTERN  _signal_sethandler
+
+    ; Syscall mappings.
+    defc    _do_swrite = _driver_6850_tx
+    ; sread
+    defc    _do_smode = _serial_mode
+
+    ; dinfo
+
+    defc    _do_fopen = _file_open
+    defc    _do_fread = _file_read
+    defc    _do_fwrite = _file_write
+    defc    _do_fclose = _file_close
+    defc    _do_fdelete = _file_delete
+    defc    _do_finfo = _file_info
+    defc    _do_fentries = _file_entries
+    defc    _do_fentry = _file_entry
+
+    defc    _do_pspawn = _process_spawn
+    defc    _do_pload = _process_load
+    defc    _do_pstate = _scheduler_state
+    ; pexit
+    defc    _do_pexitcode = _scheduler_exitcode
+
+    defc    _do_sighandle = _signal_sethandler
+
+    ; sysinfo
+
     ; Syscall table.
 _syscall_table:
     defw    _do_swrite
@@ -79,18 +125,16 @@ _syscall_handler:
     
     ; Execute syscall.
     ; Syscall function will need to pop DE, HL off the stack.
-    jp      (HL)
+    call    __execute_syscall
 
-    EXTERN  _startup_flags
+    ; Restore BC, DE, but preserve
+    ; return value in HL.
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
 
-    ; Executed when we see an invalid syscall.
-    ; Performs a warm restart of the kernel.
-__invalid_syscall:
-    ld      A, $01
-    ld      (_startup_flags), A
-    jp      $0000
-
-_syscall_common_ret:
+__syscall_ret:
     push    AF
     push    HL
     push    BC
@@ -107,33 +151,17 @@ _syscall_common_ret:
 
     ret
 
-    ; *****************************
-    ; SYSCALL DEFINITIONS
-    ; *****************************
+__execute_syscall:
+    jp      (HL)
 
-    EXTERN  _driver_6850_tx
+    EXTERN  _startup_flags
 
-    ; 0: swrite: Write bytes to serial port.
-    ;
-    ; Parameters:
-    ; DE - Pointer to byte buffer.
-    ; BC - Count.
-    ;
-    ; Returns:
-    ; Nothing.
-    ;
-    ; Description:
-    ; Writes the specified number of bytes
-    ; to the serial port.
-_do_swrite:
-    call    _driver_6850_tx
-
-    ; Restore BC, DE, HL
-    pop     BC
-    pop     DE
-    pop     HL
-
-    jp      _syscall_common_ret
+    ; Executed when we see an invalid syscall.
+    ; Performs a warm restart of the kernel.
+__invalid_syscall:
+    ld      A, $01
+    ld      (_startup_flags), A
+    jp      $0000
 
     ; 1: sread: Read character from serial port.
     ;
@@ -147,10 +175,6 @@ _do_swrite:
     ; Busy-waits until serial port receives data,
     ; then returns a single received character.
 _do_sread:
-    pop     BC
-    pop     DE
-    pop     HL
-
     push    DE
     push    HL
 
@@ -182,7 +206,7 @@ __sread_available:
 
     pop     HL
     pop     DE
-    jp      _syscall_common_ret
+    ret
 
     PUBLIC  _rx_buf_offs_head
     PUBLIC  _rx_buf_offs_tail
@@ -196,106 +220,6 @@ _rx_buf_offs_tail:
 _rx_buf:
     defs    256
 
-    EXTERN  _disk_read
-    EXTERN  _disk_write
-
-    EXTERN  _file_open
-    EXTERN  _file_read
-    EXTERN  _file_write
-    EXTERN  _file_close
-    EXTERN  _file_delete
-
-    ; 4: fopen: Open a file for writing.
-    ;
-    ; Parameters:
-    ; DE - pointer to filename string
-    ; C - mode for opening
-    ;
-    ; Returns:
-    ; File descriptor/error code in HL.
-    ;
-    ; Error codes are <0, valid file descriptors are >=0.
-    ;
-    ; Possible error codes are:
-    ; E_FILENOTFOUND = -1
-    ; E_FILELIMIT = -2
-_do_fopen:
-    ; BC, DE is already on stack (in that order).
-    ; We should be able to just call the function.
-    call    _file_open
-
-    ; Restore BC, DE
-    pop     BC
-    pop     DE
-    
-    ; Increment SP. We want to skip past the saved HL on the stack,
-    ; rather than overwriting the return value of file_fopen.
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    ; 5: fread: Read an opened file.
-    ;
-    ; Parameters:
-    ; HL - pointer to location to write to
-    ; DE - number of bytes to read
-    ; BC - file descriptor
-    ;
-    ; Returns:
-    ; Number of bytes written in HL.
-_do_fread:
-    ; BC, DE, HL are already on stack.
-    call    _file_read
-
-    ; Restore BC, DE
-    pop     BC
-    pop     DE
-
-    ; Increment SP, rather than restoring HL and trashing the return value.
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    ; 6: fwrite: Write an opened file.
-    ;
-    ; Parameters:
-    ; HL - pointer to location to read to
-    ; DE - number of bytes to write
-    ; BC - file descriptor
-    ;
-    ; Returns:
-    ; Number of bytes written in HL.
-_do_fwrite:
-    ; BC, DE, HL are already on stack.
-    call    _file_write
-
-    ; Restore BC, DE
-    pop     BC
-    pop     DE
-
-    ; Increment SP, rather than restoring HL and trashing the return value.
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    ; 7: fclose: Close an opened file.
-    ;
-    ; Parameters:
-    ; BC - file descriptor
-_do_fclose:
-    ; BC is already top of stack.
-    call    _file_close
-
-    ; Restore BC, DE, HL
-    pop     BC
-    pop     DE
-    pop     HL
-
-    jp      _syscall_common_ret
-
     EXTERN  _disk_info
 
     ; 8: dinfo: Get information about disk.
@@ -305,172 +229,8 @@ _do_fclose:
     ; Returns:
     ; Pointer to disk info struct, in HL.
 _do_dinfo:
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-
     ld      HL, _disk_info
-
-    jp      _syscall_common_ret
-
-    EXTERN  _file_info
-
-    ; 9: finfo: Get information about a file.
-    ;
-    ; Parameters:
-    ; BC - Pointer to struct in which to store the file details
-    ; DE - Pointer to filename string
-    ;
-    ; Returns:
-    ; 0 on success, error code on failure.
-_do_finfo:
-    ; BC and DE are already on top of stack.
-    call    _file_info
-
-    pop     BC
-    pop     DE
-    
-    ; Don't want to trash return value in HL.
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    EXTERN  _file_entries
-
-    ; 10: fentries: Return number of file entries in the root directory.
-    ;
-    ; Parameters: None
-    ;
-    ; Returns:
-    ; The number of file entries.
-_do_fentries:
-    call    _file_entries
-
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-    
-    jp      _syscall_common_ret
-
-    EXTERN  _file_entry
-
-    ; 11: fentry: Get the name of the nth entry in the root directory.
-    ;
-    ; Parameters:
-    ; BC - n (entry index)
-    ; DE - Pointer to string to populate
-    ;
-    ; Returns:
-    ; (int) 0 on success, error code on failure
-_do_fentry:
-    ; BC and DE are already on top of stack.
-    call    _file_entry
-
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-    
-    jp      _syscall_common_ret
-
-    EXTERN  _process_spawn
-    EXTERN  _signal_sethandler
-
-    ; 12: pspawn: Spawn new process for loaded executable image.
-    ;
-    ; Parameters:
-    ; BC - argc
-    ; DE - argv
-    ; HL - process descriptor
-    ;
-    ; Returns:
-    ; (int) success code.
-_do_pspawn:
-    ; HL, BC and DE are on top of stack.
-    call    _process_spawn
-
-    ; Restore BC, DE, but not HL (return value).
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    ; 13: sighandle: Set handler function for signal.
-    ;
-    ; Parameters:
-    ; BC - signal number
-    ; DE - function pointer for handler
-_do_sighandle:
-    ; BC, DE already on TOS.
-    call    _signal_sethandler
-
-    pop     BC
-    pop     DE
-    pop     HL
-
-    jp      _syscall_common_ret
-
-    ; 14: fdelete: Delete a file.
-    ;
-    ; Parameters:
-    ; BC - pointer to filename
-    ;
-    ; Returns:
-    ; Error code for delete operation, or 0 if successful.
-_do_fdelete:
-    ; BC already on TOS.
-    call    _file_delete
-
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    EXTERN  _process_load
-
-    ; 15: pload: Load an executable
-    ;
-    ; Parameters:
-    ; BC - pointer to filename
-    ;
-    ; Returns:
-    ; Error code for load operation, or 0 if successful.
-_do_pload:
-    ; BC, DE already on TOS.
-    call    _process_load
-
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    EXTERN  _serial_mode
-
-    ; 16: smode: Set serial mode
-    ;
-    ; Parameters:
-    ; C - mode
-    ;
-    ; Returns:
-    ; Nothing.
-_do_smode:
-    ; BC already on TOS.
-    call    _serial_mode
-
-    pop     BC
-    pop     DE
-    pop     HL
-
-    jp      _syscall_common_ret
+    ret
 
     ; 17: sysinfo: Get info about kernel.
     ;
@@ -480,36 +240,10 @@ _do_smode:
     ; Returns:
     ; Pointer to sysinfo struct in HL.
 _do_sysinfo:
-    pop     BC
-    pop     DE
-    pop     HL
-
     ld      HL, _sysinfo
-    jp      _syscall_common_ret
+    ret
 
     PUBLIC  _sysinfo
-
-    EXTERN  _scheduler_state
-
-    ; 18: pstate: Get process state
-    ;
-    ; Parameters:
-    ; BC - Process ID
-    ;
-    ; Returns:
-    ; Process state in HL.
-_do_pstate:
-    ; BC already TOS.
-    call    _scheduler_state
-
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
-
-    EXTERN  _process_exit
 
     ; 19: pexit: Exit current process.
     ;
@@ -519,44 +253,28 @@ _do_pstate:
     ; Returns:
     ; Nothing.
 _do_pexit:
-    ; BC already TOS.
-    call    _process_exit
+    ld      HL, 2
+    add     HL, SP
+    ld      C, (HL)
+    inc     HL
+    ld      B, (HL)
 
-    pop     BC
-    pop     DE
-    pop     HL
+    push    BC
+    
+    call    _process_exit
 
     ; This syscall doesn't return.
     ; Set return address to the loop function
     ; and return.
     ld      HL, __pexit_loop
     push    HL
+    ld      HL, __syscall_ret
+    push    HL
 
-    jp      _syscall_common_ret
-
+    ret
 
 __pexit_loop:
     jp      __pexit_loop
-
-    EXTERN  _scheduler_exitcode
-
-    ; 20: pexitcode: Get exit code of given process.
-    ;
-    ; Parameters:
-    ; BC: PID.
-    ;
-    ; Returns:
-    ; Exit code.
-_do_pexitcode:
-    ; BC already TOS.
-    call    _scheduler_exitcode
-
-    pop     BC
-    pop     DE
-    inc     SP
-    inc     SP
-
-    jp      _syscall_common_ret
 
 _sysinfo:
     defw    __kernel_version
