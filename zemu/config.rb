@@ -391,8 +391,8 @@ def zemu_config(instance_name, binary, disk)
     conf
 end
 
-def zemu_start
-    config = zemu_config("debug", "command.bin", "disk_copy.bin")
+def zemu_start(binary_file="command.bin")
+    config = zemu_config("debug", binary_file, "disk_copy.bin")
 
     Zemu.start_interactive(config, print_serial: false)
 end

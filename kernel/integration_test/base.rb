@@ -174,4 +174,13 @@ class IntegrationTest < Minitest::Test
         end
         stack
     end
+
+    def pc_str
+        "0x#{@instance.registers["PC"].to_s(16)}"
+    end
+
+    def assert_program_finished
+        assert @instance.halted?, "Program should have halted (at #{pc_str})."
+        assert_equal 0x8008, @instance.registers["PC"], "Halted at wrong address (at #{pc_str})."
+    end
 end

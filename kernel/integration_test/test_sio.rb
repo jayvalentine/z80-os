@@ -73,6 +73,35 @@ class SIOTest < IntegrationTest
         assert_equal 0x0000, @instance.registers["HL"], "Wrong return value!"
     end
 
+    # Tests that calling the sread syscall reads characters from the serial output.
+    def test_sread_multiple
+        compile_test_code(["kernel/integration_test/test_sread_gets.c"], "test_sread_gets.bin")
+
+        start_instance("test_sread_gets.bin")
+
+        # Send serial string.
+        input_string = "hello\n"
+        
+        # Get output string.
+        input_string.size.times do |i|
+            # Send character.
+            @instance.serial_puts(input_string[i])
+
+            # Then continue for 10000 cycles.
+            @instance.continue 5000
+
+            # Receive character to free up tx buffer for next iteration.
+            @instance.serial_gets(1)
+        end
+
+        @instance.continue 5000
+
+        assert_program_finished
+
+        # Check return value.
+        assert_equal 0x0000, @instance.registers["HL"], "Wrong return value!"
+    end
+
     # Tests that the break command is received correctly.
     def test_sbreak
         compile_test_code(["kernel/integration_test/test_sbreak.c"], "test_sbreak.bin")

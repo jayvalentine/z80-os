@@ -135,6 +135,11 @@ task 'debug' => ['build:kernel_debug', 'build:command'] do
     zemu_start()
 end
 
+desc 'Debug a test using Zemu.'
+task 'debug_test', [:test] => ['build:kernel_debug'] do |t, args|
+    zemu_start("#{args[:test]}.bin")
+end
+
 namespace 'build' do
     desc "Build boot sector image"
     task 'boot' do
