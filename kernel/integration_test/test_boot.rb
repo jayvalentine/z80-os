@@ -3,18 +3,11 @@ require_relative 'base'
 
 class BootTest < IntegrationTest
     def test_boot
-        File.open("test_boot.bin", "wb") do |f|
-            f.write [0, 0, 0, 0].pack("CCCC")
-        end
-
-        start_instance("test_boot.bin")
+        # Intentionally empty - we are just checking we can
+        # start an instance and reach main().
     end
 
     def test_boot_invalid_syscall
-        compile_test_code(["kernel/integration_test/test_boot_invalid_syscall.asm"], "test_boot_invalid_syscall.bin")
-
-        start_instance("test_boot_invalid_syscall.bin")
-
         syms = Zemu::Debug.load_map("kernel_debug.map")
         sflags_addr = syms.find_by_name("_startup_flags").address
 

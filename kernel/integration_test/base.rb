@@ -7,6 +7,19 @@ require_relative '../../../z80-libraries/vars.rb'
 require_relative '../../zemu/config'
 
 class IntegrationTest < Minitest::Test
+    def setup
+        @test_name = @NAME
+
+        # Compile code for the test case.
+        Dir.chdir("kernel/integration_test/#{@test_name}") do
+            source_files = Dir.glob("*.c") + Dir.glob("*.asm")
+            compile_test_code(source_files, "test.bin")
+        end
+
+        # Start an instance of the compiled test binary.
+        start_instance("kernel/integration_test/#{@test_name}/test.bin")
+    end
+
     def compile(test_files, output_name, crt0, address)
         address_string = "%04x" % address
 
@@ -55,10 +68,14 @@ class IntegrationTest < Minitest::Test
     end
     
     def compile_test_code(test_files, output_name)
-        compile(test_files, output_name, "kernel/integration_test/reset.rel", 0x8000)
+        compile(test_files, output_name, "../reset.rel", 0x8000)
     end
 
-    def compile_user_code(address, test_files, output_name)
+    def compile_user_code(address)
+        test_files = Dir.glob("kernel/integration_test/#{@test_name}/user/*.c")
+
+        output_name = "kernel/integration_test/#{@test_name}/user/program.bin"
+
         compile(test_files, output_name, "#{LIB}/process_crt0.rel", address)
     end
 
@@ -93,10 +110,15 @@ class IntegrationTest < Minitest::Test
         @instance.break 0x0000, :program
     end
 
-    def load_user_program(address, program)
+    # Loads a user program into the first bank of memory at the given address.
+    # This is space reserved in the test code that is then written to disk
+    # to be loaded via the pload syscall.
+    def load_user_program(address)
+        program = "kernel/integration_test/#{@test_name}/user/program.bin"
+
         offset = address - 0x8000
         File.open(program, "rb") do |f|
-            # Load maximum of 256 bytes
+            # Load maximum of 2048 bytes
             2048.times do
                 b = f.getbyte
                 break if b.nil?
@@ -139,6 +161,14 @@ class IntegrationTest < Minitest::Test
             size -= 1
         end
         s
+    end
+
+    def load_test_map()
+        Zemu::Debug.load_map("kernel/integration_test/#{@test_name}/test.map")
+    end
+
+    def load_kernel_map()
+        Zemu::Debug.load_map("kernel_debug.map")
     end
 
     def schedule_table

@@ -5,19 +5,15 @@ class StatusTest < IntegrationTest
     # Tests that the correct status bit gets set
     # when entering the ISR, and unset when leaving.
     def test_status_int
-        compile_test_code(["kernel/integration_test/test_status_int.c"], "test_status_int.bin")
-
         # Get symbols.
-        prog_symbols = Zemu::Debug.load_map("test_status_int.map")
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        prog_symbols = load_test_map()
+        kernel_symbols = load_kernel_map()
 
         int_breakpoint = kernel_symbols.find_by_name("__serial_read_handler")
         assert !int_breakpoint.nil?, "Could not find symbol for serial read handler!"
 
         prog_breakpoint = prog_symbols.find_by_name("_test_func")
         assert !prog_breakpoint.nil?, "Could not find symbol for test function!"
-
-        start_instance("test_status_int.bin")
 
         # Interrupt status bit should be unset.
         status = @instance.device("status").register
@@ -67,19 +63,15 @@ class StatusTest < IntegrationTest
     # Tests that the correct status bit gets set
     # when entering a syscall, and unset when leaving.
     def test_status_syscall
-        compile_test_code(["kernel/integration_test/test_status_syscall.c"], "test_status_syscall.bin")
-
         # Get symbols.
-        prog_symbols = Zemu::Debug.load_map("test_status_syscall.map")
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        prog_symbols = load_test_map()
+        kernel_symbols = load_kernel_map()
 
         int_breakpoint = kernel_symbols.find_by_name("_driver_6850_tx")
         assert !int_breakpoint.nil?, "Could not find symbol for swrite handler!"
 
         prog_breakpoint = prog_symbols.find_by_name("_test_func")
         assert !prog_breakpoint.nil?, "Could not find symbol for test function!"
-
-        start_instance("test_status_syscall.bin")
 
         # Syscall status bit should be unset.
         status = @instance.device("status").register

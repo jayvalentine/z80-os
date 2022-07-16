@@ -5,10 +5,6 @@ class ProcessTest < IntegrationTest
     # Tests:
     # * That calling pexec syscall executes a new process in user memory.
     def test_pexec_simple
-        compile_test_code(["kernel/integration_test/test_pexec_simple.c"], "test_pexec_simple.bin")
-
-        start_instance("test_pexec_simple.bin")
-
         # Then continue. The test code executes the pexec system call
         # so we should hit a breakpoint at 0x8000, bank 1.
         @instance.break 0x8000, :program
@@ -25,10 +21,6 @@ class ProcessTest < IntegrationTest
     # * Tests with a different address to the "normal" user code address
     #   to ensure we can call user code at different addresses.
     def test_pexec_different_address
-        compile_test_code(["kernel/integration_test/test_pexec_different_address.c"], "test_pexec_different_address.bin")
-
-        start_instance("test_pexec_different_address.bin")
-
         # Then continue. The test code executes the pexec system call
         # so we should hit a breakpoint at 0xd000, bank 1
         @instance.break 0xd000, :program
@@ -46,11 +38,8 @@ class ProcessTest < IntegrationTest
     #   to ensure we can call user code at different addresses.
     # * That arguments are passed correctly.
     def test_pexec_different_address_with_args
-        compile_test_code(["kernel/integration_test/test_pexec_different_address_with_args.c"], "test_pexec_different_address_with_args.bin")
-        compile_user_code(0xd000, ["kernel/integration_test/test_pexec_different_address_with_args_user.c"], "test_pexec_different_address_with_args_user.bin")
-
-        start_instance("test_pexec_different_address_with_args.bin")
-        load_user_program(0xc000, "test_pexec_different_address_with_args_user.bin")
+        compile_user_code(0xd000)
+        load_user_program(0xc000)
         
         # Then continue. The test code executes the pexec system call
         # so we should hit a breakpoint at 0xd000, bank 1.
@@ -73,11 +62,8 @@ class ProcessTest < IntegrationTest
     # Tests:
     # * That passing arguments with the pexec syscall are passed correctly.
     def test_pexec_args
-        compile_test_code(["kernel/integration_test/test_pexec_args.c"], "test_pexec_args.bin")
-        compile_user_code(0x8000, ["kernel/integration_test/test_pexec_args_user.c"], "test_pexec_args_user.bin")
-
-        start_instance("test_pexec_args.bin")
-        load_user_program(0xc000, "test_pexec_args_user.bin")
+        compile_user_code(0x8000)
+        load_user_program(0xc000)
 
         # Then continue. The test code executes the pexec system call
         # so we should hit a breakpoint at 0x8000, bank 1.
@@ -98,10 +84,6 @@ class ProcessTest < IntegrationTest
     end
 
     def test_pload_simple
-        compile_test_code(["kernel/integration_test/test_pload_simple.c"], "test_pload_simple.bin")
-
-        start_instance("test_pload_simple.bin")
-
         # Then continue until halt.
         # By this point the file should have been loaded at 0x8000.
         @instance.continue 1000000
@@ -117,10 +99,6 @@ class ProcessTest < IntegrationTest
     end
 
     def test_pload_large
-        compile_test_code(["kernel/integration_test/test_pload_large.c"], "test_pload_large.bin")
-
-        start_instance("test_pload_large.bin")
-
         # Then continue until halt.
         # By this point the file should have been loaded at 0x8000.
         @instance.continue 10000000
@@ -143,10 +121,6 @@ class ProcessTest < IntegrationTest
     end
 
     def test_pload_different_address
-        compile_test_code(["kernel/integration_test/test_pload_different_address.c"], "test_pload_different_address.bin")
-
-        start_instance("test_pload_different_address.bin")
-
         # Then continue until halt.
         # By this point the file should have been loaded at 0xd000.
         @instance.continue 1000000
@@ -168,10 +142,6 @@ class ProcessTest < IntegrationTest
     end
 
     def test_pload_invalid_addr
-        compile_test_code(["kernel/integration_test/test_pload_invalid_addr.c"], "test_pload_invalid_addr.bin")
-
-        start_instance("test_pload_invalid_addr.bin")
-
         # Then continue until halt.
         # File should not have been loaded and the test code should return E_INVALIDPAGE.
         @instance.continue 1000000
@@ -187,10 +157,6 @@ class ProcessTest < IntegrationTest
     end
 
     def test_pload_invalid_header
-        compile_test_code(["kernel/integration_test/test_pload_invalid_header.c"], "test_pload_invalid_header.bin")
-
-        start_instance("test_pload_invalid_header.bin")
-
         # Then continue until halt.
         # File should not have been loaded and the test code should return E_INVALIDHEADER.
         @instance.continue 1000000
@@ -206,10 +172,6 @@ class ProcessTest < IntegrationTest
     end
 
     def test_pload_wrong_size_header
-        compile_test_code(["kernel/integration_test/test_pload_wrong_size_header.c"], "test_pload_wrong_size_header.bin")
-
-        start_instance("test_pload_wrong_size_header.bin")
-
         # Then continue until halt.
         # File should not have been loaded and the test code should return E_INVALIDHEADER.
         @instance.continue 1000000
@@ -220,10 +182,6 @@ class ProcessTest < IntegrationTest
     # Tests:
     # * That the pspawn syscall allows for running two processes concurrently.
     def test_pspawn_simple
-        compile_test_code(["kernel/integration_test/test_pspawn_simple.c"], "test_pspawn_simple.bin")
-
-        start_instance("test_pspawn_simple.bin")
-
         # Then continue. Both processes should run concurrently
         # so we should eventually see the expected values in memory.
         #
@@ -234,7 +192,7 @@ class ProcessTest < IntegrationTest
         assert !@instance.break?, "Hit unexpected BREAK"
 
         # Get symbols.
-        prog_symbols = Zemu::Debug.load_map("test_pspawn_simple.map")
+        prog_symbols = load_test_map()
         val_addr = prog_symbols.find_by_name("_ret").address
         
         assert_equal 0, @instance.device("banked_ram").contents(0)[val_addr - 0x8000]
@@ -255,12 +213,8 @@ class ProcessTest < IntegrationTest
     # Tests:
     # * That the pspawn syscall allows for spawning two processes concurrently.
     def test_pspawn_two_processes
-        compile_test_code(["kernel/integration_test/test_pspawn_two_processes.c"], "test_pspawn_two_processes.bin")
-
-        start_instance("test_pspawn_two_processes.bin")
-
         # Get symbols.
-        prog_symbols = Zemu::Debug.load_map("test_pspawn_two_processes.map")
+        prog_symbols = load_test_map()
         val_addr = prog_symbols.find_by_name("_ret").address
 
         # Then continue. Both processes should run concurrently

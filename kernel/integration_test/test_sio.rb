@@ -5,10 +5,6 @@ require_relative 'base'
 class SIOTest < IntegrationTest
     # Tests that calling the swrite syscall writes characters to the serial output.
     def test_swrite
-        compile_test_code(["kernel/integration_test/test_swrite.c"], "test_swrite.bin")
-
-        start_instance("test_swrite.bin")
-
         output_string = ""
 
         12.times do
@@ -34,10 +30,6 @@ class SIOTest < IntegrationTest
 
     # Tests that calling the swrite syscall can write a single character to the serial output.
     def test_swrite_one
-        compile_test_code(["kernel/integration_test/test_swrite_one.c"], "test_swrite_one.bin")
-
-        start_instance("test_swrite_one.bin")
-
         @instance.continue 2000
         
         # Should have halted.
@@ -50,10 +42,6 @@ class SIOTest < IntegrationTest
 
     # Tests that calling the sread syscall reads characters from the serial output.
     def test_sread
-        compile_test_code(["kernel/integration_test/test_sread.c"], "test_sread.bin")
-
-        start_instance("test_sread.bin")
-
         # Send serial string.
         input_string = "hello"
         
@@ -75,10 +63,6 @@ class SIOTest < IntegrationTest
 
     # Tests that calling the sread syscall reads characters from the serial output.
     def test_sread_multiple
-        compile_test_code(["kernel/integration_test/test_sread_gets.c"], "test_sread_gets.bin")
-
-        start_instance("test_sread_gets.bin")
-
         # Send serial string.
         input_string = "hello\n"
         
@@ -104,10 +88,6 @@ class SIOTest < IntegrationTest
 
     # Tests that the break command is received correctly.
     def test_sbreak
-        compile_test_code(["kernel/integration_test/test_sbreak.c"], "test_sbreak.bin")
-
-        start_instance("test_sbreak.bin")
-
         # Run for a little bit - we expect not to halt.
         @instance.continue 10000
         assert !@instance.halted?, "Program halted unexpectedly."
@@ -126,10 +106,6 @@ class SIOTest < IntegrationTest
     # Tests that the break command is interpreted as a byte when serial port
     # is in binary mode.
     def test_smode_binmode
-        compile_test_code(["kernel/integration_test/test_smode_binmode.c"], "test_smode_binmode.bin")
-
-        start_instance("test_smode_binmode.bin")
-
         # Run for a little bit - we expect not to halt.
         @instance.continue 10000
         assert !@instance.halted?, "Program halted unexpectedly."

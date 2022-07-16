@@ -6,10 +6,6 @@ class FileHandlingTest < IntegrationTest
     # Tests that calling the fentries syscall when there are no files on disk
     # returns zero.
     def test_fentries_empty
-        compile_test_code(["kernel/integration_test/test_fentries_empty.c"], "test_fentries_empty.bin")
-
-        start_instance("test_fentries_empty.bin")
-
         @instance.continue 100000
 
         # Should have halted at 0x8008.
@@ -24,10 +20,6 @@ class FileHandlingTest < IntegrationTest
     # Tests that calling the fentries syscall when there are some files on disk
     # returns the number of files.
     def test_fentries_some_files
-        compile_test_code(["kernel/integration_test/test_fentries_some_files.c"], "test_fentries_some_files.bin")
-
-        start_instance("test_fentries_some_files.bin")
-
         @instance.continue 500000
 
         # Should have halted at 0x8008.
