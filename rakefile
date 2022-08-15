@@ -356,6 +356,169 @@ namespace 'test' do
     end
 end
 
+class Function
+    attr_reader :addr, :size, :label, :mod
+
+    def initialize(addr, size, label, mod)
+        @addr = addr
+        @size = size
+        @label = label
+        @mod = mod
+
+        @instrs = []
+        @coverage = {}
+    end
+
+    def span
+        (@addr...@addr+@size)
+    end
+
+    def num_instrs
+        @instrs.size
+    end
+
+    def num_covered
+        @instrs.select { |i| !@coverage[i].nil? }.size
+    end
+
+    def add_instr(address)
+        if !span.include? address
+            raise "#{address.to_s(16)} is not in range of function span #{span}"
+        end
+
+        @instrs << address unless @instrs.include? address
+    end
+
+    def add_coverage(address)
+        if !span.include? address
+            raise "#{address.to_s(16)} is not in range of function span #{span}"
+        end
+
+        # Increment the number of times we've seen this address.
+        if @coverage[address].nil?
+            @coverage[address] = 1
+        else
+            @coverage[address] += 1
+        end
+    end
+
+    def coverage
+        (num_covered.to_f / num_instrs.to_f) * 100
+    end
+end
+
+desc 'Generate kernel coverage report'
+task 'coverage' => ['build:kernel_debug', 'test:kernel:integration'] do
+    # Get addresses in disassembly
+    disassembly_addrs = []
+    File.open("kernel_debug.diss") do |f|
+        f.each_line do |l|
+            if /;\[([0-9A-Fa-f]{4})\]/ =~ l
+                addr = $1.to_i(16)
+                disassembly_addrs << addr
+            end
+        end
+    end
+
+    # Parse map file and get a list of functions with their start address and size,
+    # plus module if present.
+    functions = []
+    File.open("kernel_debug.map") do |f|
+        prev_addr = 0
+        prev_name = "reset"
+        prev_module = nil
+
+        f.each_line do |l|
+            if /^[0-9A-Fa-f]{8}\s+\S+/ =~ l.strip
+                l = l.split
+                addr = l[0].to_i(16)
+
+                # Skip over labels
+                next if l[1].start_with?("._") || l[1].start_with?("s_") || l[1].start_with?("l_")
+
+                # Skip over data
+                next if addr >= 0x6000
+
+                # Add an entry for the previous function now that we know its size.
+                functions << Function.new(prev_addr, addr - prev_addr, prev_name, prev_module)
+                
+                prev_addr = addr
+                prev_name = l[1]
+                prev_module = l[2]
+            end
+        end
+
+        # Add the final function.
+        functions << Function.new(prev_addr, (disassembly_addrs[-1]+1) - prev_addr, prev_name, prev_module)
+    end
+
+    # Figure out each instruction in each function.
+    disassembly_addrs.each do |addr|
+        # Find the function this address exists in.
+        funcs_for_addr = functions.select { |f| f.span.include? addr }
+        if funcs_for_addr.size != 1
+            raise "No function for address: #{addr.to_s(16)}"
+        end
+
+        funcs_for_addr[0].add_instr(addr)
+    end
+
+    # Parse generated coverage files to figure out which addresses we've hit.
+    # We keep track of the number of times we see each address, so we could create
+    # a heatmap if we want to.
+    coverage_addresses = {}
+    Dir.glob('*.coverage').each do |cov|
+        File.open(cov) do |f|
+            f.each_line do |l|
+                if /\$([0-9A-Fa-f]{4})/ =~ l
+                    addr = $1.to_i(16)
+
+                    # Find the function this address exists in.
+                    funcs_for_addr = functions.select { |f| f.span.include? addr }
+                    if funcs_for_addr.size > 1
+                        raise "Multiple functions for address: #{addr.to_s(16)}"
+                    end
+
+                    if funcs_for_addr.size == 1
+                        funcs_for_addr[0].add_coverage(addr)
+                    end
+                end
+            end
+        end
+    end
+
+    # Calculate the number of addresses in the program we see in tests.
+    num_instrs = functions.map { |f| f.num_instrs }.reduce(:+)
+    num_covered = functions.map { |f| f.num_covered }.reduce(:+)
+
+    # Print a coverage percentage.
+    percentage = (num_covered.to_f / num_instrs.to_f) * 100
+    puts "Coverage: #{percentage.round(2)}%\n"
+
+    # Get modules that aren't nil.
+    modules = functions.map { |f| f.mod }.uniq
+
+    modules.each do |mod|
+        next if mod.nil?
+
+        mod_functions = functions.select { |f| f.mod == mod }.sort_by { |f| f.coverage }
+
+        # Print coverage report for the module.
+        puts "Module '#{mod}':"
+        mod_functions.each do |f|
+            puts "    %-35s %2.2f%%" % [f.label, f.coverage]
+        end
+        puts ""
+    end
+
+    nil_functions = functions.select { |f| f.mod.nil? }.sort_by { |f| f.coverage }
+    puts "Other functions:"
+    nil_functions.each do |f|
+        puts "    %-35s %2.2f%%" % [f.label, f.coverage]
+    end
+    puts ""
+end
+
 namespace 'benchmark' do
     desc "Run kernel benchmarks"
     task 'kernel' => "build:kernel_debug" do

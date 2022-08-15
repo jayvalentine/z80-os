@@ -43,7 +43,17 @@ class IntegrationTest < Minitest::Test
             log("test:           #{test_time}s")
         end
 
-        @instance.quit unless @instance.nil?
+        # Get instructions executed by the test.
+        unless @instance.nil?
+            File.open("#{@test_name}.coverage", "w+") do |f|
+                @instance.addrs.each do |a|
+                    f.puts ("$%04x" % a)
+                end
+            end
+
+
+            @instance.quit
+        end
     end
 
     def compile(test_files, output_name, crt0, address)

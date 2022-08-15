@@ -18,3 +18,7 @@ bin/
 *.log
 
 **/unit_test/main.c
+
+# Coverage files
+*.coverage
+
