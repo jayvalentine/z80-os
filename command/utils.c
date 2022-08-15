@@ -1,4 +1,4 @@
-#include <stddef.h>
+#include <stdint.h>
 
 /* In-place "upper-cases" the given string. */
 void utils_toupper(char * s)

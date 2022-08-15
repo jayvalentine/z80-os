@@ -13,7 +13,7 @@ load '../z80-libraries/tasks.rake'
 CLEAN.include("**/*.noi", "**/*.lk", "**/*.rst", "**/*.rel", "**/*.lst", "**/*.o", "**/*.bin", "**/*.hex", "**/*.diss", "**/*.lib", "**/*.lis", "**/*.map", "**/*.sym", "**/*.exe")
 
 rule ".rel" => ".c" do |task|
-    cmd = "sdcc -c -mz80 --opt-code-speed "
+    cmd = "sdcc -c -mz80 --opt-code-speed --std-sdcc99 "
     cmd += "-o\"#{task.name}\" "
     cmd += "-I#{File.dirname(task.source)} "
     cmd += "-I#{LIB_INCLUDE} "
@@ -31,7 +31,7 @@ rule ".rel" => ".asm" do |task|
 end
 
 def compile_sdcc(output_name, object_files, crt0, code_seg, data_seg)
-    cmd = "sdcc -mz80 --opt-code-speed "
+    cmd = "sdcc -mz80 --opt-code-speed --std-sdcc99 "
     cmd += "--no-std-crt0 "
     cmd += "-Wl-b_CODE=0x#{code_seg.to_s(16)} "
     cmd += "-Wl-b_DATA=0x#{data_seg.to_s(16)} "
@@ -343,7 +343,7 @@ namespace 'test' do
     namespace 'kernel' do
         desc "Run kernel integration tests"
         Rake::TestTask.new 'integration' => ["build:kernel_debug", "kernel/integration_test/reset.rel", "lib:process_crt0"] do |t|
-            t.test_files = FileList['kernel/integration_test/test_*.rb']
+            t.test_files = FileList['kernel/integration_test/test_*.rb'].exclude('kernel/integration_test/test_helper.rb')
         end
 
         desc "Run kernel unit tests"

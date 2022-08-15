@@ -1,5 +1,6 @@
 require 'minitest/autorun'
 require_relative 'base'
+require_relative 'test_helper'
 
 class BootTest < IntegrationTest
     def test_boot

@@ -1,5 +1,8 @@
 require 'minitest/test'
+
 require 'fileutils'
+require 'benchmark'
+require 'time'
 
 require_relative '../../../zemu/lib/zemu'
 require_relative '../../../z80-libraries/vars.rb'
@@ -7,17 +10,40 @@ require_relative '../../../z80-libraries/vars.rb'
 require_relative '../../zemu/config'
 
 class IntegrationTest < Minitest::Test
+    def log(message)
+        File.open("#{@test_name}.log", "a") do |f|
+            f.puts message
+        end
+    end
+
     def setup
         @test_name = @NAME
 
-        # Compile code for the test case.
-        Dir.chdir("kernel/integration_test/#{@test_name}") do
-            source_files = Dir.glob("*.c") + Dir.glob("*.asm")
-            compile_test_code(source_files, "test.bin")
+        File.open("#{@test_name}.log", "w+") do |f|
+            f.puts "Log for #{@test_name}"
         end
 
+        # Compile code for the test case.
+        compile_time = Benchmark.realtime do
+            source_files = Dir.glob("kernel/integration_test/#{@test_name}/*.c") + Dir.glob("kernel/integration_test/#{@test_name}/*.asm")
+            compile_test_code(source_files, "kernel/integration_test/#{@test_name}/#{@test_name}.bin")
+        end
+
+        log("compile:        #{compile_time}s")
+
         # Start an instance of the compiled test binary.
-        start_instance("kernel/integration_test/#{@test_name}/test.bin")
+        start_instance("kernel/integration_test/#{@test_name}/#{@test_name}.bin")
+
+        @test_start_time = Time.now
+    end
+
+    def teardown
+        unless @test_start_time.nil?
+            test_time = Time.now - @test_start_time
+            log("test:           #{test_time}s")
+        end
+
+        @instance.quit unless @instance.nil?
     end
 
     def compile(test_files, output_name, crt0, address)
@@ -38,7 +64,7 @@ class IntegrationTest < Minitest::Test
             else
                 obj = File.basename(t, ".c") + ".rel"
                 
-                cmd = "sdcc -mz80 -c "
+                cmd = "sdcc -mz80 -c --std-sdcc99 "
                 cmd += "-I#{LIB_INCLUDE} "
                 cmd += "-o #{obj} "
                 cmd += t
@@ -68,7 +94,7 @@ class IntegrationTest < Minitest::Test
     end
     
     def compile_test_code(test_files, output_name)
-        compile(test_files, output_name, "../reset.rel", 0x8000)
+        compile(test_files, output_name, "kernel/integration_test/reset.rel", 0x8000)
     end
 
     def compile_user_code(address)
@@ -86,9 +112,19 @@ class IntegrationTest < Minitest::Test
         disk_file_name = "#{binary_name}_disk.bin"
         FileUtils.cp "kernel/integration_test/disk.img", disk_file_name
 
-        conf = zemu_config(binary_name, binary, disk_file_name)
+        conf = nil
+        create_config_time = Benchmark.realtime do
+            conf = zemu_config(binary_name, binary, disk_file_name)
+        end
 
-        @instance = Zemu.start(conf, TEST: 1)
+        log("create config:  #{create_config_time}s")
+
+        start_instance_time = Benchmark.realtime do
+            @instance = Zemu.start(conf, TEST: 1)
+        end
+
+        log("start instance: #{start_instance_time}s")
+
         @instance.device("status").display_off
         @instance.device("timer").display_off
         @instance.device("banked_ram").display_off
@@ -129,10 +165,6 @@ class IntegrationTest < Minitest::Test
         end
     end
 
-    def teardown
-        @instance.quit unless @instance.nil?
-    end
-
     def get_int16(addr)
         lo = @instance.memory(addr)
         hi = @instance.memory(addr + 1)
@@ -164,7 +196,7 @@ class IntegrationTest < Minitest::Test
     end
 
     def load_test_map()
-        Zemu::Debug.load_map("kernel/integration_test/#{@test_name}/test.map")
+        Zemu::Debug.load_map("#{@test_name}.map")
     end
 
     def load_kernel_map()

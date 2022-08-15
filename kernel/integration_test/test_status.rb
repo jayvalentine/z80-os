@@ -1,5 +1,6 @@
 require 'minitest/autorun'
 require_relative 'base'
+require_relative 'test_helper'
 
 class StatusTest < IntegrationTest
     # Tests that the correct status bit gets set

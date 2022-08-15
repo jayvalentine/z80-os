@@ -32,18 +32,13 @@ class BankedMemory < Displayable
         # 2D array containing memory banks.
         @contents = []
         256.times do |b|
-            @contents << []
+            @contents << {}
         end
 
         super
 
-        # For each bank, pad out to the right
-        # number of bytes.
-        banks.times do |b|
-            bank_size = @contents[b].size
-            (size - bank_size).times do
-                @contents[b] << padding
-            end
+        256.times do |b|
+            @contents[b].default = @padding
         end
     end
 
@@ -57,7 +52,12 @@ class BankedMemory < Displayable
         if args.size == 0
             @contents[bank]
         else
-            @contents[bank] = args[0].clone()
+            h = {}
+            args[0].each_with_index do |v, i|
+                h[i] = v
+            end
+
+            @contents[bank] = h
         end
     end
 
@@ -80,6 +80,9 @@ class BankedMemory < Displayable
         if (addr >= address) && (addr < (address + size))
             offset = addr - address
             value = @contents[@current_bank][offset]
+
+            raise "Value in banked memory should not be nil." if value.nil?
+            
             return value
         end
 
@@ -344,7 +347,7 @@ def zemu_config(instance_name, binary, disk)
 
             padding 0x76
 
-            contents 0, pad(from_binary(binary), 0x8000, 0x76)
+            contents 0, from_binary(binary)
             contents(0)[0x7fff] = 0xf7
             contents(0)[0x7ffe] = 0xec
             

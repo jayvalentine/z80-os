@@ -1,5 +1,6 @@
 require 'minitest/autorun'
 require_relative 'base'
+require_relative 'test_helper'
 
 # Tests for serial input/output.
 class SIOTest < IntegrationTest
@@ -21,7 +22,7 @@ class SIOTest < IntegrationTest
         # Final run, should hit halt.
         @instance.continue 2000
         output_string += @instance.serial_gets(1)
-        @instance.continue 2000
+        @instance.continue 1000
         
         assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
 
@@ -30,7 +31,7 @@ class SIOTest < IntegrationTest
 
     # Tests that calling the swrite syscall can write a single character to the serial output.
     def test_swrite_one
-        @instance.continue 2000
+        @instance.continue 1000
         
         # Should have halted.
         assert @instance.halted?, "Program should have halted."
@@ -50,8 +51,8 @@ class SIOTest < IntegrationTest
             # Send character.
             @instance.serial_puts(input_string[i])
 
-            # Then continue for 5000 cycles.
-            @instance.continue 5000
+            # Then continue for 2000 cycles.
+            @instance.continue 2000
         end
 
         # Should have halted.
@@ -71,8 +72,8 @@ class SIOTest < IntegrationTest
             # Send character.
             @instance.serial_puts(input_string[i])
 
-            # Then continue for 10000 cycles.
-            @instance.continue 5000
+            # Then continue for 3000 cycles.
+            @instance.continue 3000
 
             # Receive character to free up tx buffer for next iteration.
             @instance.serial_gets(1)
@@ -89,14 +90,14 @@ class SIOTest < IntegrationTest
     # Tests that the break command is received correctly.
     def test_sbreak
         # Run for a little bit - we expect not to halt.
-        @instance.continue 10000
+        @instance.continue 2000
         assert !@instance.halted?, "Program halted unexpectedly."
 
         # Send break character - 0x18.
         @instance.serial_puts(0x18.chr)
 
         # Now run and expect to halt.
-        @instance.continue 10000
+        @instance.continue 2000
         assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
 
         # Check return value.
@@ -107,14 +108,14 @@ class SIOTest < IntegrationTest
     # is in binary mode.
     def test_smode_binmode
         # Run for a little bit - we expect not to halt.
-        @instance.continue 10000
+        @instance.continue 2000
         assert !@instance.halted?, "Program halted unexpectedly."
 
         # Send break character - 0x18.
         @instance.serial_puts(0x18.chr)
 
         # Now run and expect to halt.
-        @instance.continue 10000
+        @instance.continue 2000
         assert @instance.halted?, "Program did not halt when expected."
 
         # Check return value.

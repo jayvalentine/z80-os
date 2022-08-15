@@ -1,5 +1,6 @@
 require 'minitest/autorun'
 require_relative 'base'
+require_relative 'test_helper'
 
 # Tests for file handling.
 class FileHandlingTest < IntegrationTest
