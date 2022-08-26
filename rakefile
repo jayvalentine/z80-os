@@ -453,6 +453,7 @@ task 'coverage' => ['build:kernel_debug', 'test:kernel:integration'] do
     end
 
     # Figure out each instruction in each function.
+    functions_by_addr = {}
     disassembly_addrs.each do |addr|
         # Find the function this address exists in.
         funcs_for_addr = functions.select { |f| f.span.include? addr }
@@ -461,6 +462,7 @@ task 'coverage' => ['build:kernel_debug', 'test:kernel:integration'] do
         end
 
         funcs_for_addr[0].add_instr(addr)
+        functions_by_addr[addr] = funcs_for_addr[0]
     end
 
     # Parse generated coverage files to figure out which addresses we've hit.
@@ -474,13 +476,9 @@ task 'coverage' => ['build:kernel_debug', 'test:kernel:integration'] do
                     addr = $1.to_i(16)
 
                     # Find the function this address exists in.
-                    funcs_for_addr = functions.select { |f| f.span.include? addr }
-                    if funcs_for_addr.size > 1
-                        raise "Multiple functions for address: #{addr.to_s(16)}"
-                    end
-
-                    if funcs_for_addr.size == 1
-                        funcs_for_addr[0].add_coverage(addr)
+                    func = functions_by_addr[addr]
+                    unless func.nil?
+                        func.add_coverage(addr)
                     end
                 end
             end
