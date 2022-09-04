@@ -205,12 +205,26 @@ class IntegrationTest < Minitest::Test
         s
     end
 
+    def load_map(path)
+        Zemu::Debug.load_map(path) do |s|
+            s = s.split
+            label = s[1]
+            address = s[0]
+
+            if /^[0-9a-fA-F]+$/ =~ address
+                [label, "0x#{address}"]
+            else
+                nil
+            end
+        end
+    end
+
     def load_test_map()
-        Zemu::Debug.load_map("#{@test_name}.map")
+        load_map("#{@test_name}.map")
     end
 
     def load_kernel_map()
-        Zemu::Debug.load_map("kernel_debug.map")
+        load_map("kernel_debug.map")
     end
 
     def schedule_table

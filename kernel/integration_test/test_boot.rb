@@ -9,7 +9,7 @@ class BootTest < IntegrationTest
     end
 
     def test_boot_invalid_syscall
-        syms = Zemu::Debug.load_map("kernel_debug.map")
+        syms = load_kernel_map()
         sflags_addr = syms.find_by_name("_startup_flags").address
 
         # Startup flags should be 0.
