@@ -40,7 +40,8 @@ class IntegrationTest < Minitest::Test
 
     def teardown
         # Move any generated temp files into the test directory.
-        FileUtils.mv(Dir.glob("#{@test_name}*.*"), @test_dir)
+        FileUtils.mv(Dir.glob("#{@test_name}.*"), @test_dir)
+        FileUtils.mv(Dir.glob("#{@test_name}_user.*"), @test_dir)
 
         unless @test_start_time.nil?
             test_time = Time.now - @test_start_time
