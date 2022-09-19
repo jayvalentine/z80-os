@@ -1,4 +1,5 @@
 #define ZEBRA_LINES 28
+#define ZEBRA_COLUMNS 32
 
 #include <stdio.h>
 #include <stdint.h>
@@ -39,10 +40,13 @@ const uint32_t zebra_pattern[ZEBRA_LINES] =
 
 void zebra_display(void)
 {
+    char zebra_image[(ZEBRA_LINES * ((ZEBRA_COLUMNS * 2) + 2)) + 1];
+    char * zebra_image_ptr = &zebra_image[0];
+
     for (uint8_t i = 0; i < ZEBRA_LINES; i++)
     {
         uint32_t line = zebra_pattern[i];
-        for (uint8_t i = 0; i < 32; i++)
+        for (uint8_t j = 0; j < ZEBRA_COLUMNS; j++)
         {
             if (line == 0)
             {
@@ -51,18 +55,31 @@ void zebra_display(void)
             
             if (line & UPPER_MASK)
             {
-                puts("##");
+                *zebra_image_ptr = '#';
+                zebra_image_ptr++;
+                *zebra_image_ptr = '#';
+                zebra_image_ptr++;
             }
             else
             {
-                puts("  ");
+                *zebra_image_ptr = ' ';
+                zebra_image_ptr++;
+                *zebra_image_ptr = ' ';
+                zebra_image_ptr++;
             }
 
             line <<= 1;
         }
 
-        puts("\r\n");
+        *zebra_image_ptr = '\r';
+        zebra_image_ptr++;
+        *zebra_image_ptr = '\n';
+        zebra_image_ptr++;
     }
+
+    *zebra_image_ptr = '\0';
+
+    puts(zebra_image);
 
     puts("\r\nZeus the Zebra by Katie Buttriss.\r\n\r\n");
 }
