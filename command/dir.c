@@ -6,21 +6,25 @@
 
 int command_dir(char ** argv, size_t argc)
 {
+    argv; argc;
+
     char filename[13];
     FINFO finfo;
 
     uint16_t file_entries = syscall_fentries();
 
+    printf("%u files:\n\r", file_entries);
+
     for (uint16_t f = 0; f < file_entries; f++)
     {
-        int error = syscall_fentry(filename, f);
+        int error = syscall_fentry(&filename[0], f);
         if (error == 0)
         {
             puts("    ");
-            puts(filename);
-            for (uint8_t i = strlen(filename); i < 20; i++) putchar(' ');
+            puts(&filename[0]);
+            for (uint8_t i = strlen(&filename[0]); i < 20; i++) putchar(' ');
 
-            syscall_finfo(filename, &finfo);
+            syscall_finfo(&filename[0], &finfo);
             
             if (finfo.attr & FATTR_SYS)   putchar('s');
             else                          putchar('~');
@@ -37,7 +41,7 @@ int command_dir(char ** argv, size_t argc)
         }
         else
         {
-            printf("    Error in file entry %u: %u\n\r", f, error);
+            printf("    Error in file entry %u: %d\n\r", f, error);
         }
     }
 

@@ -1,6 +1,7 @@
 #define ZEBRA_LINES 28
 
 #include <stdio.h>
+#include <stdint.h>
 
 const uint32_t zebra_pattern[ZEBRA_LINES] =
 {
