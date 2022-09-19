@@ -303,7 +303,7 @@ namespace 'build' do
             success = compile_sdcc("#{builtin_name}.bin", builtin_dependencies, PROCESS_CRT0_OBJ, code_seg, data_seg)
 
             if success
-                system("z88dk-dis -o #{origin_string} #{builtin_name}.bin > #{builtin_name}.diss")
+                system("z88dk-dis -o 0x#{code_seg.to_s(16)} #{builtin_name}.bin > #{builtin_name}.diss")
 
                 # Now make an executable from the binary.
                 File.open("#{builtin_name}.exe", "wb") do |f|
