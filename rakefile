@@ -10,7 +10,23 @@ require_relative 'zemu/config'
 
 load '../z80-libraries/tasks.rake'
 
-CLEAN.include("**/*.noi", "**/*.lk", "**/*.rst", "**/*.rel", "**/*.lst", "**/*.o", "**/*.bin", "**/*.hex", "**/*.diss", "**/*.lib", "**/*.lis", "**/*.map", "**/*.sym", "**/*.exe")
+CLEAN.include(
+    "**/*.noi",
+    "**/*.lk",
+    "**/*.rst",
+    "**/*.rel",
+    "**/*.lst",
+    "**/*.o",
+    "**/*.bin",
+    "**/*.hex",
+    "**/*.diss",
+    "**/*.lib",
+    "**/*.lis",
+    "**/*.map",
+    "**/*.sym",
+    "**/*.exe",
+    "**/*.log",
+    "**/*.coverage")
 
 rule ".rel" => ".c" do |task|
     cmd = "sdcc -c -mz80 --opt-code-speed --std-sdcc99 "
