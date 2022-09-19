@@ -485,7 +485,7 @@ task 'coverage' => ['build:kernel_debug', 'test:kernel:integration'] do
     # We keep track of the number of times we see each address, so we could create
     # a heatmap if we want to.
     coverage_addresses = {}
-    Dir.glob('*.coverage').each do |cov|
+    Dir.glob('**/*.coverage').each do |cov|
         File.open(cov) do |f|
             f.each_line do |l|
                 if /\$([0-9A-Fa-f]{4})/ =~ l

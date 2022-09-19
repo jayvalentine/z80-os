@@ -11,33 +11,37 @@ require_relative '../../zemu/config'
 
 class IntegrationTest < Minitest::Test
     def log(message)
-        File.open("#{@test_name}.log", "a") do |f|
+        File.open("#{@test_dir}/test.log", "a") do |f|
             f.puts message
         end
     end
 
     def setup
         @test_name = @NAME
+        @test_dir = "kernel/integration_test/#{@test_name}"
 
-        File.open("#{@test_name}.log", "w+") do |f|
+        File.open("#{@test_dir}/test.log", "w+") do |f|
             f.puts "Log for #{@test_name}"
         end
 
         # Compile code for the test case.
         compile_time = Benchmark.realtime do
-            source_files = Dir.glob("kernel/integration_test/#{@test_name}/*.c") + Dir.glob("kernel/integration_test/#{@test_name}/*.asm")
-            compile_test_code(source_files, "kernel/integration_test/#{@test_name}/#{@test_name}.bin")
+            source_files = Dir.glob("#{@test_dir}/*.c") + Dir.glob("#{@test_dir}/*.asm")
+            compile_test_code(source_files, "#{@test_dir}/#{@test_name}.bin")
         end
 
         log("compile:        #{compile_time}s")
 
         # Start an instance of the compiled test binary.
-        start_instance("kernel/integration_test/#{@test_name}/#{@test_name}.bin")
+        start_instance("#{@test_dir}/#{@test_name}.bin")
 
         @test_start_time = Time.now
     end
 
     def teardown
+        # Move any generated temp files into the test directory.
+        FileUtils.mv(Dir.glob("#{@test_name}*.*"), @test_dir)
+
         unless @test_start_time.nil?
             test_time = Time.now - @test_start_time
             log("test:           #{test_time}s")
@@ -45,7 +49,7 @@ class IntegrationTest < Minitest::Test
 
         # Get instructions executed by the test.
         unless @instance.nil?
-            File.open("#{@test_name}.coverage", "w+") do |f|
+            File.open("#{@test_dir}/#{@test_name}.coverage", "w+") do |f|
                 @instance.addrs.each do |a|
                     f.puts ("$%04x" % a)
                 end
@@ -108,9 +112,9 @@ class IntegrationTest < Minitest::Test
     end
 
     def compile_user_code(address)
-        test_files = Dir.glob("kernel/integration_test/#{@test_name}/user/*.c")
+        test_files = Dir.glob("#{@test_dir}/user/*.c")
 
-        output_name = "kernel/integration_test/#{@test_name}/user/program.bin"
+        output_name = "#{@test_dir}/user/program.bin"
 
         compile(test_files, output_name, "#{LIB}/process_crt0.rel", address)
     end
@@ -119,7 +123,7 @@ class IntegrationTest < Minitest::Test
         binary_name = File.basename(binary, ".bin")
 
         # Create copy of the "master" disk image for this test case.
-        disk_file_name = "#{binary_name}_disk.bin"
+        disk_file_name = "#{@test_dir}/disk.bin"
         FileUtils.cp "kernel/integration_test/disk.img", disk_file_name
 
         conf = nil
@@ -160,7 +164,7 @@ class IntegrationTest < Minitest::Test
     # This is space reserved in the test code that is then written to disk
     # to be loaded via the pload syscall.
     def load_user_program(address)
-        program = "kernel/integration_test/#{@test_name}/user/program.bin"
+        program = "#{@test_dir}/user/program.bin"
 
         offset = address - 0x8000
         File.open(program, "rb") do |f|
