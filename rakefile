@@ -128,14 +128,14 @@ def unit_test(directory)
     cmd += "-DUNIT_TEST "
     cmd += "-I#{directory} "
     cmd += "-I#{directory}/unit_test/mock "
-    cmd += "-o #{exe_name}.exe "
+    cmd += "-o #{exe_name} "
     cmd += src.join(" ")
     cmd += " #{directory}/unit_test/main.c"
 
     system(cmd)
 
     # Now run tests.
-    if (!system("./#{exe_name}.exe"))
+    if (!system("./#{exe_name}"))
         puts "TESTS FAILED"
     else
         puts "TESTS PASSED"

@@ -273,6 +273,183 @@ int test_file_delete_nonexistent()
     /* Try to delete a non-existent file. */
     int error2 = file_delete("test.txt");
 
+    ASSERT(error2 == E_FILENOTFOUND);
+
+    return 0;
+}
+
+/* Check that file_entry returns the correct filename
+ * with a single file on disk.
+ */
+int test_file_entry()
+{
+    mock_drive_init();
+
+    /* Open new file. */
+    int fd = file_open("test.txt", FMODE_WRITE);
+
+    ASSERT(fd == 0);
+
+    /* Close new file. */
+    file_close(fd);
+
+    /* Check that file_entry returns the right filename. */
+    char filename[20];
+    int e = file_entry(filename, 0);
+
+    ASSERT(e == 0);
+    ASSERT_EQUAL_STRING("TEST.TXT", filename);
+
+    return 0;
+}
+
+/* Check that file_entry returns the correct filename
+ * with multiple files on disk.
+ */
+int test_file_entry_multiple()
+{
+    mock_drive_init();
+
+    /* Open new file. */
+    int fd = file_open("test.txt", FMODE_WRITE);
+
+    ASSERT(fd == 0);
+
+    /* Close new file. */
+    file_close(fd);
+
+    /* Open new file. */
+    int fd2 = file_open("test2.log", FMODE_WRITE);
+
+    ASSERT(fd2 == 0);
+
+    /* Close new file. */
+    file_close(fd2);
+
+    /* Check that file_entry returns the right filename. */
+    char filename[20];
+
+    int e = file_entry(filename, 0);
+
+    ASSERT(e == 0);
+    ASSERT_EQUAL_STRING("TEST.TXT", filename);
+
+    int e2 = file_entry(filename, 1);
+
+    ASSERT(e2 == 0);
+    ASSERT_EQUAL_STRING("TEST2.LOG", filename);
+
+    return 0;
+}
+
+/* Check that file_entry returns an error with an
+ * out-of-bounds number.
+ */
+int test_file_entry_nonexistent()
+{
+    mock_drive_init();
+
+    /* Open new file. */
+    int fd = file_open("test.txt", FMODE_WRITE);
+
+    ASSERT(fd == 0);
+
+    /* Close new file. */
+    file_close(fd);
+
+    /* Check that file_entry returns the right filename. */
+    char filename[20];
+    int e = file_entry(filename, 1);
+
+    ASSERT(e == E_FILENOTFOUND);
+
+    return 0;
+}
+
+/* Tests with multiple files on disk, checking that the results of file_entry
+ * are correct for all of them.
+ */
+int test_file_entry_check_all()
+{
+    int fd;
+    int e;
+    char filename[20];
+
+    mock_drive_init();
+
+    fd = file_open("afile.txt", FMODE_WRITE);
+    file_close(fd);
+
+    fd = file_open("file2.log", FMODE_WRITE);
+    file_close(fd);
+
+    fd = file_open("nextfile.asm", FMODE_WRITE);
+    file_close(fd);
+    
+    /* Check names of files returned by fentry syscall. */
+    e = file_entry(filename, 0);
+    ASSERT_EQUAL_INT(0, e);
+    ASSERT_EQUAL_STRING("AFILE.TXT", filename);
+
+    e = file_entry(filename, 1);
+    ASSERT_EQUAL_INT(0, e);
+    ASSERT_EQUAL_STRING("FILE2.LOG", filename);
+
+    e = file_entry(filename, 2);
+    ASSERT_EQUAL_INT(0, e);
+    ASSERT_EQUAL_STRING("NEXTFILE.ASM", filename);
+    
+    /* Should return an error
+     * because there are only three files on disk. */
+    e = file_entry(filename, 3);
+    ASSERT_EQUAL_INT(E_FILENOTFOUND, e);
+    
+    /* Test passed. */
+    return 0;
+}
+
+/* Check that file_entries returns the correct number of files.
+ */
+int test_file_entries()
+{
+    mock_drive_init();
+
+    ASSERT(0 == file_entries());
+
+    /* Open new file. */
+    int fd = file_open("test.txt", FMODE_WRITE);
+
+    ASSERT(fd == 0);
+
+    /* Close new file. */
+    file_close(fd);
+
+    ASSERT(1 == file_entries());
+
+    /* Open new file. */
+    int fd2 = file_open("test2.txt", FMODE_WRITE);
+
+    ASSERT(fd2 == 0);
+
+    /* Close new file. */
+    file_close(fd2);
+
+    /* Open new file. */
+    int fd3 = file_open("test3.txt", FMODE_WRITE);
+
+    ASSERT(fd3 == 0);
+
+    /* Close new file. */
+    file_close(fd3);
+
+    ASSERT(3 == file_entries());
+
+    /* Delete a file. */
+    int e = file_delete("test2.txt");
+    ASSERT(0 == e);
+
+    ASSERT(2 == file_entries());
+
     return 0;
 }
 

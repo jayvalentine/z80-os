@@ -73,7 +73,7 @@ tok_size_t t_alloc_size(const tok_t * toks)
     return size + 1;
 }
 
-t_list_t t_list[NUM_TOKS] =
+const t_list_t t_list[NUM_TOKS] =
 {
     t_terminator_list,
     t_string_list,
@@ -93,7 +93,7 @@ const tok_t * t_defs_list(const tok_t * toks)
     return t_list[tok_type](toks);
 }
 
-t_size_t t_size[NUM_TOKS] =
+const t_size_t t_size[NUM_TOKS] =
 {
     t_terminator_size,
     t_string_size,

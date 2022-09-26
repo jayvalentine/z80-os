@@ -4,7 +4,7 @@
     if (test_name())                    \
     {                                   \
         printf("\n" #test_name " X (line %d)\n", failed_line);   \
-        return 1;                       \
+        error = 1;                      \
     }                                   \
     else printf(".")
 
@@ -16,9 +16,10 @@ int <%= t %>();
 
 int main(void)
 {
+    int error = 0;
 <% tests.each do |t| %>
     RUN_TEST(<%= t %>);
 <% end %>
     printf("\n");
-    return 0;
+    return error;
 }

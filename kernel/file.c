@@ -307,7 +307,7 @@ int filesystem_mark_directory_entry_free(const char * filename)
                 /* We've found the file! */
                 /* Put 0xe5 in the first character of the filename to mark
                  * this entry as free. */
-                temp_sector[f] = (char)0xe5;
+                temp_sector[f] = 0xe5u;
                 disk_write(temp_sector, sector);
                 done = TRUE;
                 break;
@@ -1007,7 +1007,7 @@ uint16_t file_entries()
             if (temp_sector[f] == 0) return entries;
 
             /* If the first byte is e5, this entry is free, so we should skip it. */
-            if (temp_sector[f] == 0xe5) continue;
+            if (temp_sector[f] == (char)0xe5) continue;
 
             /* Otherwise this could be a file.
              * Read the attribute bytes to find out. */
@@ -1047,7 +1047,7 @@ int file_entry(char * s, uint16_t entry)
             if (temp_sector[f] == 0) return E_FILENOTFOUND;
 
             /* If the first byte is e5, this entry is free, so we should skip it. */
-            if (temp_sector[f] == 0xe5) continue;
+            if (temp_sector[f] == (char)0xe5) continue;
 
             /* Otherwise this could be a file.
              * Read the attribute bytes to find out. */

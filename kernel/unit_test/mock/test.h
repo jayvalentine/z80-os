@@ -33,3 +33,15 @@ extern int failed_line;
         return 1;                                       \
     }                                                   \
 } while (0)
+
+#define ASSERT_EQUAL_STRING(expected, actual) do           \
+{                                                       \
+    failed_line = __LINE__;                             \
+    if (strcmp(expected, actual) != 0)                  \
+    {                                                   \
+        printf("\nexpected: %s actual: %s",             \
+            expected,                                   \
+            actual);                                    \
+        return 1;                                       \
+    }                                                   \
+} while (0)

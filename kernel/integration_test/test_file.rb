@@ -9,9 +9,7 @@ class FileHandlingTest < IntegrationTest
     def test_fentries_empty
         @instance.continue 100000
 
-        # Should have halted at 0x8008.
-        assert @instance.halted?, "Instance did not halt (at address 0x#{@instance.registers["PC"].to_s(16)})"
-        assert_equal 0x8008, @instance.registers["PC"]
+        assert_program_finished()
 
         # Main function should have returned 0, as that's the result
         # of the fentries call.
@@ -23,12 +21,21 @@ class FileHandlingTest < IntegrationTest
     def test_fentries_some_files
         @instance.continue 500000
 
-        # Should have halted at 0x8008.
-        assert @instance.halted?, "Instance did not halt (at address 0x#{@instance.registers["PC"].to_s(16)})"
-        assert_equal 0x8008, @instance.registers["PC"]
+        assert_program_finished()
 
         # Main function should have returned 3, as that's the result
         # of the fentries call.
         assert_equal 3, @instance.registers["HL"]
+    end
+
+    # Tests that the fentry syscall returns the right filename.
+    def test_fentry
+        @instance.continue 500000
+
+        assert_program_finished()
+
+        # Main function should have returned 0.
+        # Non-zero values are returned when the test code fails.
+        assert_equal 0, @instance.registers["HL"]
     end
 end
