@@ -234,16 +234,18 @@ class IntegrationTest < Minitest::Test
 
     def schedule_table
         #kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
-        addr = 0x6473
+        addr = 0x6474
 
         16.times do |i|
-            base = addr + (i * 5)
+            base = addr + (i * 7)
             state = get_int8(base)
-            pid = get_int16(base+1)
-            exitcode = get_int16(base+3)
+            event = get_int16(base+1)
+            pid = get_int16(base+3)
+            exitcode = get_int16(base+5)
 
             puts "SCHEDULE TABLE #{i}"
             puts "    STATE: %d" % state
+            puts "    EVENT: %d" % event
             puts "    PID:   %d" % pid
             puts "    EXIT:  %d" % exitcode
         end

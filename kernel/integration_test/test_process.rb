@@ -18,6 +18,39 @@ class ProcessTest < IntegrationTest
     end
 
     # Tests:
+    # * That the pexec syscall blocks until the called process completes.
+    def test_pexec_blocking
+        compile_user_code(0x8000)
+        load_user_program(0xc000)
+
+        # Then continue. The test code executes the pexec system call
+        # so we should hit a breakpoint at 0x8000, bank 1.
+        @instance.break 0x8000, :program
+        
+        @instance.continue 10000000
+        
+        assert @instance.break?, "Did not hit breakpoint (at address %04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
+        assert_equal 0x8000, @instance.registers["PC"], "Breakpoint at wrong address."
+        assert_equal 1, @instance.device("banked_ram").bank
+
+        # Clear the bank-switch history.
+        @instance.device("banked_ram").bank_history.clear
+
+        # Continue - user program will not exit. We should stay on bank 1.
+        @instance.continue 1000000
+        assert @instance.device("banked_ram").bank_history.all? { |b| b == 1 }, "Unexpected switch away from bank 1."
+
+        # Send a character - the running program should then complete.
+        @instance.serial_puts("h")
+
+        @instance.continue 1000000
+
+        assert_program_finished
+        assert_equal 42, @instance.registers["HL"], "Wrong return value."
+        assert_equal 0, @instance.device("banked_ram").bank
+    end
+
+    # Tests:
     # * That calling pexec syscall executes code in user memory.
     # * Tests with a different address to the "normal" user code address
     #   to ensure we can call user code at different addresses.

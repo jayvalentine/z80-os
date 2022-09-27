@@ -8,6 +8,7 @@
 typedef struct _ScheduleTableEntry_T
 {
     TaskState_T state;
+    EventType_T blocking_event;
     int pid;
     int exitcode;
 } ScheduleTableEntry_T;
@@ -55,12 +56,34 @@ int scheduler_entry(int pid)
     return -1;
 }
 
+/* Helper function to broadcast an event to all tasks except one with a given ID. */
+void scheduler_broadcast_event(EventType_T event, int exclude_pid)
+{
+    for (int i = 0; i < MAX_SCHEDULED; i++)
+    {
+        /* We are only interested in tasks which:
+         *     * Are not the task being excluded from broadcast
+         *     * Are in the BLOCKED state
+         *     * Are blocked on the event being broadcast
+         *
+         * All other tasks are ignored.
+         */
+        if (schedule_table[i].pid == exclude_pid) continue;
+        if (schedule_table[i].state != TASK_BLOCKED) continue;
+        if (schedule_table[i].blocking_event != event) continue;
+        
+        schedule_table[i].state = TASK_READY;
+        schedule_table[i].blocking_event = EVENT_NO_EVENT;
+    }
+}
+
 int scheduler_add(int pid)
 {
     int s = scheduler_allocate();
     if (s < 0) return E_TOO_MANY_TASKS;
 
     schedule_table[s].state = TASK_READY;
+    schedule_table[s].blocking_event = EVENT_NO_EVENT;
     schedule_table[s].pid = pid;
 
     num_scheduled++;
@@ -79,6 +102,9 @@ void scheduler_exit(int pid, int exitcode)
     int s = scheduler_entry(pid);
     schedule_table[s].state = TASK_FINISHED;
     schedule_table[s].exitcode = exitcode;
+
+    /* A process has completed - broadcast an event. */
+    scheduler_broadcast_event(EVENT_PROCESS_FINISHED, pid);
 }
 
 int scheduler_exitcode(int pid)
@@ -119,4 +145,58 @@ uint8_t scheduler_tick()
     const ProcessDescriptor_T * p = process_info(pid);
 
     return p->bank;
+}
+
+/* scheduler_block_current
+ *
+ * Purpose:
+ *     Blocks the current task on the given event.
+ * 
+ * Parameters:
+ *     Event type
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void scheduler_block_current(EventType_T event)
+{
+    schedule_table[current_scheduled].blocking_event = event;
+    schedule_table[current_scheduled].state = TASK_BLOCKED;
+}
+
+/* scheduler_block
+ *
+ * Purpose:
+ *     Indicates that the task with given Process ID should
+ *     be blocked on a particular event.
+ * 
+ * Parameters:
+ *     Process ID
+ *     Event type
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void scheduler_block(int pid, EventType_T event)
+{
+    int s = scheduler_entry(pid);
+    schedule_table[s].blocking_event = event;
+    schedule_table[s].state = TASK_BLOCKED;
+}
+
+/* scheduler_event
+ *
+ * Purpose:
+ *     Returns the event a given task is waiting on.
+ * 
+ * Parameters:
+ *     Process ID of task
+ * 
+ * Returns:
+ *     Event type.
+ */
+EventType_T scheduler_event(int pid)
+{
+    int s = scheduler_entry(pid);
+    return schedule_table[s].blocking_event;
 }

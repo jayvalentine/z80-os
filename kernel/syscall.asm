@@ -27,36 +27,37 @@ _syscall_table:
     .word   _driver_6850_tx         ; swrite
     .word   _do_sread               ; sread
 
-    ; DREAD, #DWRITE no longer supported.
+    ; DREAD, DWRITE no longer supported.
     .word   __invalid_syscall
     .word   __invalid_syscall
 
-    .word   _file_open              ; fopen
-    .word   _file_read              ; fread
-    .word   _file_write             ; fwrite
-    .word   _file_close             ; fclose
+    .word   _file_open               ; fopen
+    .word   _file_read               ; fread
+    .word   _file_write              ; fwrite
+    .word   _file_close              ; fclose
 
-    .word   _do_dinfo               ; dinfo
-    .word   _file_info              ; finfo
+    .word   _do_dinfo                ; dinfo
+    .word   _file_info               ; finfo
 
-    .word   _file_entries           ; fentries
-    .word   _file_entry             ; fentry
+    .word   _file_entries            ; fentries
+    .word   _file_entry              ; fentry
 
-    .word   _process_spawn          ; pspawn
+    .word   _process_spawn           ; pspawn
 
-    .word   _signal_sethandler      ; sighandle
+    .word   _signal_sethandler       ; sighandle
 
-    .word   _file_delete            ; fdelete
+    .word   _file_delete             ; fdelete
     
-    .word   _process_load           ; pload
+    .word   _process_load            ; pload
 
-    .word   _serial_mode            ; smode
+    .word   _serial_mode             ; smode
 
-    .word   _do_sysinfo             ; sysinfo
+    .word   _do_sysinfo              ; sysinfo
 
-    .word   _scheduler_state        ; pstate
-    .word   _do_pexit               ; pexit
-    .word   _scheduler_exitcode     ; pexitcode
+    .word   _scheduler_state         ; pstate
+    .word   _do_pexit                ; pexit
+    .word   _scheduler_exitcode      ; pexitcode
+    .word   _scheduler_block_current ; pblock
 
     .globl  _syscall_handler
 
@@ -258,7 +259,7 @@ __sysinfo_numbanks:
     .word   #0
 
 __kernel_version:
-    .asciz  "0.4.0"
+    .asciz  "0.5.0"
 
 __test:
     .asciz  "CANCEL handler: #0b04x\n\r"
