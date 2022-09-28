@@ -58,6 +58,20 @@ int scheduler_add(int pid);
  */
 int scheduler_next(void);
 
+/* scheduler_tick
+ *
+ * Purpose:
+ *     Performs one tick of the scheduler, advancing
+ *     to the next available task.
+ * 
+ * Parameters:
+ *     None.
+ * 
+ * Returns:
+ *     Memory bank to be selected for new process.
+ */
+uint8_t scheduler_tick(void);
+
 /* scheduler_exit
  *
  * Purpose:

@@ -164,3 +164,46 @@ int test_schedule_wait_process()
 
     return 0;
 }
+
+/* Tests that the right event occurring transitions
+ * a task from WAITING to READY when waiting on EVENT_PROCESS_FINISHED
+ * and a process finishes.
+ */
+int test_schedule_transition_from_waiting_process_finished()
+{
+    scheduler_init();
+
+    scheduler_add(5);
+    scheduler_add(6);
+
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(5));
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(6));
+
+    scheduler_tick();
+
+    /* PID 5 should now be executing, 6 ready. */
+    ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(5));
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(6));
+
+    scheduler_wait(5, EVENT_PROCESS_FINISHED);
+
+    /* PID 5 should now be waiting, 6 ready. */
+    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(5));
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(6));
+
+    /* PID 6 should now be executing. */
+    scheduler_tick();
+
+    /* PID 5 should now be waiting, 6 running. */
+    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(5));
+    ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(6));
+
+    /* PID 6 finishes, should broadcast event. */
+    scheduler_exit(6, 42);
+
+    /* PID 5 should now be ready, 6 finished. */
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(5));
+    ASSERT_EQUAL_INT(TASK_FINISHED, scheduler_state(6));
+
+    return 0;
+}
