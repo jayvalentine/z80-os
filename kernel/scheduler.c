@@ -56,6 +56,27 @@ int scheduler_entry(int pid)
     return -1;
 }
 
+/* Helper function to broadcast an event to all tasks except one with a given ID. */
+int scheduler_broadcast_event(EventType_T event, int exclude_pid)
+{
+    for (int i = 0; i < MAX_SCHEDULED; i++)
+    {
+        /* We are only interested in tasks which:
+         *     * Are not the task being excluded from broadcast
+         *     * Are in the WAITING state
+         *     * Are waiting on the event being broadcast
+         *
+         * All other tasks are ignored.
+         */
+        if (schedule_table[i].pid == exclude_pid) continue;
+        if (schedule_table[i].state != TASK_WAITING) continue;
+        if (schedule_table[i].waiting_event != event) continue;
+        
+        schedule_table[i].state = TASK_READY;
+        schedule_table[i].waiting_event = EVENT_NO_EVENT;
+    }
+}
+
 int scheduler_add(int pid)
 {
     int s = scheduler_allocate();
@@ -81,6 +102,9 @@ void scheduler_exit(int pid, int exitcode)
     int s = scheduler_entry(pid);
     schedule_table[s].state = TASK_FINISHED;
     schedule_table[s].exitcode = exitcode;
+
+    /* A process has completed - broadcast an event. */
+    scheduler_broadcast_event(EVENT_PROCESS_FINISHED, pid);
 }
 
 int scheduler_exitcode(int pid)
