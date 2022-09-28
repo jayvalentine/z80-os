@@ -207,3 +207,61 @@ int test_schedule_transition_from_waiting_process_finished()
 
     return 0;
 }
+
+/* Tests that waiting tasks do not get scheduled.
+ * Also tests that a task does get scheduled once it is no longer waiting.
+ */
+int test_schedule_task_not_scheduled_when_waiting(void)
+{
+    scheduler_init();
+
+    scheduler_add(14);
+    scheduler_add(52);
+
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(52));
+
+    scheduler_tick();
+
+    /* PID 14 should now be executing, 52 ready. */
+    ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(52));
+
+    scheduler_wait(14, EVENT_PROCESS_FINISHED);
+
+    /* PID 14 should now be waiting, 52 ready. */
+    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(52));
+
+    /* PID 52 should now be executing. */
+    scheduler_tick();
+
+    /* PID 14 should now be waiting, 52 running. */
+    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(52));
+
+    /* Run scheduler for 10 ticks and ensure 14 is never scheduled. */
+    for (int i = 0; i < 10; i++)
+    {
+        scheduler_tick();
+
+        /* PID 14 should now be waiting, 52 running. */
+        ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(14));
+        ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(52));
+    }
+
+    /* PID 52 finishes, should broadcast event. */
+    scheduler_exit(52, 42);
+
+    /* PID 14 should now be ready, 52 finished. */
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_FINISHED, scheduler_state(52));
+
+    scheduler_tick();
+
+    /* PID 14 should now be running, 52 finished. */
+    ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_FINISHED, scheduler_state(52));
+
+    return 0;
+}
