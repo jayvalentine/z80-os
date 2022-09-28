@@ -8,6 +8,7 @@
 typedef struct _ScheduleTableEntry_T
 {
     TaskState_T state;
+    EventType_T waiting_event;
     int pid;
     int exitcode;
 } ScheduleTableEntry_T;
@@ -61,6 +62,7 @@ int scheduler_add(int pid)
     if (s < 0) return E_TOO_MANY_TASKS;
 
     schedule_table[s].state = TASK_READY;
+    schedule_table[s].waiting_event = EVENT_NO_EVENT;
     schedule_table[s].pid = pid;
 
     num_scheduled++;
@@ -119,4 +121,41 @@ uint8_t scheduler_tick()
     const ProcessDescriptor_T * p = process_info(pid);
 
     return p->bank;
+}
+
+/* scheduler_wait
+ *
+ * Purpose:
+ *     Indicates that the task with given Process ID should
+ *     wait on a particular event.
+ * 
+ * Parameters:
+ *     Process ID
+ *     Event type
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void scheduler_wait(int pid, EventType_T event)
+{
+    int s = scheduler_entry(pid);
+    schedule_table[s].waiting_event = event;
+    schedule_table[s].state = TASK_WAITING;
+}
+
+/* scheduler_event
+ *
+ * Purpose:
+ *     Returns the event a given task is waiting on.
+ * 
+ * Parameters:
+ *     Process ID of task
+ * 
+ * Returns:
+ *     Event type.
+ */
+EventType_T scheduler_event(int pid)
+{
+    int s = scheduler_entry(pid);
+    return schedule_table[s].waiting_event;
 }

@@ -144,3 +144,23 @@ int test_schedule_return_status()
 
     return 0;
 }
+
+/* Tests that waiting on an event sets the status
+ * of a task correctly.
+ */
+int test_schedule_wait_process()
+{
+    scheduler_init();
+
+    scheduler_add(9);
+
+    ASSERT_EQUAL_INT(TASK_READY, scheduler_state(9));
+    ASSERT_EQUAL_INT(EVENT_NO_EVENT, scheduler_event(9));
+
+    scheduler_wait(9, EVENT_PROCESS_FINISHED);
+
+    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(9));
+    ASSERT_EQUAL_INT(EVENT_PROCESS_FINISHED, scheduler_event(9));
+
+    return 0;
+}

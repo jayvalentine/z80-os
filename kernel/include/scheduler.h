@@ -11,6 +11,12 @@ typedef int8_t TaskState_T;
 #define TASK_READY    ((TaskState_T)1)
 #define TASK_FINISHED ((TaskState_T)2)
 #define TASK_FREE     ((TaskState_T)3)
+#define TASK_WAITING  ((TaskState_T)4)
+
+typedef uint8_t EventType_T;
+
+#define EVENT_NO_EVENT ((EventType_T)0)
+#define EVENT_PROCESS_FINISHED ((EventType_T)1)
 
 /* scheduler_init
  *
@@ -106,5 +112,33 @@ TaskState_T scheduler_state(int pid);
  *     Task ID.
  */
 int scheduler_current(void);
+
+/* scheduler_wait
+ *
+ * Purpose:
+ *     Indicates that the task with given Process ID should
+ *     wait on a particular event.
+ * 
+ * Parameters:
+ *     Process ID
+ *     Event type
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void scheduler_wait(int pid, EventType_T event);
+
+/* scheduler_event
+ *
+ * Purpose:
+ *     Returns the event a given task is waiting on.
+ * 
+ * Parameters:
+ *     Process ID of task
+ * 
+ * Returns:
+ *     Event type.
+ */
+EventType_T scheduler_event(int pid);
 
 #endif
