@@ -25,9 +25,12 @@ end
 # Banked RAM
 # Memory object.
 class BankedMemory < Displayable
+    attr_reader :bank_history
+    
     # Constructor.
     def initialize
         @current_bank = 0
+        @bank_history = []
 
         # 2D array containing memory banks.
         @contents = []
@@ -110,6 +113,7 @@ class BankedMemory < Displayable
     def io_write(port, value)
         if port == bank_select
             @current_bank = value % banks
+            @bank_history << @current_bank
             log "Bank set to #{@current_bank}"
         end
     end
