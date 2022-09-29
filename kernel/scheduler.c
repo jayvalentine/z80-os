@@ -8,7 +8,7 @@
 typedef struct _ScheduleTableEntry_T
 {
     TaskState_T state;
-    EventType_T waiting_event;
+    EventType_T blocking_event;
     int pid;
     int exitcode;
 } ScheduleTableEntry_T;
@@ -63,17 +63,17 @@ int scheduler_broadcast_event(EventType_T event, int exclude_pid)
     {
         /* We are only interested in tasks which:
          *     * Are not the task being excluded from broadcast
-         *     * Are in the WAITING state
-         *     * Are waiting on the event being broadcast
+         *     * Are in the BLOCKED state
+         *     * Are blocked on the event being broadcast
          *
          * All other tasks are ignored.
          */
         if (schedule_table[i].pid == exclude_pid) continue;
-        if (schedule_table[i].state != TASK_WAITING) continue;
-        if (schedule_table[i].waiting_event != event) continue;
+        if (schedule_table[i].state != TASK_BLOCKED) continue;
+        if (schedule_table[i].blocking_event != event) continue;
         
         schedule_table[i].state = TASK_READY;
-        schedule_table[i].waiting_event = EVENT_NO_EVENT;
+        schedule_table[i].blocking_event = EVENT_NO_EVENT;
     }
 }
 
@@ -83,7 +83,7 @@ int scheduler_add(int pid)
     if (s < 0) return E_TOO_MANY_TASKS;
 
     schedule_table[s].state = TASK_READY;
-    schedule_table[s].waiting_event = EVENT_NO_EVENT;
+    schedule_table[s].blocking_event = EVENT_NO_EVENT;
     schedule_table[s].pid = pid;
 
     num_scheduled++;
@@ -147,11 +147,11 @@ uint8_t scheduler_tick()
     return p->bank;
 }
 
-/* scheduler_wait
+/* scheduler_block
  *
  * Purpose:
  *     Indicates that the task with given Process ID should
- *     wait on a particular event.
+ *     be blocked on a particular event.
  * 
  * Parameters:
  *     Process ID
@@ -160,11 +160,11 @@ uint8_t scheduler_tick()
  * Returns:
  *     Nothing.
  */
-void scheduler_wait(int pid, EventType_T event)
+void scheduler_block(int pid, EventType_T event)
 {
     int s = scheduler_entry(pid);
-    schedule_table[s].waiting_event = event;
-    schedule_table[s].state = TASK_WAITING;
+    schedule_table[s].blocking_event = event;
+    schedule_table[s].state = TASK_BLOCKED;
 }
 
 /* scheduler_event
@@ -181,5 +181,5 @@ void scheduler_wait(int pid, EventType_T event)
 EventType_T scheduler_event(int pid)
 {
     int s = scheduler_entry(pid);
-    return schedule_table[s].waiting_event;
+    return schedule_table[s].blocking_event;
 }

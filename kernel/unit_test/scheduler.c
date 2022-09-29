@@ -157,9 +157,9 @@ int test_schedule_wait_process()
     ASSERT_EQUAL_INT(TASK_READY, scheduler_state(9));
     ASSERT_EQUAL_INT(EVENT_NO_EVENT, scheduler_event(9));
 
-    scheduler_wait(9, EVENT_PROCESS_FINISHED);
+    scheduler_block(9, EVENT_PROCESS_FINISHED);
 
-    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(9));
+    ASSERT_EQUAL_INT(TASK_BLOCKED, scheduler_state(9));
     ASSERT_EQUAL_INT(EVENT_PROCESS_FINISHED, scheduler_event(9));
 
     return 0;
@@ -185,17 +185,17 @@ int test_schedule_transition_from_waiting_process_finished()
     ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(5));
     ASSERT_EQUAL_INT(TASK_READY, scheduler_state(6));
 
-    scheduler_wait(5, EVENT_PROCESS_FINISHED);
+    scheduler_block(5, EVENT_PROCESS_FINISHED);
 
     /* PID 5 should now be waiting, 6 ready. */
-    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(5));
+    ASSERT_EQUAL_INT(TASK_BLOCKED, scheduler_state(5));
     ASSERT_EQUAL_INT(TASK_READY, scheduler_state(6));
 
     /* PID 6 should now be executing. */
     scheduler_tick();
 
     /* PID 5 should now be waiting, 6 running. */
-    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(5));
+    ASSERT_EQUAL_INT(TASK_BLOCKED, scheduler_state(5));
     ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(6));
 
     /* PID 6 finishes, should broadcast event. */
@@ -227,17 +227,17 @@ int test_schedule_task_not_scheduled_when_waiting(void)
     ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(14));
     ASSERT_EQUAL_INT(TASK_READY, scheduler_state(52));
 
-    scheduler_wait(14, EVENT_PROCESS_FINISHED);
+    scheduler_block(14, EVENT_PROCESS_FINISHED);
 
     /* PID 14 should now be waiting, 52 ready. */
-    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_BLOCKED, scheduler_state(14));
     ASSERT_EQUAL_INT(TASK_READY, scheduler_state(52));
 
     /* PID 52 should now be executing. */
     scheduler_tick();
 
     /* PID 14 should now be waiting, 52 running. */
-    ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(14));
+    ASSERT_EQUAL_INT(TASK_BLOCKED, scheduler_state(14));
     ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(52));
 
     /* Run scheduler for 10 ticks and ensure 14 is never scheduled. */
@@ -246,7 +246,7 @@ int test_schedule_task_not_scheduled_when_waiting(void)
         scheduler_tick();
 
         /* PID 14 should now be waiting, 52 running. */
-        ASSERT_EQUAL_INT(TASK_WAITING, scheduler_state(14));
+        ASSERT_EQUAL_INT(TASK_BLOCKED, scheduler_state(14));
         ASSERT_EQUAL_INT(TASK_RUNNING, scheduler_state(52));
     }
 

@@ -11,7 +11,7 @@ typedef int8_t TaskState_T;
 #define TASK_READY    ((TaskState_T)1)
 #define TASK_FINISHED ((TaskState_T)2)
 #define TASK_FREE     ((TaskState_T)3)
-#define TASK_WAITING  ((TaskState_T)4)
+#define TASK_BLOCKED  ((TaskState_T)4)
 
 typedef uint8_t EventType_T;
 
@@ -127,11 +127,11 @@ TaskState_T scheduler_state(int pid);
  */
 int scheduler_current(void);
 
-/* scheduler_wait
+/* scheduler_block
  *
  * Purpose:
  *     Indicates that the task with given Process ID should
- *     wait on a particular event.
+ *     be blocked on a particular event.
  * 
  * Parameters:
  *     Process ID
@@ -140,7 +140,7 @@ int scheduler_current(void);
  * Returns:
  *     Nothing.
  */
-void scheduler_wait(int pid, EventType_T event);
+void scheduler_block(int pid, EventType_T event);
 
 /* scheduler_event
  *
