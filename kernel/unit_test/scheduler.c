@@ -208,7 +208,7 @@ int test_schedule_transition_from_waiting_process_finished()
     return 0;
 }
 
-/* Tests that waiting tasks do not get scheduled.
+/* Tests that blocked tasks do not get scheduled.
  * Also tests that a task does get scheduled once it is no longer waiting.
  */
 int test_schedule_task_not_scheduled_when_waiting(void)
