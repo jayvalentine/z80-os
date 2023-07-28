@@ -57,7 +57,7 @@ int scheduler_entry(int pid)
 }
 
 /* Helper function to broadcast an event to all tasks except one with a given ID. */
-int scheduler_broadcast_event(EventType_T event, int exclude_pid)
+void scheduler_broadcast_event(EventType_T event, int exclude_pid)
 {
     for (int i = 0; i < MAX_SCHEDULED; i++)
     {
