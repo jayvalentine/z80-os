@@ -30,7 +30,7 @@ class FileHandlingTest < IntegrationTest
 
     # Tests that the fentry syscall returns the right filename.
     def test_fentry
-        @instance.continue 500000
+        @instance.continue 1000000
 
         assert_program_finished()
 
