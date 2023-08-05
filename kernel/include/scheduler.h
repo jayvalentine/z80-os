@@ -13,7 +13,7 @@ typedef int8_t TaskState_T;
 #define TASK_FREE     ((TaskState_T)3)
 #define TASK_BLOCKED  ((TaskState_T)4)
 
-typedef uint8_t EventType_T;
+typedef int EventType_T;
 
 #define EVENT_NO_EVENT ((EventType_T)0)
 #define EVENT_PROCESS_FINISHED ((EventType_T)1)

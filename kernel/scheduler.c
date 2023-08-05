@@ -147,6 +147,23 @@ uint8_t scheduler_tick()
     return p->bank;
 }
 
+/* scheduler_block_current
+ *
+ * Purpose:
+ *     Blocks the current task on the given event.
+ * 
+ * Parameters:
+ *     Event type
+ * 
+ * Returns:
+ *     Nothing.
+ */
+void scheduler_block_current(EventType_T event)
+{
+    schedule_table[current_scheduled].blocking_event = event;
+    schedule_table[current_scheduled].state = TASK_BLOCKED;
+}
+
 /* scheduler_block
  *
  * Purpose:
