@@ -23,9 +23,6 @@ class ProcessTest < IntegrationTest
         compile_user_code(0x8000)
         load_user_program(0xc000)
 
-        # Clear the bank-switch history.
-        @instance.device("banked_ram").bank_history.clear
-
         # Then continue. The test code executes the pexec system call
         # so we should hit a breakpoint at 0x8000, bank 1.
         @instance.break 0x8000, :program
@@ -35,6 +32,9 @@ class ProcessTest < IntegrationTest
         assert @instance.break?, "Did not hit breakpoint (at address %04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
         assert_equal 0x8000, @instance.registers["PC"], "Breakpoint at wrong address."
         assert_equal 1, @instance.device("banked_ram").bank
+
+        # Clear the bank-switch history.
+        @instance.device("banked_ram").bank_history.clear
 
         # Continue - user program will not exit. We should stay on bank 1.
         @instance.continue 1000000
