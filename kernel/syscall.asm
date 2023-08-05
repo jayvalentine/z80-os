@@ -259,7 +259,7 @@ __sysinfo_numbanks:
     .word   #0
 
 __kernel_version:
-    .asciz  "0.4.0"
+    .asciz  "0.5.0"
 
 __test:
     .asciz  "CANCEL handler: #0b04x\n\r"
