@@ -66,6 +66,6 @@ const uint8_t * t_string_list(const uint8_t * toks)
         putchar(c);
     }
 
-    puts("\" ");
+    printf("\" ");
     return toks;
 }

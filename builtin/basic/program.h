@@ -63,7 +63,7 @@ error_t program_run(void);
  * Returns:
  *     Integer line number.
  */
-int program_current_lineno(void);
+numeric_t program_current_lineno(void);
 
 /* program_next_lineno
  *
@@ -90,7 +90,7 @@ numeric_t program_next_lineno(void);
  * Returns:
  *     Nothing.
  */
-void program_set_next_lineno(int lineno);
+void program_set_next_lineno(numeric_t lineno);
 
 /* program_set_numeric
  *
@@ -119,6 +119,20 @@ error_t program_set_numeric(const char * name, numeric_t val);
  *     Error, if any.
  */
 error_t program_get_numeric(const char * name, numeric_t * val);
+
+/* program_get_numeric_ref
+ *
+ * Purpose:
+ *     Get a reference to a numeric variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val:  Pointer to populate with reference to variable.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_get_numeric_ref(const char * name, numeric_t ** val);
 
 /* program_create_array
  *

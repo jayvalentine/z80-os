@@ -1,5 +1,11 @@
 #include "t_variable.h"
 
+#include "array.h"
+#include "program.h"
+#include "eval.h"
+
+#include "t_operator.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -116,4 +122,84 @@ void t_variable_get(char * varname, const tok_t * toks)
     toks++;
     memcpy(varname, (const char *)toks, size);
     varname[size] = '\0';
+}
+
+/* t_variable_get_ptr
+ *
+ * Purpose:
+ *     Returns a pointer to the value of a variable
+ *     (scalar or array element) for access.
+ * 
+ * Parameters:
+ *     toks:      Token stream
+ *     next_toks: Populated with pointer to next tok after the variable access.
+ *     ptr:       Pointer with value pointer
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t t_variable_get_ptr(const tok_t * toks, const tok_t ** next_toks, numeric_t ** value)
+{
+    error_t e;
+
+    /* Check that first token is a variable */
+    if (*toks != TOK_VARIABLE) return ERROR_SYNTAX;
+
+    /* Construct variable name string. */
+    char varname[VARNAME_BUF_SIZE];
+    t_variable_get(varname, toks+1);
+
+    /* Get next token. */
+    SKIP(toks);
+
+    /* Is it a left paren?
+     * If so this is an array access.
+     * Otherwise, it's a normal variable.
+     */
+    if (*toks == TOK_OPERATOR && *(toks + 1) == OP_LPAREN)
+    {
+        /* Skip over left paren. */
+        SKIP(toks);
+
+        /* Evaluate a sub-expression to get the index. */
+        numeric_t index;
+        e = eval_numeric(&index, toks);
+        ERROR_HANDLE(e);
+
+        /* Skip ahead to the next right paren (closing the array access) */
+        while (!(*toks == TOK_OPERATOR && *(toks + 1) == OP_RPAREN))
+        {
+            SKIP(toks);
+        }
+
+        /* Skip the right paren */
+        SKIP(toks);
+        
+        /* Get the array. */
+        tok_t * arr;
+        e = program_get_array(varname, &arr);
+        ERROR_HANDLE(e);
+
+        /* Bounds checking of index. */
+        tok_size_t array_size = ARRAY_SIZE(arr);
+        if (index < 1) return ERROR_RANGE;
+        if ((index*sizeof(numeric_t)) > array_size) return ERROR_RANGE;
+
+        /* Set pointer to element in array. */
+        *value = &ARRAY_ACCESS(arr, index);
+        *next_toks = toks;
+        return ERROR_NOERROR;
+    }
+    else
+    {
+        /* Get variable value. */
+        numeric_t * val;
+        e = program_get_numeric_ref(varname, &val);
+        ERROR_HANDLE(e);
+
+        /* Set pointer to variable value */
+        *value = val;
+        *next_toks = toks;
+        return ERROR_NOERROR;
+    }
 }

@@ -163,6 +163,9 @@ int process_load(const char * filename)
     *p-- = 0xf7;
     *p-- = 0xec;
 
+    /* Skip space on stack for register values
+     * (because they don't matter when the process starts)
+     */
     p = (char*)0xf7ff;
 
     /* Set up argv and argc. */

@@ -1,0 +1,116 @@
+#include "t_func.h"
+
+#include "eval.h"
+
+#include "t_operator.h"
+
+#include <string.h>
+#include <stdio.h>
+
+int t_func_parse(tok_t ** dst_ptr, const char ** input_ptr)
+{
+    const char * input = *input_ptr;
+
+    /* Get next whitespace, null, or non-A-Z char. */
+    const char * p = *input_ptr;
+    while (*p != ' ' && *p != '\0' && *p >= 'A' && *p <= 'Z') p++;
+
+    /* Copy function name */
+    char funcname[FUNCNAME_BUF_SIZE];
+    size_t size = (size_t)(p - input);
+    memcpy(funcname, input, size);
+    funcname[size] = '\0';
+
+    /* Check function name. */
+    if (strcmp(funcname, "RND") == 0)
+    {
+        tok_t * dst = *dst_ptr;
+        *dst = TOK_FUNC; dst++;
+        *dst = FUNC_RND; dst++;
+
+        *dst_ptr = dst;
+        *input_ptr = p;
+        
+        return 1;
+    }
+
+    /* Not a function. */
+    return 0;
+}
+
+#define RND_RANGE_MIN 1
+
+uint16_t r;
+
+void srand16(uint16_t seed)
+{
+    r = seed;
+}
+
+numeric_t rand16(void)
+{
+    r ^= r << 7;
+    r ^= r >> 9;
+    r ^= r << 8;
+    return *(numeric_t *)&r;
+}
+
+error_t t_func_call(const tok_t * toks, const tok_t ** end, numeric_t * ret)
+{
+    if (*toks != TOK_FUNC) return ERROR_SYNTAX;
+    toks++;
+
+    if (*toks == FUNC_RND)
+    {
+        toks++;
+        
+        /* Is the next token a left paren?
+         * If so then evaluate the argument.
+         */
+        if (OP_CHECK(toks, OP_LPAREN))
+        {
+            numeric_t param;
+            ERROR_HANDLE(eval_numeric(&param, toks));
+
+            *ret = (numeric_t)(rand16() % (param + 1 - RND_RANGE_MIN) + RND_RANGE_MIN);
+
+            /* Skip to next rparen. */
+            while (!OP_CHECK(toks, OP_RPAREN)) SKIP(toks);
+
+            /* Skip the rparen, set pointer to token after call. */
+            SKIP(toks);
+            *end = toks;
+
+            return ERROR_NOERROR;
+        }
+        else
+        {
+            *ret = (numeric_t)rand16();
+
+            /* Set pointer to token after call (current token). */
+            *end = toks;
+            
+            return ERROR_NOERROR;
+        }
+    }
+
+    return ERROR_UNKNOWN_FUNC;
+}
+
+/* Print function token. */
+const tok_t * t_func_list(const tok_t * toks)
+{
+    const char * s;
+    if (*toks == FUNC_RND) s = "RND";
+
+    printf("%s", s);
+
+    toks++;
+    return toks;
+}
+
+/* Function token size. */
+tok_t t_func_size(const tok_t * toks)
+{
+    return 1;
+}

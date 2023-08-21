@@ -12,6 +12,14 @@ typedef uint8_t operator_t;
 #define OP_EQUAL 0x02
 #define OP_LPAREN 0x03
 #define OP_RPAREN 0x04
+#define OP_LT 0x05
+#define OP_GT 0x06
+#define OP_LTEQ 0x07
+#define OP_GTEQ 0x08
+#define OP_MULT 0x09
+
+#define OP_CHECK(_toks, _optype) ((*_toks == TOK_OPERATOR) && (*(_toks+1) == _optype))
+#define OP_GET(_toks) (*(_toks+1))
 
 /* t_operator_parse
  *

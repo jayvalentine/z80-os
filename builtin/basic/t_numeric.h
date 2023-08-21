@@ -7,18 +7,7 @@
 
 typedef int16_t numeric_t;
 
-/* t_numeric_get
- *
- * Purpose:
- *     Return a numeric (int) from the given token stream.
- * 
- * Parameters:
- *     toks: Token stream to read from.
- * 
- * Returns:
- *     integer value of numeric.
- */
-numeric_t t_numeric_get(const tok_t * toks);
+#define NUMERIC_GET(_toks) (*(numeric_t *)(_toks+1))
 
 /* t_numeric_put
  *

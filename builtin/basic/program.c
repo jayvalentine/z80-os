@@ -8,11 +8,13 @@
 #include "t_defs.h"
 #include "t_numeric.h"
 
-#ifdef Z88DK
-extern tok_t _tail;
+#ifdef Z80
+#include <os.h>
 
-#define program_start (&_tail)
-#define program_max ((tok_t *)0xe000)
+extern tok_t end;
+
+#define program_start (&end)
+#define program_max ((tok_t *)USER_PROG_END)
 
 #else
 
@@ -32,6 +34,14 @@ numeric_t next_lineno;
 
 uint8_t program_state;
 
+/* Union representing a variable type.
+ * Type is inferred from usage - there is no indicator
+ * for the type in the variable type itself.
+ * 
+ * A variable can either be:
+ *     A numeric
+ *     An array (pointer to a region in the program memory)
+ */
 typedef union _VAR_VALUE_T
 {
     numeric_t val;
@@ -155,13 +165,13 @@ const tok_t * program_search_lineno(int lineno, const tok_t * stmt)
         /* Skip over it if it's an allocation. */
         if (tok_type == TOK_ALLOC)
         {
-            ptr += t_defs_size(ptr);
+            SKIP(ptr);
             continue;
         }
 
         if (tok_type != TOK_NUMERIC) return NULL;
 
-        int this_lineno = t_numeric_get(ptr+1);
+        numeric_t this_lineno = NUMERIC_GET(ptr);
         if (this_lineno >= lineno)
         {
             return ptr;
@@ -179,7 +189,7 @@ const tok_t * program_search_lineno(int lineno, const tok_t * stmt)
  * with a given line number, or the nearest higher statement
  * if none equal exists.
  */
-const tok_t * program_getlineno(int lineno)
+static const tok_t * program_getlineno(numeric_t lineno)
 {
     /* Greater than current lineno?
      * If so search forward from current program pointer.
@@ -199,6 +209,18 @@ error_t program_run(void)
 {
     program_state = PROGSTATE_RUNNING;
     program_stmt_ptr = program_start;
+    current_lineno = 0;
+    next_lineno = 0;
+    
+    /* Free the variable context. */
+    program_context.count = 0;
+    for (int i = 0; i < MAX_NUMERICS; i++)
+    {
+        program_context.defines[i].name[0] = '\0';
+    }
+
+    /* Clear the return stack. */
+    program_return_stack.count = 0;
 
     while (program_stmt_ptr < program_end_ptr)
     {
@@ -217,14 +239,12 @@ error_t program_run(void)
             return program_end(ERROR_LINENUM);
         }
 
-        stmt++;
-
         /* Get numeric line number. */
-        current_lineno = t_numeric_get(stmt);
+        current_lineno = NUMERIC_GET(stmt);
         next_lineno = current_lineno + 1;
 
         /* Skip initial lineno. */
-        stmt += 2;
+        stmt += 3;
 
         /* Interpret the statement. */
         error_t e = statement_interpret(stmt);
@@ -254,7 +274,7 @@ error_t program_run(void)
  * Returns:
  *     Integer line number.
  */
-int program_current_lineno(void)
+numeric_t program_current_lineno(void)
 {
     return current_lineno;
 }
@@ -270,7 +290,7 @@ int program_current_lineno(void)
  * Returns:
  *     Nothing.
  */
-void program_set_next_lineno(int lineno)
+void program_set_next_lineno(numeric_t lineno)
 {
     next_lineno = lineno;
 }
@@ -295,6 +315,34 @@ numeric_t program_next_lineno(void)
 /* The functions below relate to defining, setting,
  * and getting variables. */
 
+/* program_get_numeric_ref
+ *
+ * Purpose:
+ *     Get a reference to a numeric variable.
+ * 
+ * Parameters:
+ *     name: Name of the variable.
+ *     val:  Pointer to populate with reference to variable.
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t program_get_numeric_ref(const char * name, numeric_t ** val)
+{
+    if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
+    
+    for (uint8_t i = 0; i < program_context.count; i++)
+    {
+        if (strcmp(program_context.defines[i].name, name) == 0)
+        {
+            *val = &program_context.defines[i].value.val;
+            return ERROR_NOERROR;
+        }
+    }
+
+    return ERROR_UNDEFINED_VAR;
+}
+
 /* program_set_numeric
  *
  * Purpose:
@@ -309,19 +357,19 @@ numeric_t program_next_lineno(void)
  */
 error_t program_set_numeric(const char * name, numeric_t val)
 {
-    if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
+    numeric_t * ref;
+    error_t e = program_get_numeric_ref(name, &ref);
 
-    /* First check if it is already defined. */
-    for (uint8_t i = 0; i < program_context.count; i++)
+    /* If the variable already exists then just set it. */
+    if (e == ERROR_NOERROR)
     {
-        if (strcmp(program_context.defines[i].name, name) == 0)
-        {
-            program_context.defines[i].value.val = val;
-            return ERROR_NOERROR;
-        }
+        *ref = val;
+        return ERROR_NOERROR;
     }
-    
+
     /* Otherwise we're defining a new variable. */
+    if (e != ERROR_UNDEFINED_VAR) return e;
+    
     if (program_context.count == MAX_NUMERICS) return ERROR_TOO_MANY_VARS;
 
     context_var_t * define = &program_context.defines[program_context.count];
@@ -347,18 +395,11 @@ error_t program_set_numeric(const char * name, numeric_t val)
  */
 error_t program_get_numeric(const char * name, numeric_t * val)
 {
-    if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
-    
-    for (uint8_t i = 0; i < program_context.count; i++)
-    {
-        if (strcmp(program_context.defines[i].name, name) == 0)
-        {
-            *val = program_context.defines[i].value.val;
-            return ERROR_NOERROR;
-        }
-    }
-
-    return ERROR_UNDEFINED_VAR;
+    numeric_t * ref;
+    error_t e = program_get_numeric_ref(name, &ref);
+    if (e != ERROR_NOERROR) return e;
+    *val = *ref;
+    return ERROR_NOERROR;
 }
 
 /* program_push_return
@@ -426,7 +467,11 @@ tok_t * program_alloc(tok_size_t size)
     *program_end_ptr = size;
     program_end_ptr++;
 
-    program_end_ptr += size;
+    for (tok_size_t i = 0; i < size; i++)
+    {
+        *program_end_ptr = 0;
+        program_end_ptr++;
+    }
 
     return allocated;
 }
@@ -447,7 +492,10 @@ error_t program_create_array(const char * name, tok_size_t size)
 {
     tok_t * a = program_alloc(size);
 
+    /* Get next available space in context for new variable */
     context_var_t * define = &program_context.defines[program_context.count];
+
+    /* Set variable name and pointer to array */
     strcpy(define->name, name);
     define->value.ptr = a;
 
@@ -481,5 +529,5 @@ error_t program_get_array(const char * name, tok_t ** array)
         }
     }
 
-    return ERROR_UNDEFINED_VAR;
+    return ERROR_UNDEFINED_ARRAY;
 }

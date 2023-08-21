@@ -35,11 +35,16 @@ uint8_t startup_flags;
 
 typedef void (*proc_t)(void);
 
+void interrupt_disable(void);
 void interrupt_enable(void);
 void debug_process_run(void);
 
+extern const char kernel_version;
+
 void main(void)
 {
+    interrupt_disable();
+
     status_init();
 
     filesystem_init();
@@ -48,10 +53,9 @@ void main(void)
     serial_init();
 
     /* Get number of RAM banks. */
-    //uint16_t banks = ram_bank_test();
-    uint16_t banks = 16;
+    uint16_t banks = ram_bank_test();
     sysinfo.numbanks = banks;
-    ram_bank_set(15);
+    ram_bank_set(banks-1);
 
     int e = memory_init(banks);
     if (e != 0)
@@ -63,9 +67,10 @@ void main(void)
 
     scheduler_init();
 
-    interrupt_enable();
-
 #ifndef DEBUG
+    //printf("Z80-OS KERNEL v%s\r\n", &kernel_version);
+    //printf("Memory: %d banks\r\n", (int)sysinfo.numbanks);
+
     /* Check startup flags. Warn the user if there is a problem. */
     if (startup_flags != 0)
     {
@@ -76,10 +81,10 @@ void main(void)
     }
     else
     {
-        puts("Done.\n\r");
+        //puts("Done.\n\r");
     }
 
-    puts("Loading command processor... ");
+    //puts("Loading command processor... ");
 
     int pd = process_load("COMMAND.EXE");
 
@@ -97,6 +102,8 @@ void main(void)
 
     int e2 = process_spawn(pd, NULL, 0);
 #endif
+
+    interrupt_enable();
 
     while (1) {}
 }

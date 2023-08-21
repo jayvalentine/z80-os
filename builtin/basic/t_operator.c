@@ -25,18 +25,40 @@ int t_operator_parse(tok_t ** dst_ptr, const char ** input_ptr)
     tok_t * dst = *dst_ptr;
 
     char c = *input;
+    input++;
 
     switch (c)
     {
         case '-': op = OP_MINUS; break;
         case '+': op = OP_PLUS; break;
+        case '*': op = OP_MULT; break;
         case '=': op = OP_EQUAL; break;
         case '(': op = OP_LPAREN; break;
         case ')': op = OP_RPAREN; break;
+        case '<':
+            if (*input == '=')
+            {
+                op = OP_LTEQ;
+                input++;
+            }
+            else
+            {
+                op = OP_LT;
+            }
+            break;
+        case '>':
+            if (*input == '=')
+            {
+                op = OP_GTEQ;
+                input++;
+            }
+            else
+            {
+                op = OP_GT;
+            }
+            break;
         default: return 0;
     }
-
-    input++;
 
     *dst = TOK_OPERATOR;
     dst++;
@@ -82,20 +104,46 @@ const tok_t * t_operator_list(const tok_t * toks)
     operator_t op = *toks;
     toks++;
 
-    if (op == OP_MINUS)
+    const char * s;
+
+    switch(op)
     {
-        putchar('-');
-    }
-    else if (op == OP_PLUS)
-    {
-        putchar('+');
-    }
-    else if (op == OP_EQUAL)
-    {
-        putchar('=');
+        case OP_MINUS:
+            s = "-";
+            break;
+        case OP_PLUS:
+            s = "+";
+            break;
+        case OP_MULT:
+            s = "*";
+            break;
+        case OP_EQUAL:
+            s = "=";
+            break;
+        case OP_LPAREN:
+            s = "(";
+            break;
+        case OP_RPAREN:
+            s = ")";
+            break;
+        case OP_LT:
+            s = "<";
+            break;
+        case OP_GT:
+            s = ">";
+            break;
+        case OP_LTEQ:
+            s = "<=";
+            break;
+        case OP_GTEQ:
+            s = ">=";
+            break;
+        default:
+            s = "?!";
+            break;
     }
 
-    putchar(' ');
+    printf("%s", s);
 
     return toks;
 }

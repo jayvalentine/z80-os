@@ -12,6 +12,7 @@
 #include "t_numeric.h"
 #include "t_operator.h"
 #include "t_variable.h"
+#include "t_func.h"
 
 /* Tokenize a substring of a statement,
  * returning a pointer to the next byte to be filled
@@ -19,6 +20,9 @@
  */
 static error_t statement_tokenize_string(tok_t ** dst_ptr, const char ** input_ptr)
 {
+    /* Remark (comment)? */
+    if (t_rem_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
+
     /* Separator? */
     if (t_sep_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
     
@@ -34,7 +38,13 @@ static error_t statement_tokenize_string(tok_t ** dst_ptr, const char ** input_p
     /* Keyword? */
     if (t_keyword_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
 
-    /* Variable? */
+    /* Function? */
+    if (t_func_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
+
+    /* Variable?
+     * This has to come at the end so that keywords/functions
+     * don't get parsed as variable names.
+     */
     if (t_variable_parse(dst_ptr, input_ptr)) return ERROR_NOERROR;
 
     return ERROR_SYNTAX;
@@ -104,23 +114,6 @@ tok_size_t statement_size(const tok_t * stmt)
  */
 error_t statement_interpret(const tok_t * stmt)
 {
-#ifdef DEBUG
-    uint8_t * p = stmt;
-    while (*p != TOK_TERMINATOR)
-    {
-        uint8_t size = t_defs_size(p);
-        for (uint8_t i = 0; i < size; i++)
-        {
-            uint16_t tok = *p;
-            printf("%x ", tok);
-            p++;
-        }
-
-        puts("! ");
-    }
-    puts("\r\n");
-#endif
-
     tok_t tok_type = *stmt;
     error_t error = ERROR_NOERROR;
 
@@ -134,30 +127,52 @@ error_t statement_interpret(const tok_t * stmt)
     if (tok_type == TOK_KEYWORD)
     {
         stmt++;
+
+        /* Keyword, so interpret the keyword. */
         kw_code kw = *stmt;
         stmt++;
         return t_keyword_interpret(kw, stmt);
     }
     else if (tok_type == TOK_VARIABLE)
     {
-        stmt++;
+        /* Get pointer to the variable to assign. */
+        const tok_t * next_toks;
+        numeric_t * val_ptr;
+        error = t_variable_get_ptr(stmt, &next_toks, &val_ptr);
 
-        /* Assignment. Check that the next token is equals. */
-        char varname[VARNAME_BUF_SIZE];
-        t_variable_get(varname, stmt);
+        /* If error is due to an undefined variable, define the variable
+         * and try again. */
+        if (error == ERROR_UNDEFINED_VAR)
+        {
+            char varname[VARNAME_BUF_SIZE];
+            t_variable_get(varname, stmt+1);
+            error = program_set_numeric(varname, 0);
+            ERROR_HANDLE(error);
 
-        stmt += t_variable_size(stmt);
-        if (*stmt != TOK_OPERATOR) return ERROR_SYNTAX;
-        stmt++;
-        if (*stmt != OP_EQUAL) return ERROR_SYNTAX;
-        stmt++;
+            error = t_variable_get_ptr(stmt, &next_toks, &val_ptr);
+        }
+
+        ERROR_HANDLE(error);
+
+        /* Check syntax of tokens after the variable reference. */
+        stmt = next_toks;
+        if (!OP_CHECK(stmt, OP_EQUAL)) return ERROR_SYNTAX;
 
         /* Now we have a statement to evaluate. */
         numeric_t val;
-        error_t error = eval_numeric(&val, stmt);
-        if (error != ERROR_NOERROR) return error;
+        error = eval_numeric(&val, stmt);
+        ERROR_HANDLE(error);
 
         /* Eval was successful, assign the value. */
-        return program_set_numeric(varname, val);
+        *val_ptr = val;
+        return ERROR_NOERROR;
     }
+    else if (tok_type == TOK_REMARK)
+    {
+        /* Do nothing, just a comment. */
+        return ERROR_NOERROR;
+    }
+
+    /* Not a valid beginning to an executable statement. */
+    return ERROR_SYNTAX;
 }

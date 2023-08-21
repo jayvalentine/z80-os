@@ -175,6 +175,11 @@ _interrupt_disable:
     di
     ret
 
+    ; void halt(void)
+    .globl _halt
+_halt:
+    halt
+
     ; void interrupt_tx_enable(void)
     .globl  _interrupt_tx_enable
 _interrupt_tx_enable:

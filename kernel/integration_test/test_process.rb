@@ -162,7 +162,7 @@ class ProcessTest < IntegrationTest
         assert_equal 0x0000, @instance.registers["HL"]
         
         # Assert contents of memory.
-        assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0000]
+        assert_equal 0x01, @instance.device("banked_ram").contents(1)[0x0000] # RAM test
         assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0001]
         assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0002]
         assert_equal 0x76, @instance.device("banked_ram").contents(1)[0x0003]

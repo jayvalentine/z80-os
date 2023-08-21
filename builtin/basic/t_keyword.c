@@ -3,6 +3,8 @@
 
 #include "errors.h"
 #include "program.h"
+#include "eval.h"
+#include "statement.h"
 
 #include "t_defs.h"
 #include "t_keyword.h"
@@ -58,6 +60,14 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "DIM",
         KEYWORD_DIM
+    },
+    {
+        "IF",
+        KEYWORD_IF
+    },
+    {
+        "THEN",
+        KEYWORD_THEN
     }
 };
 
@@ -122,17 +132,16 @@ error_t do_print_string(const tok_t * toks)
     return ERROR_NOERROR;
 }
 
-error_t do_print_variable(const tok_t * toks)
+error_t do_print_numeric(const tok_t * toks)
 {
-    char varname[VARNAME_BUF_SIZE];
-    t_variable_get(varname, toks);
+    /* Evaluate the statement */
+    numeric_t result;
+    error_t e = eval_numeric(&result, toks);
 
-    numeric_t val;
-    error_t e = program_get_numeric(varname, &val);
     if (e != ERROR_NOERROR) return e;
 
-    /* Print the variable. */
-    printf("%d", val);
+    /* Print the result. */
+    printf("%d", result);
 
     return ERROR_NOERROR;
 }
@@ -149,23 +158,27 @@ error_t do_print(const tok_t * toks)
             error_t e = do_print_string(toks+1);
             if (e != ERROR_NOERROR) return e;
         }
-        else if (*toks == TOK_VARIABLE)
+        else
         {
-            error_t e = do_print_variable(toks+1);
+            error_t e = do_print_numeric(toks);
             if (e != ERROR_NOERROR) return e;
         }
-        else return ERROR_SYNTAX;
 
-        toks += t_defs_size(toks);
+        /* Skip ahead to either a separator or a terminator. */
+        while (*toks != TOK_TERMINATOR && *toks != TOK_SEPARATOR)
+        {
+            toks += t_defs_size(toks);
+        }
 
-        /* Next token must either be a separator or a terminator. */
+        /* Stop print loop if we've hit a terminator. */
         if (*toks == TOK_TERMINATOR) break;
 
-        if (*toks != TOK_SEPARATOR) return ERROR_SYNTAX;
+        /* Skip separator so that we evaluate the next expression */
         toks += 1;
     }
 
-    puts("\r\n");
+    putchar('\r');
+    putchar('\n');
 
     return ERROR_NOERROR;
 }
@@ -196,11 +209,10 @@ error_t do_goto(const tok_t * toks)
 {
     /* Next token must be numeric. */
     tok_t tok_type = *toks;
-    toks++;
 
     if (tok_type != TOK_NUMERIC) return ERROR_SYNTAX;
 
-    int lineno = t_numeric_get(toks);
+    int lineno = NUMERIC_GET(toks);
     program_set_next_lineno(lineno);
     return ERROR_NOERROR;
 }
@@ -223,7 +235,7 @@ error_t do_for(const tok_t * toks)
 
     /* Now NUMERIC. */
     if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
-    numeric_t start = t_numeric_get(toks+1);
+    numeric_t start = NUMERIC_GET(toks);
     toks += t_defs_size(toks);
 
     /* Now TO. */
@@ -233,7 +245,7 @@ error_t do_for(const tok_t * toks)
 
     /* Finally limit NUMERIC. */
     if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
-    numeric_t limit = t_numeric_get(toks+1);
+    numeric_t limit = NUMERIC_GET(toks);
     toks += t_defs_size(toks);
 
     /* Get top of return stack to see if we're
@@ -244,7 +256,7 @@ error_t do_for(const tok_t * toks)
     /* If the variable in the FOR matches
      * the variable in TOS, then we're already
      * in the loop. */
-    if (strcmp(tos.varname, varname) == 0)
+    if (e_onstack == ERROR_NOERROR && strcmp(tos.varname, varname) == 0)
     {
         numeric_t current_val;
         program_get_numeric(varname, &current_val);
@@ -277,9 +289,11 @@ error_t do_for(const tok_t * toks)
     return ERROR_NOERROR;
 }
 
-error_t do_to(const tok_t * toks)
+/* Handler to use when a keyword is valid but cannot be interpreted
+ * by itself (e.g. TO, THEN)
+ */
+error_t cannot_interpret(const tok_t * toks)
 {
-    /* Shouldn't ever be interpreted! */
     return ERROR_SYNTAX;
 }
 
@@ -300,7 +314,7 @@ error_t do_next(const tok_t * toks)
     /* If we get an empty-stack error then we have */
     /* a NEXT without a FOR. */
     if (e == ERROR_RETSTACK_EMPTY) return ERROR_SYNTAX;
-    if (e != ERROR_NOERROR) return e;
+    ERROR_HANDLE(e);
 
     /* Check it's the right variable! */
     if (strcmp(varname, ret.varname) != 0) return ERROR_SYNTAX;
@@ -310,7 +324,7 @@ error_t do_next(const tok_t * toks)
     /* Push a new value onto the stack. */
     ret.lineno = program_current_lineno();
     e = program_push_return(&ret);
-    if (e != ERROR_NOERROR) return e;
+    ERROR_HANDLE(e);
 
     /* GOTO the loop start. */
     program_set_next_lineno(dest);
@@ -324,7 +338,7 @@ error_t do_gosub(const tok_t * toks)
     if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
 
     /* Get line number from token stream. */
-    numeric_t next_lineno = t_numeric_get(toks+1);
+    numeric_t next_lineno = NUMERIC_GET(toks);
     numeric_t current_lineno = program_current_lineno();
     
     /* Push current line number onto stack. */
@@ -365,7 +379,7 @@ error_t do_dim(const tok_t * toks)
     toks += t_defs_size(toks);
 
     /* Size (numeric). */
-    numeric_t size = t_numeric_get(toks+1);
+    numeric_t size = NUMERIC_GET(toks);
     toks += t_defs_size(toks);
 
     /* Operator ) */
@@ -387,6 +401,111 @@ error_t do_dim(const tok_t * toks)
     return ERROR_NOERROR;
 }
 
+static const tok_t * helper_if_get_operator(const tok_t * toks)
+{
+    while (!(OP_CHECK(toks, OP_EQUAL)
+             || OP_CHECK(toks, OP_LT)
+             || OP_CHECK(toks, OP_GT)
+             || OP_CHECK(toks, OP_LTEQ)
+             || OP_CHECK(toks, OP_GTEQ)))
+    {
+        /* If we hit a terminator then there is no operator. */
+        if (*toks == TOK_TERMINATOR) return TOK_PTR_NULL;
+
+        /* If we hit THEN then there is no operator (at least not in the if-expression) */
+        if (KW_CHECK(toks, KEYWORD_THEN)) return TOK_PTR_NULL;
+
+        SKIP(toks);
+    }
+    return toks;
+}
+
+static const tok_t * helper_if_get_then(const tok_t * toks)
+{
+    while (!KW_CHECK(toks, KEYWORD_THEN))
+    {
+        /* If we hit a terminator then there is no THEN. */
+        if (*toks == TOK_TERMINATOR) return TOK_PTR_NULL;
+
+        SKIP(toks);
+    }
+    return toks;
+}
+
+/* Get a sequence of tokens from start to end (end not inclusive). */
+static void helper_if_get_toks(tok_t * dst, const tok_t * start, const tok_t * end)
+{
+    size_t size = (size_t)(end - start);
+    memcpy(dst, start, size);
+    dst[size] = TOK_TERMINATOR;
+}
+
+/* Performs the given comparison on two values. */
+static int helper_if_do_comparison(const tok_t * comp, numeric_t left, numeric_t right)
+{
+    operator_t op = *(comp+1);
+    switch(op)
+    {
+        case OP_EQUAL:
+            return left == right;
+        case OP_LT:
+            return left < right;
+        case OP_GT:
+            return left > right;
+        case OP_LTEQ:
+            return left <= right;
+        case OP_GTEQ:
+            return left >= right;
+        default:
+            return -1;
+    }
+}
+
+error_t do_if(const tok_t * toks)
+{
+    /* Syntax is:
+     * (IF) expr = expr THEN stmt
+     */
+
+    /* Get position of comparison operator. */
+    const tok_t * pos_comp = helper_if_get_operator(toks);
+    if (pos_comp == TOK_PTR_NULL) return ERROR_SYNTAX;
+
+    /* Get position of THEN. */
+    const tok_t * pos_then = helper_if_get_then(toks);
+    if (pos_then == TOK_PTR_NULL) return ERROR_SYNTAX;
+
+    /* Get both expressions. */
+    tok_t expr1[100];
+    tok_t expr2[100];
+    helper_if_get_toks(expr1, toks, pos_comp);
+    helper_if_get_toks(expr2, pos_comp+2, pos_then);
+    
+    /* Evaluate both expressions. */
+    numeric_t expr1_val;
+    numeric_t expr2_val;
+    ERROR_HANDLE(eval_numeric(&expr1_val, expr1));
+    ERROR_HANDLE(eval_numeric(&expr2_val, expr2));
+    
+    /* Do the comparison. */
+    int result = helper_if_do_comparison(pos_comp, expr1_val, expr2_val);
+
+    /* Non-zero result means that the comparison was invalid
+     * (somehow - we checked it earlier!)
+     */
+    if (result < 0) return ERROR_SYNTAX;
+
+    /* If true, interpret the sub-statement. */
+    if (result)
+    {
+        /* Get tokens for sub-statement. */
+        const tok_t * sub_stmt = pos_then + 2;
+        ERROR_HANDLE(statement_interpret(sub_stmt));
+    }
+
+    return ERROR_NOERROR;
+}
+
 const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
 {
     do_print,
@@ -396,11 +515,13 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_end,
     do_goto,
     do_for,
-    do_to,
+    cannot_interpret, /* TO */
     do_next,
     do_gosub,
     do_return,
-    do_dim
+    do_dim,
+    do_if,
+    cannot_interpret /* THEN */
 };
 
 error_t t_keyword_interpret(kw_code kw, const tok_t * toks)
@@ -420,7 +541,7 @@ const tok_t * t_keyword_list(const tok_t * toks)
     {
         if (kw == keywords[i].code)
         {
-            puts(keywords[i].str);
+            printf("%s", keywords[i].str);
             break;
         }
     }

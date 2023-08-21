@@ -1,11 +1,16 @@
 #include <string.h>
 
+#include <stdio.h>
+
 #include "eval.h"
 #include "program.h"
 
 #include "t_numeric.h"
 #include "t_operator.h"
 #include "t_variable.h"
+#include "t_func.h"
+
+#include "array.h"
 
 #define OPSTACK_MAX 16
 #define NUMSTACK_MAX 16
@@ -21,6 +26,9 @@ typedef struct _NUMSTACK_T
     uint8_t count;
     numeric_t stack[NUMSTACK_MAX];
 } numstack_t;
+
+/* Gets top of given opstack. */
+#define OPSTACK_TOP(_opstack) (_opstack.stack[_opstack.count-1])
 
 uint8_t opstack_push(opstack_t * opstack, operator_t op)
 {
@@ -52,22 +60,26 @@ void opstack_pop_all(tok_t ** dst_ptr, opstack_t * opstack)
     *dst_ptr = dst;
 }
 
-uint8_t numstack_push(numstack_t * numstack, numeric_t num)
-{
-    if (numstack->count == NUMSTACK_MAX) return 0;
-    numstack->stack[numstack->count] = num;
-    numstack->count++;
-    return 1;
-}
+#define NUMSTACK_PUSH(_numstack, _num) \
+    _numstack.stack[_numstack.count++] = _num
 
-uint8_t numstack_pop(numstack_t * numstack, numeric_t * num)
-{
-    if (numstack->count == 0) return 0;
-    numstack->count--;
-    *num = numstack->stack[numstack->count];
-    return 1;
-}
+#define NUMSTACK_POP(_numstack) \
+    _numstack.stack[--(_numstack.count)]
 
+static int8_t helper_eval_precedence(operator_t op)
+{
+    switch (op)
+    {
+        case OP_MULT:
+            return 4;
+        case OP_MINUS:
+            return 2;
+        case OP_PLUS:
+            return 1;
+        default:
+            return 0;
+    }
+}
 
 /* eval_numeric
  *
@@ -98,81 +110,66 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
         tok = *src;
 
         if (tok == TOK_TERMINATOR) break;
+        if (tok == TOK_SEPARATOR) break;
+        if (tok == TOK_OPERATOR && *(src+1) == OP_RPAREN) break;
 
         if (tok == TOK_NUMERIC)
         {
-            num = t_numeric_get(src+1);
+            num = NUMERIC_GET(src);
             t_numeric_put(output_ptr, num);
             output_ptr += 3;
+
+            /* Skip numeric token */
+            SKIP(src);
+        }
+        else if (tok == TOK_FUNC)
+        {
+            numeric_t val;
+            const tok_t * end;
+            ERROR_HANDLE(t_func_call(src, &end, &val));
+
+            t_numeric_put(output_ptr, val);
+            output_ptr += 3;
+
+            /* Skip function call. */
+            src = end;
         }
         else if (tok == TOK_VARIABLE)
         {
-            /* Construct variable name string. */
-            char varname[VARNAME_BUF_SIZE];
-            t_variable_get(varname, src+1);
+            numeric_t * val;
+            const tok_t * next_toks;
+            ERROR_HANDLE(t_variable_get_ptr(src, &next_toks, &val));
 
-            /* Get next token. */
-            const tok_t * next_tok = src + t_defs_size(src);
+            t_numeric_put(output_ptr, *val);
+            output_ptr += 3;
 
-            /* Is it a left paren?
-             * If so this is an array access.
-             * Otherwise, it's a normal variable.
-             */
-            if (*next_tok == TOK_OPERATOR && *(next_tok + 1) == OP_LPAREN)
-            {
-                /* Skip over variable and left paren. */
-                src += t_defs_size(src);
-                src += t_defs_size(src);
-
-                /* Now we should have a numeric.
-                 * This is the array index. */
-                if (*src != TOK_NUMERIC) return ERROR_SYNTAX;
-
-                numeric_t index = t_numeric_get(src + 1);
-                src += t_defs_size(src);
-
-                /* Check we have a closing paren. */
-                if (*src != TOK_OPERATOR) return ERROR_SYNTAX;
-                if (*(src+1) != OP_RPAREN) return ERROR_SYNTAX;
-
-                /* Get the array. */
-                tok_t * arr;
-                program_get_array(varname, &arr);
-                numeric_t * arr_num = (numeric_t *)(arr+2);
-
-                /* Bounds checking of index. */
-                tok_size_t array_size = *(arr + 1);
-                if (index < 1) return ERROR_RANGE;
-                if ((index*sizeof(numeric_t)) > array_size) return ERROR_RANGE;
-
-                /* Get the value at the given index in the array. */
-                numeric_t array_value = arr_num[index-1];
-
-                t_numeric_put(output_ptr, array_value);
-                output_ptr += 3;
-            }
-            else
-            {
-                /* Get variable value. */
-                numeric_t val;
-                error_t e = program_get_numeric(varname, &val);
-                if (e != ERROR_NOERROR) return e;
-
-                /* Write value to output. */
-                t_numeric_put(output_ptr, val);
-                output_ptr += 3;
-            }
+            /* Skip var ref tokens */
+            src = next_toks;
         }
         else if (tok == TOK_OPERATOR)
         {
-            /* Pop all operators off the stack. */
-            opstack_pop_all(&output_ptr, &opstack);
+            /* Pop operators off the stack (into output) while they have greater precedence
+             * than this operator. */
+            while (opstack.count > 0
+                   && (helper_eval_precedence(OPSTACK_TOP(opstack)) > helper_eval_precedence(OP_GET(src))))
+            {
+                operator_t op;
+                uint8_t res = opstack_pop(&opstack, &op);
+                if (!res) return ERROR_SYNTAX;
 
-            operator_t op = *(src+1);
+                *output_ptr = TOK_OPERATOR;
+                output_ptr++;
+                *output_ptr = op;
+                output_ptr++;
+            }
+            
+            /* Push this operator. */
+            operator_t op = OP_GET(src);
             opstack_push(&opstack, op);
-        }
 
-        src += t_defs_size(src);
+            /* Skip operator token */
+            SKIP(src);
+        }
     }
 
     /* Now pop all operators off the stack. */
@@ -193,8 +190,8 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
 
         if (tok == TOK_NUMERIC)
         {
-            num = t_numeric_get(output_ptr+1);
-            numstack_push(&numstack, num);
+            num = NUMERIC_GET(output_ptr);
+            NUMSTACK_PUSH(numstack, num);
         }
         else if (tok == TOK_OPERATOR)
         {
@@ -203,14 +200,21 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
             if (op == OP_PLUS)
             {
                 /* Pop 2 numbers off stack, add them together. */
-                numeric_t a;
-                numeric_t b;
-
-                numstack_pop(&numstack, &a);
-                numstack_pop(&numstack, &b);
+                numeric_t a = NUMSTACK_POP(numstack);
+                numeric_t b = NUMSTACK_POP(numstack);
 
                 numeric_t c = a + b;
-                numstack_push(&numstack, c);
+                NUMSTACK_PUSH(numstack, c);
+            }
+
+            else if (op == OP_MULT)
+            {
+                /* Pop 2 numbers off stack, multiply. */
+                numeric_t a = NUMSTACK_POP(numstack);
+                numeric_t b = NUMSTACK_POP(numstack);
+
+                numeric_t c = a * b;
+                NUMSTACK_PUSH(numstack, c);
             }
 
             else if (op == OP_MINUS)
@@ -219,33 +223,29 @@ error_t eval_numeric(numeric_t * result, const tok_t * src)
                 if (numstack.count == 1)
                 {
                     /* Just one, so this is negation. */
-                    numeric_t a;
-                    numstack_pop(&numstack, &a);
+                    numeric_t a = NUMSTACK_POP(numstack);
 
                     a = -a;
 
-                    numstack_push(&numstack, a);
+                    NUMSTACK_PUSH(numstack, a);
                 }
-                else if (numstack.count == 2)
+                else if (numstack.count >= 2)
                 {
                     /* Pop 2 numbers off stack, add them together. */
-                    numeric_t a;
-                    numeric_t b;
-
-                    numstack_pop(&numstack, &a);
-                    numstack_pop(&numstack, &b);
+                    numeric_t a = NUMSTACK_POP(numstack);
+                    numeric_t b = NUMSTACK_POP(numstack);
 
                     numeric_t c = b - a;
-                    numstack_push(&numstack, c);
+                    NUMSTACK_PUSH(numstack, c);
                 }
             }
         }
 
-        output_ptr += t_defs_size(output_ptr);
+        SKIP(output_ptr);
     }
 
     /* Get TOS. */
-    numstack_pop(&numstack, result);
+    *result = NUMSTACK_POP(numstack);
 
     return ERROR_NOERROR;
 }

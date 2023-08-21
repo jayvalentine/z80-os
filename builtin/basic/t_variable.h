@@ -4,6 +4,9 @@
 #include <stdint.h>
 
 #include "t_defs.h"
+#include "t_numeric.h"
+
+#include "errors.h"
 
 #define VARNAME_SIZE 4
 #define VARNAME_BUF_SIZE (VARNAME_SIZE+1)
@@ -61,6 +64,22 @@ const tok_t * t_variable_list(const tok_t * toks);
  *     Nothing.
  */
 void t_variable_get(char * varname, const tok_t * toks);
+
+/* t_variable_get_ptr
+ *
+ * Purpose:
+ *     Returns a pointer to the value of a variable
+ *     (scalar or array element) for access.
+ * 
+ * Parameters:
+ *     toks:      Token stream
+ *     next_toks: Populated with pointer to next tok after the variable access.
+ *     ptr:       Pointer with value pointer
+ * 
+ * Returns:
+ *     Error, if any.
+ */
+error_t t_variable_get_ptr(const tok_t * toks, const tok_t ** next_toks, numeric_t ** value);
 
 #endif
 

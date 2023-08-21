@@ -16,6 +16,10 @@ typedef uint8_t error_t;
 #define ERROR_TOO_MANY_VARS 8
 #define ERROR_RETSTACK_EMPTY 9
 #define ERROR_RANGE 10
+#define ERROR_UNDEFINED_ARRAY 11
+#define ERROR_UNKNOWN_FUNC 12
+
+#define ERROR_HANDLE(_err) if (_err != ERROR_NOERROR) return _err
 
 void error_display(error_t error);
 

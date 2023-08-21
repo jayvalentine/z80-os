@@ -2,7 +2,7 @@
 
     ; I/O port for bank select register.
     .equ    BANK_SELECT, 0x30
-    .equ    BANKED_MEM_END, 0xffff
+    .equ    BANKED_MEM_TEST, 0x8000
 
 _dst_bank:
     .ds     #1
@@ -116,9 +116,10 @@ _ram_bank_test:
     ld      L, #0
 
 __ram_bank_test_init:
-    call    _ram_bank_set
+    ld      A, L
+    out     (BANK_SELECT), A
     ld      A, #0xff
-    ld      (BANKED_MEM_END), A
+    ld      (BANKED_MEM_TEST), A
     inc     L
     jp      nz, #__ram_bank_test_init
 
@@ -129,13 +130,14 @@ __ram_bank_test_init:
     ld      L, #0
 
 __ram_bank_test_loop:
-    call    _ram_bank_set
-    ld      A, (BANKED_MEM_END)
+    ld      A, L
+    out     (BANK_SELECT), A
+    ld      A, (BANKED_MEM_TEST)
     cp      #0xff
     jp      nz, #__ram_bank_test_done
 
     ld      A, L
-    ld      (BANKED_MEM_END), A
+    ld      (BANKED_MEM_TEST), A
 
     inc     L
     jp      nz, #__ram_bank_test_loop

@@ -102,14 +102,15 @@ Low RAM                                  High RAM
       │                        │               │                        │
       │                        │               │                        │
       │                        │               │                        │
-      │                        │               │                        │
-      │                        │               │                        │
-      │                        │         0xF800├────────────────────────┤
+      │                        │         0xF000├────────────────────────┤
       │                        │               │ Stack                  │
+      │                        │         0xF800├────────────────────────┤
+      │                        │               │ User Program Args      │
       └────────────────────────┘               └────────────────────────┘
 ~~~~
 
 * Kernel: This is the memory area in which the kernel (including reset vectors) resides
 * Command Processor: This is the memory area in which the command processor resides
 * User Program Area: User programs are loaded into this memory area when executed
-* Stack: Reserved for program stack. Stack pointer is initialized to `0xFFFF` on startup and grows down.
+* Stack: Reserved for program stack. Stack pointer is initialized to `0xF7FF` on program startup and grows down.
+* User Program Args: Reserved for user program arguments (`argv` and `argc`).

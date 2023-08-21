@@ -254,11 +254,12 @@ __pexit_loop:
     jp      __pexit_loop
 
 _sysinfo:
-    .word   __kernel_version
+    .word   _kernel_version
 __sysinfo_numbanks:
     .word   #0
 
-__kernel_version:
+    .globl  _kernel_version
+_kernel_version:
     .asciz  "0.5.0"
 
 __test:

@@ -7,7 +7,7 @@
 
 #include "t_defs.h"
 
-#define NUM_KEYWORDS 12
+#define NUM_KEYWORDS 14
 
 #define KEYWORD_UNDEFINED 0
 
@@ -25,6 +25,10 @@
 #define KEYWORD_GOSUB 10
 #define KEYWORD_RETURN 11
 #define KEYWORD_DIM 12
+#define KEYWORD_IF 13
+#define KEYWORD_THEN 14
+
+#define KW_CHECK(_toks, _kw_type) ((*_toks == TOK_KEYWORD) && (*(_toks+1) == _kw_type))
 
 typedef uint8_t kw_code;
 

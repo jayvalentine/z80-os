@@ -6,6 +6,8 @@
 #include "t_defs.h"
 #include "t_keyword.h"
 
+#include "array.h"
+
 #include <string.h>
 
 int test_tokenize_print()
@@ -634,7 +636,7 @@ int test_interpret_dim_toolarge_boundary_toolarge()
     /* Variable should be undefined. */
     tok_t * a;
     error_t e3 = program_get_array("FOO", &a);
-    ASSERT_EQUAL_UINT(ERROR_UNDEFINED_VAR, e3);
+    ASSERT_EQUAL_UINT(ERROR_UNDEFINED_ARRAY, e3);
 
     return 0;
 }
@@ -655,7 +657,160 @@ int test_interpret_dim_toolarge()
     /* Variable should be undefined. */
     tok_t * a;
     error_t e3 = program_get_array("Z", &a);
-    ASSERT_EQUAL_UINT(ERROR_UNDEFINED_VAR, e3);
+    ASSERT_EQUAL_UINT(ERROR_UNDEFINED_ARRAY, e3);
+
+    return 0;
+}
+
+#define HELPER_TOKENIZE(dst, input) \
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, statement_tokenize(dst, input))
+
+#define HELPER_INTERPRET(toks) \
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, statement_interpret(toks))
+
+int test_interpret_assign_array()
+{
+    program_new();
+    program_create_array("ARR", 15);
+
+    const char * input = "ARR(5) = 42";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    HELPER_INTERPRET(dst);
+
+    /* Array index 5 should be set. */
+    tok_t * a;
+    error_t e = program_get_array("ARR", &a);
+    ASSERT_EQUAL_INT(42, ARRAY_ACCESS(a, 5));
+
+    return 0;
+}
+
+int test_interpret_assign_array_variable_index()
+{
+    program_new();
+    program_create_array("ARR", 15);
+    program_set_numeric("IDX", 3);
+
+    const char * input = "ARR(IDX) = 42";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    HELPER_INTERPRET(dst);
+
+    /* Array index 5 should be set. */
+    tok_t * a;
+    error_t e = program_get_array("ARR", &a);
+    ASSERT_EQUAL_INT(42, ARRAY_ACCESS(a, 3));
+
+    return 0;
+}
+
+int test_interpret_assign_array_undefined()
+{
+    program_new();
+    program_set_numeric("IDX", 3);
+
+    const char * input = "ARR(IDX) = 42";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    error_t e = statement_interpret(dst);
+
+    ASSERT_EQUAL_UINT(ERROR_UNDEFINED_ARRAY, e);
+
+    return 0;
+}
+
+int test_interpret_if_true()
+{
+    program_new();
+    program_set_numeric("TEST", 42);
+    program_set_numeric("FOO", 99);
+
+    const char * input = "IF TEST = 42 THEN FOO = 9";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    HELPER_INTERPRET(dst);
+
+    numeric_t val;
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_INT(9, val);
+
+    return 0;
+}
+
+int test_interpret_if_false()
+{
+    program_new();
+    program_set_numeric("TEST", 100);
+    program_set_numeric("FOO", 99);
+
+    const char * input = "IF TEST = 42 THEN FOO = 9";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    HELPER_INTERPRET(dst);
+
+    numeric_t val;
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_INT(99, val);
+
+    return 0;
+}
+
+int test_interpret_if_lteq_true()
+{
+    program_new();
+    program_set_numeric("TEST", 100);
+    program_set_numeric("FOO", 99);
+
+    const char * input = "IF TEST <= 104 THEN FOO = 9";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    HELPER_INTERPRET(dst);
+
+    numeric_t val;
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_INT(9, val);
+
+    return 0;
+}
+
+int test_interpret_if_gt_false()
+{
+    program_new();
+    program_set_numeric("TEST", 100);
+    program_set_numeric("FOO", 99);
+
+    const char * input = "IF TEST > 100 THEN FOO = 9";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    HELPER_INTERPRET(dst);
+
+    numeric_t val;
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_INT(99, val);
+
+    return 0;
+}
+
+int test_tokenize_and_interpret_rem()
+{
+    program_new();
+    
+    const char * input = "REM This is a comment";
+    tok_t dst[80];
+
+    HELPER_TOKENIZE(dst, input);
+    
+    ASSERT_EQUAL_UINT(TOK_REMARK, dst[0]);
+
+    HELPER_INTERPRET(dst);
 
     return 0;
 }

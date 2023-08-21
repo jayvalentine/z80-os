@@ -28,7 +28,7 @@ int test_numeric_parse_positive()
     ASSERT_EQUAL_INT(1, success);
     ASSERT_EQUAL_INT(TOK_NUMERIC, dst_buf[0]);
     
-    numeric_t num = t_numeric_get(&dst_buf[1]);
+    numeric_t num = NUMERIC_GET(&dst_buf[0]);
     ASSERT_EQUAL_INT(123, num);
 
     return 0;
@@ -44,7 +44,7 @@ int test_numeric_parse_positive_boundary()
     ASSERT_EQUAL_INT(1, success);
     ASSERT_EQUAL_INT(TOK_NUMERIC, dst_buf[0]);
     
-    numeric_t num = t_numeric_get(&dst_buf[1]);
+    numeric_t num = NUMERIC_GET(&dst_buf[0]);
     ASSERT_EQUAL_INT(32767, num);
 
     return 0;

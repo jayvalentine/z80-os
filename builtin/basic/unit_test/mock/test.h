@@ -31,3 +31,17 @@ extern int failed_line;
         return 1;                                       \
     }                                                   \
 } while (0)
+
+#define ASSERT_EQUAL_PTR(expected, actual) do           \
+{                                                       \
+    failed_line = __LINE__;                             \
+    if (expected != actual)                             \
+    {                                                   \
+        printf("\nexpected: %p actual: %p",             \
+            expected,                                   \
+            actual);                                    \
+        return 1;                                       \
+    }                                                   \
+} while (0)
+
+#define ASSERT_NO_ERROR(e) ASSERT_EQUAL_UINT(ERROR_NOERROR, e)

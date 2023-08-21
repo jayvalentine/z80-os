@@ -36,6 +36,7 @@ rule ".rel" => ".c" do |task|
     cmd += "-I#{File.dirname(task.source)} "
     cmd += "-I#{LIB_INCLUDE} "
     cmd += "-DDEBUG "
+    cmd += "-DZ80 "
     cmd += "#{task.source}"
     puts cmd
     system(cmd)
@@ -49,24 +50,56 @@ rule ".rel" => ".asm" do |task|
     system(cmd)
 end
 
+def get_addr(map, label)
+    if /([0-9a-fA-F]+)\s+#{label}/ =~ File.read(map)
+        return $1.to_i(16)
+    else
+        abort("Could not find label '#{label}' in map file '#{map}'")
+    end
+end
+
+def valid_memory_map(map_file)
+    code_start = get_addr(map_file, "s__CODE")
+    code_end   = code_start + get_addr(map_file, "l__CODE")
+    data_start = get_addr(map_file, "s__DATA")
+    data_end   = data_start + get_addr(map_file, "l__DATA")
+
+    # Assumes data is always located after code.
+    if data_start < code_end
+        return false
+    end
+
+    true
+end
+
 def compile_sdcc(output_name, object_files, crt0, code_seg, data_seg)
-    cmd = "sdcc -mz80 --opt-code-speed --std-sdcc99 "
+    basename = File.basename(output_name, ".bin")
+
+    cmd = "sdcc --verbose -mz80 --opt-code-speed --std-sdcc99 "
     cmd += "--no-std-crt0 "
     cmd += "-Wl-b_CODE=0x#{code_seg.to_s(16)} "
     cmd += "-Wl-b_DATA=0x#{data_seg.to_s(16)} "
-    cmd += "-o #{File.basename(output_name, ".bin")}.hex "
+    cmd += "-o #{basename}.hex "
     cmd += "-L#{LIB} "
     cmd += "#{crt0} "
     cmd += object_files.join(" ")
     cmd += " stdlib.lib"
     
+    puts cmd
     success = system("#{cmd} > link.log 2>&1")
 
     unless success
         abort("Link failed:\n#{File.read("link.log")}")
     end
 
-    system("objcopy --gap-fill 0x76 -Iihex -Obinary #{File.basename(output_name, ".bin")}.hex #{output_name}")
+    # Check memory layout is valid.
+    # sdld will happily assign two objects of different types to the same memory
+    # which causes us a headache if we don't notice!
+    unless valid_memory_map("#{basename}.map")
+        abort("Invalid memory map for program '#{basename}'!")
+    end
+
+    system("objcopy --gap-fill 0x76 -Iihex -Obinary #{basename}.hex #{output_name}")
     
     size = File.size(output_name)
     size_kb = size / 1024.0
@@ -103,6 +136,11 @@ def unit_test(directory)
                 tests << $1
             end
         end
+    end
+
+    # Filter based on environment variable (if any)
+    unless ENV["UNIT_TEST_NAME"].nil?
+        tests = tests.select { |t| t.include?(ENV["UNIT_TEST_NAME"]) }
     end
 
     # Create the templated main.
@@ -295,6 +333,16 @@ namespace 'build' do
             limit = 32 * 1024
             bin = File.read("command.bin", mode: "rb")
             abort("Command processor image is too large: size is #{bin.size} (#{limit} expected)") if bin.size > limit
+
+            # Now make an executable from the binary.
+            File.open("command.exe", "wb") do |f|
+                f.write([0x0a, 0x80].pack("CC"))
+                File.open("command.bin", "rb") do |f2|
+                    f2.each_byte do |b|
+                        f.write([b].pack("C"))
+                    end
+                end
+            end
         end
     end
 
@@ -343,7 +391,7 @@ namespace 'install' do
     desc "Install command processor image onto CF-card"
     task 'command', [:path] => ['build:command'] do |t, args|
         abort("No path specified") if args[:path].nil?
-        FileUtils.cp('command.bin', File.join(args[:path], 'COMMAND.BIN'))
+        FileUtils.cp('command.exe', File.join(args[:path], 'COMMAND.EXE'))
     end
 
     Dir.glob("builtin/*").each do |builtin|

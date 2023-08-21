@@ -2,23 +2,6 @@
 
 #include "t_numeric.h"
 
-/* t_numeric_get
- *
- * Purpose:
- *     Return a numeric (int) from the given token stream.
- * 
- * Parameters:
- *     toks: Token stream to read from.
- * 
- * Returns:
- *     integer value of numeric.
- */
-numeric_t t_numeric_get(const tok_t * toks)
-{
-    numeric_t * numeric_ptr = (numeric_t *)toks;
-    return *numeric_ptr;
-}
-
 /* t_numeric_size
  * Purpose:
  *     Return the size of a numeric in memory.
@@ -98,45 +81,7 @@ const tok_t * t_numeric_list(const tok_t * toks)
 
     numeric_t val = *numeric_ptr;
 
-    char ten_thousands = '0';
-    char thousands = '0';
-    char hundreds = '0';
-    char tens = '0';
-    char units = '0';
-
-    while (val >= 10000)
-    {
-        ten_thousands++;
-        val -= 10000;
-    }
-
-    while (val >= 1000)
-    {
-        thousands++;
-        val -= 1000;
-    }
-
-    while (val >= 100)
-    {
-        hundreds++;
-        val -= 100;
-    }
-
-    while (val >= 10)
-    {
-        tens++;
-        val -= 10;
-    }
-
-    /* Guaranteed to be <10 now. */
-    units += val;
-
-    if (ten_thousands != '0') putchar(ten_thousands);
-    if (thousands != '0')     putchar(thousands);
-    if (hundreds != '0')      putchar(hundreds);
-    if (tens != '0')          putchar(tens);
-    putchar(units);
-    putchar(' ');
+    printf("%d ", val);
 
     return toks;
 }
