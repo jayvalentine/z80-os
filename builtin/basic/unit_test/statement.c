@@ -5,6 +5,8 @@
 
 #include "t_defs.h"
 #include "t_keyword.h"
+#include "t_numeric.h"
+#include "t_operator.h"
 
 #include "array.h"
 
@@ -22,6 +24,8 @@ int test_tokenize_print()
     ASSERT_EQUAL_UINT(TOK_KEYWORD, dst[0]);
     ASSERT_EQUAL_UINT(KEYWORD_PRINT, dst[1]);
     ASSERT_EQUAL_UINT(TOK_TERMINATOR, dst[2]);
+
+    return 0;
 }
 
 int test_tokenize_list()
@@ -36,6 +40,8 @@ int test_tokenize_list()
     ASSERT_EQUAL_UINT(TOK_KEYWORD, dst[0]);
     ASSERT_EQUAL_UINT(KEYWORD_LIST, dst[1]);
     ASSERT_EQUAL_UINT(TOK_TERMINATOR, dst[2]);
+
+    return 0;
 }
 
 int test_tokenize_variable()
@@ -47,10 +53,11 @@ int test_tokenize_variable()
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    ASSERT_EQUAL_UINT(TOK_VARIABLE, dst[0]);
-    ASSERT_EQUAL_UINT(1, dst[1]);
-    ASSERT_EQUAL_UINT('C', dst[2]);
-    ASSERT_EQUAL_UINT(TOK_TERMINATOR, dst[3]);
+    ASSERT_EQUAL_UINT(TOK_REGISTER, dst[0]);
+    ASSERT_EQUAL_UINT(2, dst[1]);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, dst[2]);
+
+    return 0;
 }
 
 int test_interpret_assignment()
@@ -67,10 +74,14 @@ int test_interpret_assignment()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     numeric_t val;
-    error_t e3 = program_get_numeric("C", &val);
+    tok_t c[10];
+    MAKE_VAR_TOK(c, "C");
+    error_t e3 = program_get_numeric(c, &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(3, val);
+
+    return 0;
 }
 
 int test_interpret_assignment_from_self()
@@ -84,16 +95,18 @@ int test_interpret_assignment_from_self()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     /* Set up the context. */
-    program_set_numeric("AM", 9);
+    SET_TEST_VAR(AM, 9);
 
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     numeric_t val;
-    error_t e3 = program_get_numeric("AM", &val);
+    error_t e3 = program_get_numeric(TEST_VAR(AM), &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(5, val);
+
+    return 0;
 }
 
 int test_interpret_assignment_from_self_equal()
@@ -107,19 +120,38 @@ int test_interpret_assignment_from_self_equal()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     /* Set up the context. */
-    program_set_numeric("AM", 9);
+    SET_TEST_VAR(AM, 9);
 
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     numeric_t val;
-    error_t e3 = program_get_numeric("AM", &val);
+    error_t e3 = program_get_numeric(TEST_VAR(AM), &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(9, val);
+
+    return 0;
 }
 
-extern numeric_t current_lineno;
+/* Program listing.
+ *
+ * Matches line numbers to program statements.
+ */
+typedef struct _LISTING_ENTRY_T
+{
+    numeric_t lineno;
+    const tok_t * stmt;
+} listing_entry_t;
+
+typedef struct _LISTING_T
+{
+    uint16_t count;
+    int16_t  index; /* -1 if invalid. */
+    listing_entry_t entries[100];
+} listing_t;
+
+extern listing_t program_listing;
 
 int test_interpret_for_entry()
 {
@@ -127,7 +159,9 @@ int test_interpret_for_entry()
 
     program_return_t ret_start;
     ret_start.lineno = 123;
-    strcpy(ret_start.varname, "VAR");
+    tok_t var[VAR_TOK_BUF_SIZE];
+    MAKE_VAR_TOK(var, "VAR");
+    ret_start.vartoken = var;
 
     program_push_return(&ret_start);
 
@@ -137,12 +171,14 @@ int test_interpret_for_entry()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     numeric_t val;
-    error_t e3 = program_get_numeric("I", &val);
+    tok_t i[10];
+    MAKE_VAR_TOK(i, "I");
+    error_t e3 = program_get_numeric(i, &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(1, val);
@@ -153,7 +189,7 @@ int test_interpret_for_entry()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
 
     ASSERT_EQUAL_INT(456, ret1.lineno);
-    ASSERT(strcmp("I", ret1.varname) == 0);
+    ASSERT(varcmp(i, ret1.vartoken) == 0);
 
     /* Program stack should have the for added. */
     program_return_t ret2;
@@ -161,7 +197,7 @@ int test_interpret_for_entry()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e5);
 
     ASSERT_EQUAL_INT(123, ret2.lineno);
-    ASSERT(strcmp("VAR", ret2.varname) == 0);
+    ASSERT(varcmp(var, ret2.vartoken) == 0);
 
     return 0;
 }
@@ -169,11 +205,11 @@ int test_interpret_for_entry()
 int test_interpret_for_continue()
 {
     program_new();
-    program_set_numeric("I", 1);
+    SET_TEST_VAR(I, 1);
 
     program_return_t ret_start;
     ret_start.lineno = 210;
-    strcpy(ret_start.varname, "I");
+    ret_start.vartoken = TEST_VAR(I);
 
     program_push_return(&ret_start);
 
@@ -183,12 +219,12 @@ int test_interpret_for_continue()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 130;
+    program_listing.entries[program_listing.index].lineno = 130;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     numeric_t val;
-    error_t e3 = program_get_numeric("I", &val);
+    error_t e3 = program_get_numeric(TEST_VAR(I), &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(2, val);
@@ -199,7 +235,7 @@ int test_interpret_for_continue()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
 
     ASSERT_EQUAL_INT(130, ret1.lineno);
-    ASSERT(strcmp("I", ret1.varname) == 0);
+    ASSERT(varcmp(TEST_VAR(I), ret1.vartoken) == 0);
 
     return 0;
 }
@@ -207,11 +243,11 @@ int test_interpret_for_continue()
 int test_interpret_for_hit_limit()
 {
     program_new();
-    program_set_numeric("I", 3);
+    SET_TEST_VAR(I, 3);
 
     program_return_t ret_start;
     ret_start.lineno = 210;
-    strcpy(ret_start.varname, "I");
+    ret_start.vartoken = TEST_VAR(I);
 
     program_push_return(&ret_start);
 
@@ -221,12 +257,12 @@ int test_interpret_for_hit_limit()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 130;
+    program_listing.entries[program_listing.index].lineno = 130;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     numeric_t val;
-    error_t e3 = program_get_numeric("I", &val);
+    error_t e3 = program_get_numeric(TEST_VAR(I), &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(4, val);
@@ -253,12 +289,14 @@ int test_interpret_entry_empty_stack()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     numeric_t val;
-    error_t e3 = program_get_numeric("I", &val);
+    tok_t i[10];
+    MAKE_VAR_TOK(i, "I");
+    error_t e3 = program_get_numeric(i, &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(1, val);
@@ -269,7 +307,7 @@ int test_interpret_entry_empty_stack()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
 
     ASSERT_EQUAL_INT(456, ret1.lineno);
-    ASSERT(strcmp("I", ret1.varname) == 0);
+    ASSERT(varcmp(i, ret1.vartoken) == 0);
 
     /* Only one entry in stack. */
     program_return_t ret2;
@@ -289,7 +327,7 @@ int test_interpret_for_missing_var()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
 
@@ -306,7 +344,7 @@ int test_interpret_for_missing_equals()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
 
@@ -323,7 +361,7 @@ int test_interpret_for_missing_to()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
 
@@ -334,11 +372,11 @@ int test_interpret_next()
 {
     program_new();
 
-    program_set_numeric("I", 3);
+    SET_TEST_VAR(I, 3);
 
     program_return_t ret_start;
     ret_start.lineno = 123;
-    strcpy(ret_start.varname, "I");
+    ret_start.vartoken = TEST_VAR(I);
     program_push_return(&ret_start);
 
     const char * input = "NEXT I";
@@ -347,14 +385,14 @@ int test_interpret_next()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
     ASSERT_EQUAL_INT(123, program_next_lineno());
 
     numeric_t val;
-    error_t e3 = program_get_numeric("I", &val);
+    error_t e3 = program_get_numeric(TEST_VAR(I), &val);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_INT(3, val);
@@ -365,7 +403,7 @@ int test_interpret_next()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
 
     ASSERT_EQUAL_INT(456, ret1.lineno);
-    ASSERT(strcmp("I", ret1.varname) == 0);
+    ASSERT(varcmp(TEST_VAR(I), ret1.vartoken) == 0);
 
     /* Only one entry in stack. */
     program_return_t ret2;
@@ -379,11 +417,11 @@ int test_interpret_next_wrongvar()
 {
     program_new();
 
-    program_set_numeric("I", 3);
+    SET_TEST_VAR(I, 3);
 
     program_return_t ret_start;
     ret_start.lineno = 123;
-    strcpy(ret_start.varname, "I");
+    ret_start.vartoken = TEST_VAR(I);
     program_push_return(&ret_start);
 
     const char * input = "NEXT J";
@@ -392,7 +430,7 @@ int test_interpret_next_wrongvar()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
 
@@ -409,7 +447,7 @@ int test_interpret_next_notvar()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
 
@@ -419,36 +457,33 @@ int test_interpret_next_notvar()
 int test_tokenize_with_sep()
 {
     const char * input = "\"HELLO\",NAME";
-    const char * orig_input = input;
-
     tok_t dst_buf[40];
-    
-    tok_t * dst = dst_buf;
-    tok_t * orig_dst = dst;
 
     error_t e = statement_tokenize(dst_buf, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     ASSERT_EQUAL_UINT(TOK_STRING, dst_buf[0]);
-    ASSERT_EQUAL_UINT(5, dst_buf[1]);
+    ASSERT_EQUAL_UINT(6, dst_buf[1]);
 
     ASSERT_EQUAL_UINT('H', dst_buf[2]);
     ASSERT_EQUAL_UINT('E', dst_buf[3]);
     ASSERT_EQUAL_UINT('L', dst_buf[4]);
     ASSERT_EQUAL_UINT('L', dst_buf[5]);
     ASSERT_EQUAL_UINT('O', dst_buf[6]);
+    ASSERT_EQUAL_UINT('\0', dst_buf[7]);
 
-    ASSERT_EQUAL_UINT(TOK_SEPARATOR, dst_buf[7]);
+    ASSERT_EQUAL_UINT(TOK_SEPARATOR, dst_buf[8]);
 
-    ASSERT_EQUAL_UINT(TOK_VARIABLE, dst_buf[8]);
-    ASSERT_EQUAL_UINT(4, dst_buf[9]);
+    ASSERT_EQUAL_UINT(TOK_VARIABLE, dst_buf[9]);
+    ASSERT_EQUAL_UINT(5, dst_buf[10]);
 
-    ASSERT_EQUAL_UINT('N', dst_buf[10]);
-    ASSERT_EQUAL_UINT('A', dst_buf[11]);
-    ASSERT_EQUAL_UINT('M', dst_buf[12]);
-    ASSERT_EQUAL_UINT('E', dst_buf[13]);
+    ASSERT_EQUAL_UINT('N', dst_buf[11]);
+    ASSERT_EQUAL_UINT('A', dst_buf[12]);
+    ASSERT_EQUAL_UINT('M', dst_buf[13]);
+    ASSERT_EQUAL_UINT('E', dst_buf[14]);
+    ASSERT_EQUAL_UINT('\0', dst_buf[15]);
 
-    ASSERT_EQUAL_UINT(TOK_TERMINATOR, dst_buf[14]);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, dst_buf[16]);
 
     return 0;
 }
@@ -463,7 +498,7 @@ int test_interpret_gosub()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
@@ -475,7 +510,7 @@ int test_interpret_gosub()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e4);
 
     ASSERT_EQUAL_INT(456, ret1.lineno);
-    ASSERT(strcmp("", ret1.varname) == 0);
+    ASSERT_EQUAL_UINT(NULL, ret1.vartoken); /* No variable associated. */
 
     /* Only one entry in stack. */
     program_return_t ret2;
@@ -495,7 +530,7 @@ int test_interpret_gosub_invalid_lineno()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_SYNTAX, e2);
 
@@ -508,7 +543,7 @@ int test_interpret_return()
 
     program_return_t ret_start;
     ret_start.lineno = 123;
-    ret_start.varname[0] = '\0';
+    ret_start.vartoken = NULL;
     program_push_return(&ret_start);
 
     const char * input = "RETURN";
@@ -517,7 +552,7 @@ int test_interpret_return()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e2);
 
@@ -541,7 +576,7 @@ int test_interpret_return_empty_stack()
     error_t e = statement_tokenize(dst, input);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    current_lineno = 456;
+    program_listing.entries[program_listing.index].lineno = 456;
     error_t e2 = statement_interpret(dst);
     ASSERT_EQUAL_UINT(ERROR_RETSTACK_EMPTY, e2);
 
@@ -563,7 +598,8 @@ int test_interpret_dim()
 
     /* Get value of variable. */
     tok_t * a;
-    error_t e3 = program_get_array("X", &a);
+    tok_t var[10]; MAKE_VAR_TOK(var, "X");
+    error_t e3 = program_get_array(var, &a);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_UINT(TOK_ALLOC, a[0]);
@@ -587,7 +623,9 @@ int test_interpret_dim14()
 
     /* Get value of variable. */
     tok_t * a;
-    error_t e3 = program_get_array("ABC", &a);
+    tok_t abc[10];
+    MAKE_VAR_TOK(abc, "ABC");
+    error_t e3 = program_get_array(abc, &a);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_UINT(TOK_ALLOC, a[0]);
@@ -611,7 +649,9 @@ int test_interpret_dim_toolarge_boundary_ok()
 
     /* Get value of variable. */
     tok_t * a;
-    error_t e3 = program_get_array("Z", &a);
+    tok_t z[10];
+    MAKE_VAR_TOK(z, "Z");
+    error_t e3 = program_get_array(z, &a);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e3);
 
     ASSERT_EQUAL_UINT(TOK_ALLOC, a[0]);
@@ -635,7 +675,9 @@ int test_interpret_dim_toolarge_boundary_toolarge()
 
     /* Variable should be undefined. */
     tok_t * a;
-    error_t e3 = program_get_array("FOO", &a);
+    tok_t foo[10];
+    MAKE_VAR_TOK(foo, "FOO");
+    error_t e3 = program_get_array(foo, &a);
     ASSERT_EQUAL_UINT(ERROR_UNDEFINED_ARRAY, e3);
 
     return 0;
@@ -656,7 +698,9 @@ int test_interpret_dim_toolarge()
 
     /* Variable should be undefined. */
     tok_t * a;
-    error_t e3 = program_get_array("Z", &a);
+    tok_t z[10];
+    MAKE_VAR_TOK(z, "Z");
+    error_t e3 = program_get_array(z, &a);
     ASSERT_EQUAL_UINT(ERROR_UNDEFINED_ARRAY, e3);
 
     return 0;
@@ -671,7 +715,9 @@ int test_interpret_dim_toolarge()
 int test_interpret_assign_array()
 {
     program_new();
-    program_create_array("ARR", 15);
+    tok_t arr[10];
+    MAKE_VAR_TOK(arr, "ARR");
+    program_create_array(arr, 15);
 
     const char * input = "ARR(5) = 42";
     tok_t dst[80];
@@ -681,7 +727,7 @@ int test_interpret_assign_array()
 
     /* Array index 5 should be set. */
     tok_t * a;
-    error_t e = program_get_array("ARR", &a);
+    ASSERT_NO_ERROR(program_get_array(arr, &a));
     ASSERT_EQUAL_INT(42, ARRAY_ACCESS(a, 5));
 
     return 0;
@@ -690,8 +736,10 @@ int test_interpret_assign_array()
 int test_interpret_assign_array_variable_index()
 {
     program_new();
-    program_create_array("ARR", 15);
-    program_set_numeric("IDX", 3);
+    tok_t arr[10];
+    MAKE_VAR_TOK(arr, "ARR");
+    program_create_array(arr, 15);
+    SET_TEST_VAR(IDX, 3);
 
     const char * input = "ARR(IDX) = 42";
     tok_t dst[80];
@@ -701,7 +749,7 @@ int test_interpret_assign_array_variable_index()
 
     /* Array index 5 should be set. */
     tok_t * a;
-    error_t e = program_get_array("ARR", &a);
+    ASSERT_NO_ERROR(program_get_array(arr, &a));
     ASSERT_EQUAL_INT(42, ARRAY_ACCESS(a, 3));
 
     return 0;
@@ -710,7 +758,7 @@ int test_interpret_assign_array_variable_index()
 int test_interpret_assign_array_undefined()
 {
     program_new();
-    program_set_numeric("IDX", 3);
+    SET_TEST_VAR(IDX, 3);
 
     const char * input = "ARR(IDX) = 42";
     tok_t dst[80];
@@ -726,8 +774,8 @@ int test_interpret_assign_array_undefined()
 int test_interpret_if_true()
 {
     program_new();
-    program_set_numeric("TEST", 42);
-    program_set_numeric("FOO", 99);
+    SET_TEST_VAR(TEST, 42);
+    SET_TEST_VAR(FOO, 99);
 
     const char * input = "IF TEST = 42 THEN FOO = 9";
     tok_t dst[80];
@@ -736,7 +784,7 @@ int test_interpret_if_true()
     HELPER_INTERPRET(dst);
 
     numeric_t val;
-    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric(TEST_VAR(FOO), &val));
     ASSERT_EQUAL_INT(9, val);
 
     return 0;
@@ -745,8 +793,8 @@ int test_interpret_if_true()
 int test_interpret_if_false()
 {
     program_new();
-    program_set_numeric("TEST", 100);
-    program_set_numeric("FOO", 99);
+    SET_TEST_VAR(TEST, 100);
+    SET_TEST_VAR(FOO, 99);
 
     const char * input = "IF TEST = 42 THEN FOO = 9";
     tok_t dst[80];
@@ -755,7 +803,7 @@ int test_interpret_if_false()
     HELPER_INTERPRET(dst);
 
     numeric_t val;
-    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric(TEST_VAR(FOO), &val));
     ASSERT_EQUAL_INT(99, val);
 
     return 0;
@@ -764,8 +812,8 @@ int test_interpret_if_false()
 int test_interpret_if_lteq_true()
 {
     program_new();
-    program_set_numeric("TEST", 100);
-    program_set_numeric("FOO", 99);
+    SET_TEST_VAR(TEST, 100);
+    SET_TEST_VAR(FOO, 99);
 
     const char * input = "IF TEST <= 104 THEN FOO = 9";
     tok_t dst[80];
@@ -774,7 +822,7 @@ int test_interpret_if_lteq_true()
     HELPER_INTERPRET(dst);
 
     numeric_t val;
-    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric(TEST_VAR(FOO), &val));
     ASSERT_EQUAL_INT(9, val);
 
     return 0;
@@ -783,8 +831,8 @@ int test_interpret_if_lteq_true()
 int test_interpret_if_gt_false()
 {
     program_new();
-    program_set_numeric("TEST", 100);
-    program_set_numeric("FOO", 99);
+    SET_TEST_VAR(TEST, 100);
+    SET_TEST_VAR(FOO, 99);
 
     const char * input = "IF TEST > 100 THEN FOO = 9";
     tok_t dst[80];
@@ -793,7 +841,7 @@ int test_interpret_if_gt_false()
     HELPER_INTERPRET(dst);
 
     numeric_t val;
-    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric("FOO", &val));
+    ASSERT_EQUAL_UINT(ERROR_NOERROR, program_get_numeric(TEST_VAR(FOO), &val));
     ASSERT_EQUAL_INT(99, val);
 
     return 0;
@@ -811,6 +859,89 @@ int test_tokenize_and_interpret_rem()
     ASSERT_EQUAL_UINT(TOK_REMARK, dst[0]);
 
     HELPER_INTERPRET(dst);
+
+    return 0;
+}
+
+int test_tokenize_long_print()
+{
+    program_new();
+
+    const char * input = "PRINT \"A = { \", A(1), \" \", A(2), \" \", A(3), \" \", A(4), \" \", A(5), \" \", A(6), \" \", A(7), \" \", A(8), \" \", A(9), \" \", A(10), \" }\"";
+    tok_t dst[256];
+
+    HELPER_TOKENIZE(dst, input);
+    const tok_t * toks = dst;
+
+    /* Check first token is PRINT. */
+    ASSERT(KW_CHECK(toks, KEYWORD_PRINT));
+    toks += KW_SIZE;
+
+    /* Then "A = {" */
+    ASSERT_EQUAL_UINT(TOK_STRING, *toks);
+    ASSERT_EQUAL_UINT(7, *(toks+1));
+    ASSERT(strcmp("A = { ", (const char *)(toks+2)) == 0);
+    toks = t_varlen_skip(toks);
+
+    /* Then 1-9 times: SEP, A, (, NUMERIC, ), SEP, " " */
+    for (numeric_t i = 1; i <= 9; i++)
+    {
+        ASSERT_EQUAL_UINT(TOK_SEPARATOR, *toks);
+        toks++;
+
+        ASSERT_EQUAL_UINT(TOK_REGISTER, *toks);
+        ASSERT_EQUAL_UINT(0, *(toks+1));
+        toks += 2;
+
+        ASSERT(OP_CHECK(toks, OP_LPAREN));
+        toks += OP_SIZE;
+
+        ASSERT_EQUAL_INT(i, NUMERIC_GET(toks));
+        toks += NUMERIC_SIZE;
+
+        ASSERT(OP_CHECK(toks, OP_RPAREN));
+        toks += OP_SIZE;
+
+        ASSERT_EQUAL_UINT(TOK_SEPARATOR, *toks);
+        toks++;
+
+        ASSERT_EQUAL_UINT(TOK_STRING, *toks);
+        ASSERT_EQUAL_UINT(2, *(toks+1));
+        ASSERT(strcmp(" ", (const char *)(toks+2)) == 0);
+        toks = t_varlen_skip(toks);
+    }
+
+    /* Then: SEP, A, (, NUMERIC, ), SEP, " }" */
+    ASSERT_EQUAL_UINT(TOK_SEPARATOR, *toks);
+    toks++;
+    
+    ASSERT_EQUAL_UINT(TOK_REGISTER, *toks);
+    ASSERT_EQUAL_UINT(0, *(toks+1));
+    toks += 2;
+
+    ASSERT(OP_CHECK(toks, OP_LPAREN));
+    toks += OP_SIZE;
+
+    ASSERT_EQUAL_INT(10, NUMERIC_GET(toks));
+    toks += NUMERIC_SIZE;
+
+    ASSERT(OP_CHECK(toks, OP_RPAREN));
+    toks += OP_SIZE;
+
+    ASSERT_EQUAL_UINT(TOK_SEPARATOR, *toks);
+    toks++;
+
+    ASSERT_EQUAL_UINT(TOK_STRING, *toks);
+    ASSERT_EQUAL_UINT(3, *(toks+1));
+    ASSERT(strcmp(" }", (const char *)(toks+2)) == 0);
+    toks = t_varlen_skip(toks);
+
+    /* Now expect terminator token. */
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *toks);
+    toks++;
+
+    tok_size_t actual_size = (tok_size_t)(toks - dst);
+    ASSERT_EQUAL_UINT(actual_size, statement_size(dst));
 
     return 0;
 }

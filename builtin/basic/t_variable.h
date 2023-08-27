@@ -11,6 +11,33 @@
 #define VARNAME_SIZE 4
 #define VARNAME_BUF_SIZE (VARNAME_SIZE+1)
 
+/* Maximum number of bytes needed to hold a variable token.
+ * Name + token + size + null
+ * 4    + 1     + 1    + 1    = 7
+ */
+#define VAR_TOK_BUF_SIZE (VARNAME_SIZE+3)
+
+/* Gets a pointer to the name field of a variable token
+ */
+#define VARIABLE_GET(_toks) ((const char *)(_toks+2))
+
+/* Size of a register token. */
+#define REGISTER_SIZE 2
+
+/* varcmp
+ *
+ * Purpose:
+ *     Compare two variable tokens.
+ * 
+ * Parameters:
+ *     left:  variable token pointer
+ *     right: variable token pointer
+ * 
+ * Returns:
+ *     0 if equal, 1 otherwise.
+ */
+int varcmp(const tok_t * left, const tok_t * right);
+
 /* t_variable_parse
  *
  * Purpose:
@@ -25,19 +52,6 @@
  */
 int t_variable_parse(tok_t ** dst_ptr, const char ** input_ptr);
 
-/* t_variable_size
- *
- * Purpose:
- *     Get the size of a variable token.
- * 
- * Parameters:
- *     toks:   Variable token stream.
- * 
- * Returns:
- *     Size of variable token.
- */
-tok_size_t t_variable_size(const tok_t * toks);
-
 /* t_variable_list
  *
  * Purpose:
@@ -50,20 +64,6 @@ tok_size_t t_variable_size(const tok_t * toks);
  *     Pointer to token after the variable.
  */
 const tok_t * t_variable_list(const tok_t * toks);
-
-/* t_variable_get
- *
- * Purpose:
- *     Get a variable name from the given token stream.
- * 
- * Parameters:
- *     var:    Buffer for variable name string.
- *     toks:   Variable token stream.
- * 
- * Returns:
- *     Nothing.
- */
-void t_variable_get(char * varname, const tok_t * toks);
 
 /* t_variable_get_ptr
  *

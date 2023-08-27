@@ -43,6 +43,7 @@ int test_alloc_too_many()
     for (int i = 0; i < 16; i++)
     {
         int p = memory_allocate();
+        ASSERT_EQUAL_INT(i, p);
     }
 
     int p2 = memory_allocate();
@@ -88,6 +89,7 @@ int test_free_disabled()
     for (int i = 0; i < 16; i++)
     {
         int p = memory_allocate();
+        ASSERT_EQUAL_INT(i, p);
     }
 
     /* Free a disabled page. */

@@ -8,6 +8,7 @@
 typedef int16_t numeric_t;
 
 #define NUMERIC_GET(_toks) (*(numeric_t *)(_toks+1))
+#define NUMERIC_SIZE 3
 
 /* t_numeric_put
  *
@@ -22,19 +23,6 @@ typedef int16_t numeric_t;
  *     Nothing.
  */
 void t_numeric_put(tok_t * toks, numeric_t num);
-
-/* t_numeric_size
- * Purpose:
- *     Return the size of a numeric in memory.
- * 
- * Parameters:
- *     toks: Token stream to read from.
- * 
- * Returns:
- *     unsigned size of numeric tokens (2).
- */
-
-tok_size_t t_numeric_size(const tok_t * toks);
 
 /* t_numeric_parse
  *

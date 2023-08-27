@@ -12,6 +12,14 @@
 
 #define FILE_LIMIT 1
 
+#define FILENAME_MAXLEN 8
+#define FILEEXT_MAXLEN 3
+
+/* Size of buffer for filename+ext.
+ * FILENAME + . + EXT + NULL
+ */
+#define FILENAME_BUF_LEN (FILENAME_MAXLEN + FILEEXT_MAXLEN + 2)
+
 typedef struct _DirectoryEntry
 {
     char name[8];

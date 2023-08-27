@@ -9,13 +9,14 @@
 #include "t_variable.h"
 
 /* Type of an entry in the program return stack.
- * lineno: Line number to return to.
- * varname: Associated variable (first character '\0' if N/A).
+ * lineno:   Line number to return to.
+ * vartoken: Token for associated variable (NULL if N/A).
+ *           Must have program lifetime.
  */
 typedef struct _PROGRAM_RETURN_T
 {
     numeric_t lineno;
-    char varname[VARNAME_BUF_SIZE];
+    const tok_t * vartoken;
 } program_return_t;
 
 /* program_end
@@ -98,13 +99,13 @@ void program_set_next_lineno(numeric_t lineno);
  *     Set a numeric variable.
  * 
  * Parameters:
- *     name: Name of the variable.
+ *     toks: Pointer to variable token.
  *     val:  Value of the variable.
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_set_numeric(const char * name, numeric_t val);
+error_t program_set_numeric(const tok_t * toks, numeric_t val);
 
 /* program_get_numeric
  *
@@ -112,13 +113,13 @@ error_t program_set_numeric(const char * name, numeric_t val);
  *     Get the value of a numeric variable.
  * 
  * Parameters:
- *     name: Name of the variable.
+ *     toks: Pointer to variable token.
  *     val:  Reference value of the variable.
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_get_numeric(const char * name, numeric_t * val);
+error_t program_get_numeric(const tok_t * toks, numeric_t * val);
 
 /* program_get_numeric_ref
  *
@@ -126,27 +127,27 @@ error_t program_get_numeric(const char * name, numeric_t * val);
  *     Get a reference to a numeric variable.
  * 
  * Parameters:
- *     name: Name of the variable.
+ *     toks: Pointer to variable token.
  *     val:  Pointer to populate with reference to variable.
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_get_numeric_ref(const char * name, numeric_t ** val);
+error_t program_get_numeric_ref(const tok_t * toks, numeric_t ** val);
 
 /* program_create_array
  *
  * Purpose:
- *     Create a new array with the given name.
+ *     Create a new array for the given variable.
  * 
  * Parameters:
- *     name: Name of new array.
+ *     toks: Pointer to variable token.
  *     size: Size of array.
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_create_array(const char * name, tok_size_t size);
+error_t program_create_array(const tok_t * toks, tok_size_t size);
 
 /* program_get_array
  *
@@ -154,13 +155,13 @@ error_t program_create_array(const char * name, tok_size_t size);
  *     Get the value (pointer to) an array variable.
  * 
  * Parameters:
- *     name: Name of the variable.
+ *     toks: Pointer to variable token.
  *     val: Reference value of the array.
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_get_array(const char * name, tok_t ** array);
+error_t program_get_array(const tok_t * toks, tok_t ** array);
 
 /* program_push_return
  *

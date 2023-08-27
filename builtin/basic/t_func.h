@@ -12,6 +12,8 @@
 /* Builtin functions. */
 #define FUNC_RND 0x01
 
+#define FUNC_SIZE 2
+
 /* t_func_parse
  *
  * Purpose:
@@ -46,8 +48,5 @@ error_t t_func_call(const tok_t * toks, const tok_t ** end, numeric_t * ret);
 
 /* Print function token. */
 const tok_t * t_func_list(const tok_t * toks);
-
-/* Function token size. */
-tok_t t_func_size(const tok_t * toks);
 
 #endif /* _T_FUNC_H */

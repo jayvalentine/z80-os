@@ -6,6 +6,8 @@
 
 #include "t_defs.h"
 
+#define STRING_GET(_toks) ((const char *)(_toks+2))
+
 /* t_string_parse
  *
  * Purpose:

@@ -88,17 +88,47 @@ error_t statement_tokenize(tok_t * stmt, const char * input)
 
 tok_size_t statement_size(const tok_t * stmt)
 {
-    tok_size_t size = 0;
+    const tok_t * start = stmt;
+    
     while (*stmt != TOK_TERMINATOR)
     {
-        tok_size_t tok_size = t_defs_size(stmt);
-        size += tok_size;
-        stmt += tok_size;
+        tok_t tok = *stmt;
+        switch(tok)
+        {
+            case TOK_NUMERIC:
+                stmt += NUMERIC_SIZE;
+                break;
+
+            case TOK_KEYWORD:
+                stmt += KW_SIZE;
+                break;
+            case TOK_OPERATOR:
+                stmt += OP_SIZE;
+                break;
+            case TOK_FUNC:
+                stmt += FUNC_SIZE;
+                break;
+            case TOK_REGISTER:
+                stmt += REGISTER_SIZE;
+                break;
+
+            case TOK_TERMINATOR:
+            case TOK_SEPARATOR:
+                stmt++;
+                break;
+            
+            case TOK_STRING:
+            case TOK_VARIABLE:
+            case TOK_ALLOC:
+            case TOK_REMARK:
+                stmt = t_varlen_skip(stmt);
+                break;
+        }
     }
 
-    /* Account for final terminator. */
-    size++;
-    return size;
+    stmt++;
+
+    return (tok_size_t)(stmt - start);
 }
 
 /* statement_interpret
@@ -133,7 +163,7 @@ error_t statement_interpret(const tok_t * stmt)
         stmt++;
         return t_keyword_interpret(kw, stmt);
     }
-    else if (tok_type == TOK_VARIABLE)
+    else if (tok_type == TOK_VARIABLE || tok_type == TOK_REGISTER)
     {
         /* Get pointer to the variable to assign. */
         const tok_t * next_toks;
@@ -144,9 +174,7 @@ error_t statement_interpret(const tok_t * stmt)
          * and try again. */
         if (error == ERROR_UNDEFINED_VAR)
         {
-            char varname[VARNAME_BUF_SIZE];
-            t_variable_get(varname, stmt+1);
-            error = program_set_numeric(varname, 0);
+            error = program_set_numeric(stmt, 0);
             ERROR_HANDLE(error);
 
             error = t_variable_get_ptr(stmt, &next_toks, &val_ptr);
@@ -157,10 +185,12 @@ error_t statement_interpret(const tok_t * stmt)
         /* Check syntax of tokens after the variable reference. */
         stmt = next_toks;
         if (!OP_CHECK(stmt, OP_EQUAL)) return ERROR_SYNTAX;
+        stmt += OP_SIZE;
 
         /* Now we have a statement to evaluate. */
         numeric_t val;
-        error = eval_numeric(&val, stmt);
+        const tok_t * end;
+        error = eval_numeric(&val, stmt, &end);
         ERROR_HANDLE(error);
 
         /* Eval was successful, assign the value. */

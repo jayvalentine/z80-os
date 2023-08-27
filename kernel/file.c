@@ -172,7 +172,7 @@ int filesystem_get_directory_entry(DirectoryEntry_T * dir_entry, const char * fi
     bool done = FALSE;
 
     /* Buffer for filename. */
-    uint8_t buf[13];
+    char buf[FILENAME_BUF_LEN];
 
     /* Try to find the file in the root directory. */
     while (!done)
@@ -222,7 +222,7 @@ int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const cha
     bool done = FALSE;
 
     /* Buffer for filename. */
-    uint8_t buf[13];
+    char buf[FILENAME_BUF_LEN];
 
     /* Try to find the file in the root directory. */
     while (!done)
@@ -273,7 +273,7 @@ int filesystem_mark_directory_entry_free(const char * filename)
     bool done = FALSE;
 
     /* Buffer for filename. */
-    uint8_t buf[13];
+    char buf[FILENAME_BUF_LEN];
 
     /* Try to find the file in the root directory. */
     while (!done)

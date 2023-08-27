@@ -37,6 +37,7 @@ rule ".rel" => ".c" do |task|
     cmd += "-I#{LIB_INCLUDE} "
     cmd += "-DDEBUG "
     cmd += "-DZ80 "
+    cmd += "--Werror "
     cmd += "#{task.source}"
     puts cmd
     system(cmd)
@@ -171,6 +172,7 @@ def unit_test(directory)
     end
 
     cmd = "gcc "
+    cmd += "-Wall -Werror -Wno-unused-value -Wno-format "
     cmd += "-g -O1 "
     cmd += "-DUNIT_TEST "
     cmd += "-I#{directory} "

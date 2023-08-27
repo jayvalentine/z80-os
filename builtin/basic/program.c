@@ -9,6 +9,8 @@
 #include "t_numeric.h"
 
 #ifdef Z80
+#define TGT_FASTCALL __z88dk_fastcall
+
 #include <os.h>
 
 extern tok_t end;
@@ -17,6 +19,7 @@ extern tok_t end;
 #define program_max ((tok_t *)USER_PROG_END)
 
 #else
+#define TGT_FASTCALL
 
 tok_t program_region[4096];
 
@@ -25,8 +28,7 @@ tok_t program_region[4096];
 #endif
 
 tok_t * program_end_ptr;
-const tok_t * program_stmt_ptr;
-numeric_t current_lineno;
+
 numeric_t next_lineno;
 
 #define PROGSTATE_RUNNING 0
@@ -55,14 +57,24 @@ typedef struct _CONTEXT_VAR_T
 } context_var_t;
 
 
-#define MAX_NUMERICS 16
+#define MAX_VARS 16
 
 typedef struct _CONTEXT_T
 {
     uint8_t count;
 
-    context_var_t defines[MAX_NUMERICS];
+    context_var_t defines[MAX_VARS];
 } context_t;
+
+/* There is a "register" for each single-letter variable A-Z. */
+typedef struct _REGISTER_T
+{
+    uint8_t defined;
+    var_value_t value;
+} register_t;
+
+#define NUM_REGISTERS 26
+register_t program_registers[NUM_REGISTERS];
 
 context_t program_context;
 
@@ -80,6 +92,25 @@ typedef struct _PROGRAM_RETURN_STACK_T
 } program_return_stack_t;
 
 program_return_stack_t program_return_stack;
+
+/* Program listing.
+ *
+ * Matches line numbers to program statements.
+ */
+typedef struct _LISTING_ENTRY_T
+{
+    numeric_t lineno;
+    const tok_t * stmt;
+} listing_entry_t;
+
+typedef struct _LISTING_T
+{
+    int16_t count;
+    int16_t index; /* -1 if invalid. */
+    listing_entry_t entries[100];
+} listing_t;
+
+listing_t program_listing;
 
 /* program_end
  *
@@ -106,13 +137,21 @@ uint16_t program_free(void)
 
 void program_new(void)
 {
-    current_lineno = 0;
+    program_listing.count = 0;
+    program_listing.index = 0;
+
     program_end_ptr = program_start;
     program_state = PROGSTATE_READY;
 
+    /* Free registers. */
+    for (int i = 0; i < NUM_REGISTERS; i++)
+    {
+        program_registers[i].defined = 0;
+    }
+
     /* Free the variable context. */
     program_context.count = 0;
-    for (int i = 0; i < MAX_NUMERICS; i++)
+    for (int i = 0; i < MAX_VARS; i++)
     {
         program_context.defines[i].name[0] = '\0';
     }
@@ -121,100 +160,112 @@ void program_new(void)
     program_return_stack.count = 0;
 }
 
+void program_listing_insert(numeric_t lineno, const tok_t * toks)
+{
+    program_listing.entries[program_listing.count].lineno = lineno;
+    program_listing.entries[program_listing.count].stmt = toks;
+    program_listing.count++;
+}
+
 error_t program_insert(const tok_t * toks)
 {
-    while (*toks != TOK_TERMINATOR)
-    {
-        tok_size_t size = t_defs_size(toks);
-        for (tok_size_t i = 0; i < size; i++)
-        {
-            *program_end_ptr = *toks;
-            program_end_ptr++;
-            toks++;
-        }
-    }
+    /* First token should be a numeric. */
+    if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
+    numeric_t lineno = NUMERIC_GET(toks);
+    toks += NUMERIC_SIZE;
 
-    *program_end_ptr = TOK_TERMINATOR;
-    program_end_ptr++;
+    /* Get size of statement to insert. */
+    tok_size_t size = statement_size(toks);
+
+    /* Insertion point of statement. */
+    const tok_t * stmt = program_end_ptr;
+
+    /* Insert tokens into program memory. */
+    memcpy(program_end_ptr, toks, size);
+    program_end_ptr += size;
+
+    /* Insert into listing. */
+    program_listing_insert(lineno, stmt);
 
     return ERROR_NOERROR;
 }
 
 void program_list(void)
 {
-    const tok_t * p = program_start;
-
-    while (p != program_end_ptr)
+    for (int i = 0; i < program_listing.count; i++)
     {
-        p = t_defs_list(p);
+        printf("%d ", program_listing.entries[i].lineno);
+
+        const tok_t * p = program_listing.entries[i].stmt;
+        while (*p != TOK_TERMINATOR)
+        {
+            p = t_defs_list(p);
+        }
+        t_defs_list(p);
     }
 }
 
-/* Helper function to search for a statement
+/* Helper function to search for a listing
  * with a given linenumber.
- * Returns NULL if it can't be found.
+ *
+ * Returns listing index or -1 if it can't be found.
  */
-const tok_t * program_search_lineno(int lineno, const tok_t * stmt)
+int16_t program_search_lineno(int lineno) TGT_FASTCALL
 {
-    const tok_t * ptr = stmt;
-    while (ptr < program_end_ptr)
+    if (lineno < program_listing.entries[program_listing.index].lineno)
     {
-        /* First token should be a line number or an allocation. */
-        tok_t tok_type = *ptr;
-        
-        /* Skip over it if it's an allocation. */
-        if (tok_type == TOK_ALLOC)
+        /* Search backwards */
+        uint16_t i = program_listing.index - 1;
+        while (program_listing.entries[i].lineno >= lineno)
         {
-            SKIP(ptr);
-            continue;
+            if (i == 0) return -1;
+            i--;
         }
 
-        if (tok_type != TOK_NUMERIC) return NULL;
-
-        numeric_t this_lineno = NUMERIC_GET(ptr);
-        if (this_lineno >= lineno)
-        {
-            return ptr;
-        }
-
-        /* Otherwise not matching, move onto next statement. */
-        ptr += statement_size(ptr);
+        /* i now points to the first statement which has a lineno
+         * < to the search lineno.
+         *
+         * we want the statement after that - i.e. the furthest away
+         * statement which is >= the search lineno.
+         */
+        return i+1;
     }
-
-    /* Didn't find matching line number. */
-    return NULL;
+    else
+    {
+        /* Search forwards */
+        uint16_t i = program_listing.index + 1;
+        while (program_listing.entries[i].lineno < lineno)
+        {
+            if (i == program_listing.count) return -1;
+            i++;
+        }
+        return i;
+    }
 }
 
-/* Helper function to return a pointer to the statement
- * with a given line number, or the nearest higher statement
- * if none equal exists.
+/* Helper function to move to the next line in the program.
  */
-static const tok_t * program_getlineno(numeric_t lineno)
+static error_t program_nextline(numeric_t lineno) TGT_FASTCALL
 {
-    /* Greater than current lineno?
-     * If so search forward from current program pointer.
-     */
-    if (lineno >= current_lineno)
-    {
-        return program_search_lineno(lineno, program_stmt_ptr);
-    }
+    int16_t index = program_search_lineno(lineno);
+    if (index == -1) return ERROR_GOTO;
 
-    /* Otherwise search forward from beginning
-     * (can't search backwards)
-     */
-    return program_search_lineno(lineno, program_start);
+    program_listing.index = index;
+    return ERROR_NOERROR;
 }
 
 error_t program_run(void)
 {
+    error_t e;
+
     program_state = PROGSTATE_RUNNING;
-    program_stmt_ptr = program_start;
-    current_lineno = 0;
+
+    program_listing.index = 0;
     next_lineno = 0;
     
     /* Free the variable context. */
     program_context.count = 0;
-    for (int i = 0; i < MAX_NUMERICS; i++)
+    for (int i = 0; i < MAX_VARS; i++)
     {
         program_context.defines[i].name[0] = '\0';
     }
@@ -222,32 +273,19 @@ error_t program_run(void)
     /* Clear the return stack. */
     program_return_stack.count = 0;
 
-    while (program_stmt_ptr < program_end_ptr)
+    while (program_listing.index < program_listing.count)
     {
-        /* Skip over it if it's an allocation. */
-        if (*program_stmt_ptr == TOK_ALLOC)
-        {
-            program_stmt_ptr += t_defs_size(program_stmt_ptr);
-            continue;
-        }
+        const tok_t * stmt = program_listing.entries[program_listing.index].stmt;
 
-        const tok_t * stmt = program_stmt_ptr;
+        /* Shouldn't ever be an allocation or a numeric. */
+        if (*stmt == TOK_ALLOC) return program_end(ERROR_SYNTAX);
+        if (*stmt == TOK_NUMERIC) return program_end(ERROR_SYNTAX);
 
-        /* Sanity check, should start with a line number. */
-        if (*stmt != TOK_NUMERIC)
-        {
-            return program_end(ERROR_LINENUM);
-        }
-
-        /* Get numeric line number. */
-        current_lineno = NUMERIC_GET(stmt);
-        next_lineno = current_lineno + 1;
-
-        /* Skip initial lineno. */
-        stmt += 3;
+        /* Get next line number. */
+        next_lineno = program_current_lineno() + 1;
 
         /* Interpret the statement. */
-        error_t e = statement_interpret(stmt);
+        e = statement_interpret(stmt);
 
         /* We could have ended the program. */
         if (program_state != PROGSTATE_RUNNING) break;
@@ -255,8 +293,8 @@ error_t program_run(void)
         if (e != ERROR_NOERROR) return program_end(e);
 
         /* Move onto next statement. */
-        program_stmt_ptr = program_getlineno(next_lineno);
-        if (program_stmt_ptr == NULL) return program_end(ERROR_GOTO);
+        e = program_nextline(next_lineno);
+        if (e != ERROR_NOERROR) return program_end(e);
     }
 
     program_state = PROGSTATE_READY;
@@ -276,7 +314,7 @@ error_t program_run(void)
  */
 numeric_t program_current_lineno(void)
 {
-    return current_lineno;
+    return program_listing.entries[program_listing.index].lineno;
 }
 
 /* program_set_next_lineno
@@ -315,20 +353,17 @@ numeric_t program_next_lineno(void)
 /* The functions below relate to defining, setting,
  * and getting variables. */
 
-/* program_get_numeric_ref
- *
- * Purpose:
- *     Get a reference to a numeric variable.
- * 
- * Parameters:
- *     name: Name of the variable.
- *     val:  Pointer to populate with reference to variable.
- * 
- * Returns:
- *     Error, if any.
- */
-error_t program_get_numeric_ref(const char * name, numeric_t ** val)
+error_t program_get_numeric_ref(const tok_t * toks, numeric_t ** val)
 {
+    /* Is the variable a register? */
+    if (*toks == TOK_REGISTER)
+    {
+        *val = &program_registers[*(toks+1)].value.val;
+        return ERROR_NOERROR;
+    }
+
+    /* Otherwise look up the variable in the context list. */
+    const char * name = VARIABLE_GET(toks);
     if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
     
     for (uint8_t i = 0; i < program_context.count; i++)
@@ -343,22 +378,10 @@ error_t program_get_numeric_ref(const char * name, numeric_t ** val)
     return ERROR_UNDEFINED_VAR;
 }
 
-/* program_set_numeric
- *
- * Purpose:
- *     Set a numeric variable.
- * 
- * Parameters:
- *     name: Name of the variable.
- *     val:  Value of the variable.
- * 
- * Returns:
- *     Error, if any.
- */
-error_t program_set_numeric(const char * name, numeric_t val)
+error_t program_set_numeric(const tok_t * toks, numeric_t val)
 {
     numeric_t * ref;
-    error_t e = program_get_numeric_ref(name, &ref);
+    error_t e = program_get_numeric_ref(toks, &ref);
 
     /* If the variable already exists then just set it. */
     if (e == ERROR_NOERROR)
@@ -370,10 +393,12 @@ error_t program_set_numeric(const char * name, numeric_t val)
     /* Otherwise we're defining a new variable. */
     if (e != ERROR_UNDEFINED_VAR) return e;
     
-    if (program_context.count == MAX_NUMERICS) return ERROR_TOO_MANY_VARS;
+    if (program_context.count == MAX_VARS) return ERROR_TOO_MANY_VARS;
+
+    const char * varname = VARIABLE_GET(toks);
 
     context_var_t * define = &program_context.defines[program_context.count];
-    strcpy(define->name, name);
+    strcpy(define->name, varname);
     define->value.val = val;
 
     program_context.count++;
@@ -393,10 +418,10 @@ error_t program_set_numeric(const char * name, numeric_t val)
  * Returns:
  *     Error, if any.
  */
-error_t program_get_numeric(const char * name, numeric_t * val)
+error_t program_get_numeric(const tok_t * toks, numeric_t * val)
 {
     numeric_t * ref;
-    error_t e = program_get_numeric_ref(name, &ref);
+    error_t e = program_get_numeric_ref(toks, &ref);
     if (e != ERROR_NOERROR) return e;
     *val = *ref;
     return ERROR_NOERROR;
@@ -416,7 +441,8 @@ error_t program_get_numeric(const char * name, numeric_t * val)
 error_t program_push_return(const program_return_t * ret)
 {
     uint8_t i = program_return_stack.count;
-    memcpy((char *)&program_return_stack.stack[i], (const char *)ret, sizeof(program_return_t));
+    program_return_stack.stack[i].lineno = ret->lineno;
+    program_return_stack.stack[i].vartoken = ret->vartoken;
     program_return_stack.count++;
 
     return ERROR_NOERROR;
@@ -439,7 +465,8 @@ error_t program_pop_return(program_return_t * ret)
 
     program_return_stack.count--;
     uint8_t i = program_return_stack.count;
-    memcpy((char *)ret, (char *)&program_return_stack.stack[i], sizeof(program_return_t));
+    ret->lineno = program_return_stack.stack[i].lineno;
+    ret->vartoken = program_return_stack.stack[i].vartoken;
 
     return ERROR_NOERROR;
 }
@@ -488,9 +515,20 @@ tok_t * program_alloc(tok_size_t size)
  * Returns:
  *     Error, if any.
  */
-error_t program_create_array(const char * name, tok_size_t size)
+error_t program_create_array(const tok_t * toks, tok_size_t size)
 {
     tok_t * a = program_alloc(size);
+
+    /* Is the variable a register? */
+    if (*toks == TOK_REGISTER)
+    {
+        program_registers[*(toks+1)].value.ptr = a;
+        program_registers[*(toks+1)].defined = 1;
+        return ERROR_NOERROR;
+    }
+
+    /* Otherwise add the variable to the context list. */
+    const char * name = VARIABLE_GET(toks);
 
     /* Get next available space in context for new variable */
     context_var_t * define = &program_context.defines[program_context.count];
@@ -516,8 +554,19 @@ error_t program_create_array(const char * name, tok_size_t size)
  * Returns:
  *     Error, if any.
  */
-error_t program_get_array(const char * name, tok_t ** array)
+error_t program_get_array(const tok_t * toks, tok_t ** array)
 {
+    /* Is the variable a register? */
+    if (*toks == TOK_REGISTER)
+    {
+        if (!program_registers[*(toks+1)].defined) return ERROR_UNDEFINED_ARRAY;
+
+        *array = program_registers[*(toks+1)].value.ptr;
+        return ERROR_NOERROR;
+    }
+
+    /* Otherwise get array from context list. */
+    const char * name = VARIABLE_GET(toks);
     if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
     
     for (uint8_t i = 0; i < program_context.count; i++)

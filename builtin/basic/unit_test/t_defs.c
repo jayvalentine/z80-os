@@ -18,8 +18,6 @@ int test_parse_sep()
     ASSERT_EQUAL_INT(1, success);
     ASSERT_EQUAL_UINT(TOK_SEPARATOR, dst_buf[0]);
 
-    ASSERT_EQUAL_UINT(1, t_defs_size(orig_dst));
-
     ASSERT(dst == orig_dst+1);
     ASSERT(input == orig_input+1);
 
@@ -36,11 +34,10 @@ int test_parse_rem()
     int success = t_rem_parse(&dst, &input);
     ASSERT_EQUAL_INT(1, success);
     ASSERT_EQUAL_UINT(TOK_REMARK, dst_buf[0]);
-    ASSERT_EQUAL_UINT(17, dst_buf[1]);
+    ASSERT_EQUAL_UINT(18, dst_buf[1]);
 
-    char s[40];
-    memcpy(s, &dst_buf[2], 17);
-    s[17] = '\0';
-    int cmp = strcmp(" This is a remark", s);
+    int cmp = strcmp(" This is a remark", (const char *)&dst_buf[2]);
     ASSERT_EQUAL_INT(0, cmp);
+
+    return 0;
 }

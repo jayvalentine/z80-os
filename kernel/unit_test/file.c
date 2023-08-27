@@ -540,4 +540,6 @@ int test_file_stress_test()
             }
         }
     }
+
+    return 0;
 }

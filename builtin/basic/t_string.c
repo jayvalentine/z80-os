@@ -40,10 +40,15 @@ int t_string_parse(uint8_t ** dst_ptr, const char ** input_ptr)
         str_size++;
     }
 
+    /* Null-terminate string. */
+    *dst = '\0';
+    dst++;
+    str_size++;
+
     *size = str_size;
 
     /* Skip final '"' */
-    *input++;
+    input++;
 
     /* Update pointers. */
     *input_ptr = input;
@@ -54,18 +59,11 @@ int t_string_parse(uint8_t ** dst_ptr, const char ** input_ptr)
 
 const uint8_t * t_string_list(const uint8_t * toks)
 {
-    putchar('"');
-
     uint8_t size = *toks;
     toks++;
 
-    for (uint8_t i = 0; i < size; i++)
-    {
-        char c = *toks;
-        toks++;
-        putchar(c);
-    }
+    printf("\"%s\" ", (const char *)toks);
+    toks += size;
 
-    printf("\" ");
     return toks;
 }

@@ -71,22 +71,24 @@ int t_operator_parse(tok_t ** dst_ptr, const char ** input_ptr)
     return 1;
 }
 
-/* t_operator_size
- *
- * Purpose:
- *     Get the size of an operator token.
- * 
- * Parameters:
- *     toks:   Operator token stream.
- * 
- * Returns:
- *     Size of operator token.
- */
-tok_size_t t_operator_size(const tok_t * toks)
+uint8_t t_operator_is_comparison(const tok_t * toks) TGT_FASTCALL
 {
-    return 1;
-}
+    if (*toks != TOK_OPERATOR) return 0;
+    toks++;
 
+    switch (*toks)
+    {
+        case OP_EQUAL:
+        case OP_LT:
+        case OP_GT:
+        case OP_LTEQ:
+        case OP_GTEQ:
+            return 1;
+
+        default:
+            return 0;
+    }
+}
 
 /* t_operator_list
  *

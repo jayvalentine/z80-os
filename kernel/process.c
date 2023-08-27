@@ -49,8 +49,6 @@ const ProcessDescriptor_T * process_info(int pid)
 
 int process_spawn(int pd, char ** argv, size_t argc)
 {
-    uintptr_t address = process_table[pd].base_address;
-
     /* Copy argv strings onto stack. */
     char arg_buffer[512];
     char * arg_buffer_ptr = arg_buffer;

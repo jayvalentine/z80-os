@@ -6,9 +6,14 @@ int test_failed;
     if (test_name())                    \
     {                                   \
         printf("\n" #test_name " X (line %d)\n", failed_line);   \
+        fflush(stdout);                 \
         test_failed = 1;                \
     }                                   \
-    else printf(".")
+    else                                \
+    {                                   \
+        printf(".");                    \
+        fflush(stdout);                 \
+    }
 
 int failed_line;
 

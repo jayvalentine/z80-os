@@ -70,15 +70,16 @@ error_t t_func_call(const tok_t * toks, const tok_t ** end, numeric_t * ret)
         if (OP_CHECK(toks, OP_LPAREN))
         {
             numeric_t param;
-            ERROR_HANDLE(eval_numeric(&param, toks));
+            const tok_t * expr_end;
+            ERROR_HANDLE(eval_numeric(&param, toks, &expr_end));
 
             *ret = (numeric_t)(rand16() % (param + 1 - RND_RANGE_MIN) + RND_RANGE_MIN);
 
             /* Skip to next rparen. */
-            while (!OP_CHECK(toks, OP_RPAREN)) SKIP(toks);
+            toks = expr_end;
 
             /* Skip the rparen, set pointer to token after call. */
-            SKIP(toks);
+            toks += OP_SIZE;
             *end = toks;
 
             return ERROR_NOERROR;
@@ -102,15 +103,10 @@ const tok_t * t_func_list(const tok_t * toks)
 {
     const char * s;
     if (*toks == FUNC_RND) s = "RND";
+    else s = "FUNC?";
 
     printf("%s", s);
 
     toks++;
     return toks;
-}
-
-/* Function token size. */
-tok_t t_func_size(const tok_t * toks)
-{
-    return 1;
 }

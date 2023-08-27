@@ -18,9 +18,11 @@ int test_eval_numeric()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, success);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(123, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -36,10 +38,12 @@ int test_eval_numeric_negative()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, success);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(-456, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -54,14 +58,13 @@ int test_eval_addition()
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
-    tok_t eval_buf[3];
-    tok_t * eval = eval_buf;
-
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(127, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -77,10 +80,12 @@ int test_eval_subtraction_positive_result()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(4, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -96,10 +101,12 @@ int test_eval_subtraction_negative_result()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(-4, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -115,10 +122,12 @@ int test_eval_addition_three_terms()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
     
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(17, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -135,10 +144,12 @@ int test_eval_addition_subtraction()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(9, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -154,7 +165,8 @@ int test_eval_subtraction_addition()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(11, num);
@@ -167,7 +179,7 @@ int test_eval_variable()
     program_new();
 
     /* Set up context. */
-    program_set_numeric("VAR", 42);
+    SET_TEST_VAR(VAR, 42);
 
     const char * input = "VAR";
     tok_t dst_buf[128];
@@ -178,10 +190,12 @@ int test_eval_variable()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(42, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -191,8 +205,8 @@ int test_eval_variable_complex()
     program_new();
 
     /* Set up context. */
-    program_set_numeric("VAR", 42);
-    program_set_numeric("FRED", 9);
+    SET_TEST_VAR(VAR, 42);
+    SET_TEST_VAR(FRED, 9);
 
     const char * input = "VAR + 22 - FRED";
     tok_t dst_buf[128];
@@ -203,10 +217,12 @@ int test_eval_variable_complex()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
     
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(55, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -216,7 +232,7 @@ int test_eval_variable_negation()
     program_new();
 
     /* Set up context. */
-    program_set_numeric("VAR", 8);
+    SET_TEST_VAR(VAR, 8);
 
     const char * input = "-VAR";
     tok_t dst_buf[128];
@@ -227,10 +243,12 @@ int test_eval_variable_negation()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(-8, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -240,9 +258,11 @@ int test_eval_array_access_first()
     program_new();
 
     /* Set up context. */
-    program_create_array("ARR", 10);
+    tok_t var[10];
+    MAKE_VAR_TOK(var, "ARR");
+    program_create_array(var, 10);
     tok_t * arr;
-    program_get_array("ARR", &arr);
+    program_get_array(var, &arr);
     numeric_t * arr_num = (numeric_t *)(arr + 2);
     arr_num[0] = 42;
 
@@ -255,10 +275,12 @@ int test_eval_array_access_first()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(42, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -268,9 +290,11 @@ int test_eval_array_access_last()
     program_new();
 
     /* Set up context. */
-    program_create_array("BOB", 24);
+    tok_t bob[10];
+    MAKE_VAR_TOK(bob, "BOB");
+    program_create_array(bob, 24);
     tok_t * arr;
-    program_get_array("BOB", &arr);
+    program_get_array(bob, &arr);
     numeric_t * arr_num = (numeric_t *)(arr + 2);
     arr_num[11] = 9;
 
@@ -283,10 +307,12 @@ int test_eval_array_access_last()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(9, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -296,9 +322,11 @@ int test_eval_array_access_mid()
     program_new();
 
     /* Set up context. */
-    program_create_array("FOO", 12);
+    tok_t foo[10];
+    MAKE_VAR_TOK(foo, "FOO");
+    program_create_array(foo, 12);
     tok_t * arr;
-    program_get_array("FOO", &arr);
+    program_get_array(foo, &arr);
     numeric_t * arr_num = (numeric_t *)(arr + 2);
     arr_num[2] = 22;
 
@@ -311,10 +339,12 @@ int test_eval_array_access_mid()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
 
     ASSERT_EQUAL_UINT(ERROR_NOERROR, err);
     ASSERT_EQUAL_INT(22, num);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -324,9 +354,11 @@ int test_eval_array_access_outofrange_end()
     program_new();
 
     /* Set up context. */
-    program_create_array("BOB", 24);
+    tok_t bob[10];
+    MAKE_VAR_TOK(bob, "BOB");
+    program_create_array(bob, 24);
     tok_t * arr;
-    program_get_array("BOB", &arr);
+    program_get_array(bob, &arr);
     numeric_t * arr_num = (numeric_t *)(arr + 2);
     arr_num[11] = 9;
 
@@ -339,7 +371,9 @@ int test_eval_array_access_outofrange_end()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end = NULL;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
+    ASSERT_EQUAL_UINT(NULL, end);
 
     ASSERT_EQUAL_UINT(ERROR_RANGE, err);
 
@@ -351,9 +385,11 @@ int test_eval_array_access_outofrange_begin()
     program_new();
 
     /* Set up context. */
-    program_create_array("BOB", 6);
+    tok_t bob[10];
+    MAKE_VAR_TOK(bob, "BOB");
+    program_create_array(bob, 6);
     tok_t * arr;
-    program_get_array("BOB", &arr);
+    program_get_array(bob, &arr);
     numeric_t * arr_num = (numeric_t *)(arr + 2);
     arr_num[11] = 9;
 
@@ -366,7 +402,9 @@ int test_eval_array_access_outofrange_begin()
     ASSERT_EQUAL_UINT(ERROR_NOERROR, e);
 
     numeric_t num;
-    error_t err = eval_numeric(&num, &dst_buf[0]);
+    const tok_t * end = NULL;
+    error_t err = eval_numeric(&num, &dst_buf[0], &end);
+    ASSERT_EQUAL_UINT(NULL, end);
 
     ASSERT_EQUAL_UINT(ERROR_RANGE, err);
 
@@ -380,14 +418,16 @@ int test_eval_var()
 
     program_new();
 
-    program_set_numeric("I", 42);
+    SET_TEST_VAR(I, 42);
 
     e = statement_tokenize(dst_buf, "I");
     ASSERT_NO_ERROR(e);
 
     numeric_t num;
-    e = eval_numeric(&num, dst_buf);
+    const tok_t * end;
+    e = eval_numeric(&num, dst_buf, &end);
     ASSERT_NO_ERROR(e);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     ASSERT_EQUAL_INT(42, num);
 
@@ -404,11 +444,13 @@ int test_eval_array_access_variable_index()
     /* Set a variable to use as index.
      * Remember indexing starts from 1.
      */
-    program_set_numeric("I", 3);
+    SET_TEST_VAR(I, 3);
 
-    program_create_array("ARR", 6 * sizeof(numeric_t));
+    tok_t var[10];
+    MAKE_VAR_TOK(var, "ARR");
+    program_create_array(var, 6 * sizeof(numeric_t));
     tok_t * arr;
-    program_get_array("ARR", &arr);
+    program_get_array(var, &arr);
     numeric_t * arr_num = (numeric_t *)(arr + 2);
     arr_num[2] = 42;
     arr_num[4] = 99;
@@ -416,16 +458,20 @@ int test_eval_array_access_variable_index()
     e = statement_tokenize(dst_buf, "ARR(I)");
     ASSERT_NO_ERROR(e);
 
+    const tok_t * end;
+
     numeric_t num = 0;
-    e = eval_numeric(&num, dst_buf);
+    e = eval_numeric(&num, dst_buf, &end);
     ASSERT_NO_ERROR(e);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     e = statement_tokenize(dst_buf, "ARR(I+2)");
     ASSERT_NO_ERROR(e);
 
     numeric_t num2 = 0;
-    e = eval_numeric(&num2, dst_buf);
+    e = eval_numeric(&num2, dst_buf, &end);
     ASSERT_NO_ERROR(e);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     ASSERT_EQUAL_INT(42, num);
     ASSERT_EQUAL_INT(99, num2);
@@ -443,8 +489,10 @@ int test_eval_rnd()
     ASSERT_NO_ERROR(e);
 
     numeric_t num;
-    e = eval_numeric(&num, dst_buf);
+    const tok_t * end;
+    e = eval_numeric(&num, dst_buf, &end);
     ASSERT_NO_ERROR(e);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     return 0;
 }
@@ -460,8 +508,10 @@ int test_eval_rnd_lim()
     ASSERT_NO_ERROR(e);
 
     numeric_t num;
-    e = eval_numeric(&num, dst_buf);
+    const tok_t * end;
+    e = eval_numeric(&num, dst_buf, &end);
     ASSERT_NO_ERROR(e);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     ASSERT(num >= 1 && num <= 5);
 
@@ -479,8 +529,10 @@ int test_eval_rnd_in_expr()
     ASSERT_NO_ERROR(e);
 
     numeric_t num;
-    e = eval_numeric(&num, dst_buf);
+    const tok_t * end;
+    e = eval_numeric(&num, dst_buf, &end);
     ASSERT_NO_ERROR(e);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     ASSERT(num >= 10 && num <= 15);
 
@@ -498,8 +550,10 @@ int test_eval_mul_precedence()
     ASSERT_NO_ERROR(e);
 
     numeric_t num;
-    e = eval_numeric(&num, dst_buf);
+    const tok_t * end;
+    e = eval_numeric(&num, dst_buf, &end);
     ASSERT_NO_ERROR(e);
+    ASSERT_EQUAL_UINT(TOK_TERMINATOR, *end);
 
     /* Should be: 8 (5 + (1*3))
      * and not:   18 ((5+1) * 3)

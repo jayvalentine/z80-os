@@ -59,9 +59,6 @@ int test_numeric_size()
     int success = t_numeric_parse(&dst, &input);
     ASSERT_EQUAL_INT(1, success);
     ASSERT_EQUAL_INT(TOK_NUMERIC, dst_buf[0]);
-    
-    tok_size_t sz = t_numeric_size(&dst_buf[1]);
-    ASSERT_EQUAL_INT(2, sz);
 
     return 0;
 }

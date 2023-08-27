@@ -29,6 +29,7 @@
 #define KEYWORD_THEN 14
 
 #define KW_CHECK(_toks, _kw_type) ((*_toks == TOK_KEYWORD) && (*(_toks+1) == _kw_type))
+#define KW_SIZE 2
 
 typedef uint8_t kw_code;
 

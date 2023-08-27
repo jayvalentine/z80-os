@@ -15,10 +15,11 @@
  * Parameters:
  *     result: Destination for result value
  *     src:    Expression tokens to evaluate.
+ *     end:    Token after end of expression.
  * 
  * Returns:
  *     Error, if any.
  */
-error_t eval_numeric(numeric_t * result, const tok_t * src);
+error_t eval_numeric(numeric_t * result, const tok_t * src, const tok_t ** end);
 
 #endif
