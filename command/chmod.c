@@ -29,8 +29,7 @@ int command_chmod(char ** argv, size_t argc)
 
     uint32_t sector = dinfo->root_region;
 
-    uint8_t done = 0;
-    while (!done)
+    while (1)
     {
         /* Read this sector of the root directory. */
         syscall_dread(temp, sector);

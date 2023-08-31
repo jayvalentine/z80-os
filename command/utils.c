@@ -27,7 +27,7 @@ uint16_t utils_strtou(const char * s)
     uint16_t val = 0;
 
     /* At most 4 characters for a 16-bit int. */
-    for (char * c = s; c < (s+4); c++)
+    for (const char * c = s; c < (s+4); c++)
     {
         if (*c == '\0') return val;
 

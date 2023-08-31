@@ -31,7 +31,7 @@ CLEAN.include(
     "**/*.coverage")
 
 rule ".rel" => ".c" do |task|
-    cmd = "sdcc -c -mz80 --opt-code-speed --std-sdcc99 "
+    cmd = "sdcc -c -mz80 --opt-code-speed --max-allocs-per-node 10000 --std-sdcc99 "
     cmd += "-o\"#{task.name}\" "
     cmd += "-I#{File.dirname(task.source)} "
     cmd += "-I#{LIB_INCLUDE} "
@@ -76,7 +76,7 @@ end
 def compile_sdcc(output_name, object_files, crt0, code_seg, data_seg)
     basename = File.basename(output_name, ".bin")
 
-    cmd = "sdcc --verbose -mz80 --opt-code-speed --std-sdcc99 "
+    cmd = "sdcc --verbose -mz80 --opt-code-speed --max-allocs-per-node 10000 --std-sdcc99 "
     cmd += "--no-std-crt0 "
     cmd += "-Wl-b_CODE=0x#{code_seg.to_s(16)} "
     cmd += "-Wl-b_DATA=0x#{data_seg.to_s(16)} "

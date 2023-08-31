@@ -33,8 +33,6 @@ uint8_t get_byte(const char * str)
 
 void process_ihex_record(const char * rec)
 {
-    uint8_t bytes[255];
-
     /* Skip over the ':' */
     rec++;
 
@@ -123,7 +121,7 @@ uint8_t breakpoints_set;
 
 void process_commands()
 {
-    uint16_t last_load_address;
+    uint16_t last_load_address = 0x8000;
 
     while (1)
     {
@@ -190,7 +188,7 @@ void process_commands()
 
             uint16_t break_address = (break_address_upper << 8) | break_address_lower;
 
-            set_breakpoint(break_address);
+            set_breakpoint((uint8_t *)break_address);
         }
     }
 }
@@ -230,6 +228,9 @@ void set_breakpoint(uint8_t * address)
 
 int user_main(char ** argv, size_t argc)
 {
+    argv;
+    argc;
+
     syscall_sighandle(debug_break, SIG_BREAK);
     
     in_breakpoint = FALSE;

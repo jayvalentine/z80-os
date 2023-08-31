@@ -202,9 +202,8 @@ error_t t_variable_get_ptr(const tok_t * toks, const tok_t ** next_toks, numeric
     else
     {
         /* Get variable value. */
-        numeric_t * val;
-        e = program_get_numeric_ref(var, &val);
-        ERROR_HANDLE(e);
+        numeric_t * val = program_get_numeric_ref(var);
+        if (val == NULL) return ERROR_UNDEFINED_VAR;
 
         /* Set pointer to variable value */
         *value = val;

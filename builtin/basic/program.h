@@ -8,6 +8,12 @@
 #include "t_numeric.h"
 #include "t_variable.h"
 
+#ifdef Z80
+#define TGT_FASTCALL __z88dk_fastcall
+#else
+#define TGT_FASTCALL
+#endif
+
 /* Type of an entry in the program return stack.
  * lineno:   Line number to return to.
  * vartoken: Token for associated variable (NULL if N/A).
@@ -128,12 +134,11 @@ error_t program_get_numeric(const tok_t * toks, numeric_t * val);
  * 
  * Parameters:
  *     toks: Pointer to variable token.
- *     val:  Pointer to populate with reference to variable.
  * 
  * Returns:
- *     Error, if any.
+ *     Pointer to numeric variable, or NULL if undefined.
  */
-error_t program_get_numeric_ref(const tok_t * toks, numeric_t ** val);
+numeric_t * program_get_numeric_ref(const tok_t * toks) TGT_FASTCALL;
 
 /* program_create_array
  *

@@ -105,11 +105,11 @@ const Inbuilt_T commands[NUM_COMMANDS] =
     }
 };
 
-Inbuilt_T * get_command(const char * s)
+const Inbuilt_T * get_command(void)
 {
     for (size_t c = 0; c < NUM_COMMANDS; c++)
     {
-        Inbuilt_T * command = &commands[c];
+        const Inbuilt_T * command = &commands[c];
         if (strcmp(cmd, command->name) == 0)
         {
             return command;
@@ -121,7 +121,7 @@ Inbuilt_T * get_command(const char * s)
 
 void user_main()
 {
-    SysInfo_T * sysinfo = syscall_sysinfo();
+    const SysInfo_T * sysinfo = syscall_sysinfo();
     /* Clear screen, cursor to top-left. */
     puts("\033[2J\033[1;1H");
 
@@ -154,7 +154,7 @@ void user_main()
 
         utils_toupper(cmd);
 
-        Inbuilt_T * command_to_run = get_command(cmd);
+        const Inbuilt_T * command_to_run = get_command();
         
         if (command_to_run == NULL)
         {

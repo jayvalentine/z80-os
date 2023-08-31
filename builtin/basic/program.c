@@ -353,49 +353,44 @@ numeric_t program_next_lineno(void)
 /* The functions below relate to defining, setting,
  * and getting variables. */
 
-error_t program_get_numeric_ref(const tok_t * toks, numeric_t ** val)
+numeric_t * program_get_numeric_ref(const tok_t * toks) TGT_FASTCALL
 {
     /* Is the variable a register? */
     if (*toks == TOK_REGISTER)
     {
-        *val = &program_registers[*(toks+1)].value.val;
-        return ERROR_NOERROR;
+        return &program_registers[*(toks+1)].value.val;
     }
 
     /* Otherwise look up the variable in the context list. */
     const char * name = VARIABLE_GET(toks);
-    if (strlen(name) > VARNAME_SIZE) return ERROR_VARNAME;
     
     for (uint8_t i = 0; i < program_context.count; i++)
     {
         if (strcmp(program_context.defines[i].name, name) == 0)
         {
-            *val = &program_context.defines[i].value.val;
-            return ERROR_NOERROR;
+            return &program_context.defines[i].value.val;
         }
     }
 
-    return ERROR_UNDEFINED_VAR;
+    return NULL;
 }
 
 error_t program_set_numeric(const tok_t * toks, numeric_t val)
 {
-    numeric_t * ref;
-    error_t e = program_get_numeric_ref(toks, &ref);
+    numeric_t * ref = program_get_numeric_ref(toks);
 
     /* If the variable already exists then just set it. */
-    if (e == ERROR_NOERROR)
+    if (ref != NULL)
     {
         *ref = val;
         return ERROR_NOERROR;
     }
 
     /* Otherwise we're defining a new variable. */
-    if (e != ERROR_UNDEFINED_VAR) return e;
-    
     if (program_context.count == MAX_VARS) return ERROR_TOO_MANY_VARS;
 
     const char * varname = VARIABLE_GET(toks);
+    if (strlen(varname) > VARNAME_SIZE) return ERROR_VARNAME;
 
     context_var_t * define = &program_context.defines[program_context.count];
     strcpy(define->name, varname);
@@ -420,9 +415,9 @@ error_t program_set_numeric(const tok_t * toks, numeric_t val)
  */
 error_t program_get_numeric(const tok_t * toks, numeric_t * val)
 {
-    numeric_t * ref;
-    error_t e = program_get_numeric_ref(toks, &ref);
-    if (e != ERROR_NOERROR) return e;
+    numeric_t * ref = program_get_numeric_ref(toks);
+    if (ref == NULL) return ERROR_UNDEFINED_VAR;
+
     *val = *ref;
     return ERROR_NOERROR;
 }
