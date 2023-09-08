@@ -17,7 +17,7 @@
 #define PAGE_USED 0x02
 
 int memory_init(int pages);
-int memory_allocate();
+int memory_allocate(void);
 void memory_free(int page);
 
 #endif

@@ -44,25 +44,19 @@ _disk_init:
 
     ; void disk_read(char * buf, uint32_t sector)
     ;
+    ; buf    will be in HL
+    ; sector will be on stack.
+    ;
+    ; callee is responsible for cleaning up the stack.
+    ;
     ; Reads a sector from CF-card.
 _disk_read:
-    push    IX
+    ; Return address
+    pop     IY
 
-    ; Skip over return address and IX.
-    ld      HL, #4
-    add     HL, SP
-    push    HL
-    pop     IX
-
-    ; Sector number in DEBC
-    ld      C, 2(IX)
-    ld      B, 3(IX)
-    ld      E, 4(IX)
-    ld      D, 5(IX)
-
-    ; Buffer in HL.
-    ld      L, 0(IX)
-    ld      H, 1(IX)
+    ; Sector
+    pop     BC
+    pop     DE
 
     call    _status_set_disk
     
@@ -76,31 +70,25 @@ _disk_read:
 
     call    _status_clr_disk
 
-    pop     IX
+    jp      (IY)
 
-    ret
+
 
     ; void disk_write(char * buf, uint32_t sector)
     ;
+    ; buf    will be in HL
+    ; sector will be on stack.
+    ;
+    ; callee is responsible for cleaning up the stack.
+    ;
     ; Writes a sector to CF-card.
 _disk_write:
-    push    IX
+    ; Return address
+    pop     IY
 
-    ; Skip over return address and IX.
-    ld      HL, #4
-    add     HL, SP
-    push    HL
-    pop     IX
-
-    ; Sector number in DEBC
-    ld      C, 2(IX)
-    ld      B, 3(IX)
-    ld      E, 4(IX)
-    ld      D, 5(IX)
-
-    ; Buffer in HL.
-    ld      L, 0(IX)
-    ld      H, 1(IX)
+    ; Sector
+    pop     BC
+    pop     DE
 
     call    _status_set_disk
     
@@ -114,8 +102,9 @@ _disk_write:
 
     call    _status_clr_disk
 
-    pop     IX
-    ret
+    jp      (IY)
+
+    
 
     ; **************************
     ; READ/WRITE ROUTINES

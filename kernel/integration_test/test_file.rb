@@ -19,7 +19,7 @@ class FileHandlingTest < IntegrationTest
     # Tests that calling the fentries syscall when there are some files on disk
     # returns the number of files.
     def test_fentries_some_files
-        @instance.continue 500000
+        @instance.continue 1000000
 
         assert_program_finished()
 
@@ -36,6 +36,15 @@ class FileHandlingTest < IntegrationTest
 
         # Main function should have returned 0.
         # Non-zero values are returned when the test code fails.
+        assert_equal 0, @instance.registers["HL"]
+    end
+
+    # Tests that a file can be written and read.
+    def test_fwrite_fread
+        @instance.continue 1000000
+
+        assert_program_finished()
+
         assert_equal 0, @instance.registers["HL"]
     end
 end

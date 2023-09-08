@@ -16,7 +16,7 @@ void break_handle(uint16_t address)
     longjmp(jmp_env, 1);
 }
 
-int main()
+int main(void)
 {
     /* Put serial into binary mode. */
     syscall_smode(SMODE_BINARY);

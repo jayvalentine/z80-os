@@ -138,7 +138,7 @@ int scheduler_next(void)
     return schedule_table[current_scheduled].pid;
 }
 
-uint8_t scheduler_tick()
+uint8_t scheduler_tick(void)
 {
     int pid = scheduler_next();
 

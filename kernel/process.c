@@ -78,7 +78,9 @@ int process_spawn(int pd, char ** argv, size_t argc)
     ram_copy(process_args, bank, arg_buffer, 512);
 
     /* Create a scheduler entry for this process. */
-    return scheduler_add(pd);
+    int success = scheduler_add(pd);
+    if (success) return success;
+    else return 0;
 }
 
 int process_allocate(void)

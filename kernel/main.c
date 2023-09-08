@@ -20,6 +20,7 @@
 
 #include <include/status.h>
 #include <include/file.h>
+#include <include/disk.h>
 #include <include/signal.h>
 #include <include/ram.h>
 #include <include/process.h>
@@ -47,13 +48,14 @@ void main(void)
 
     status_init();
 
+    disk_init();
     filesystem_init();
     signal_init();
 
     serial_init();
 
     /* Get number of RAM banks. */
-    uint16_t banks = ram_bank_test();
+    uint8_t banks = ram_bank_test();
     sysinfo.numbanks = banks;
     ram_bank_set(banks-1);
 

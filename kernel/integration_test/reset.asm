@@ -8,6 +8,7 @@ _reset:
     jp      _main
 
 _done:
+    ex      DE, HL
     halt
 
     .globl  _loop

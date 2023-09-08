@@ -4,7 +4,7 @@
 
 char buf[10];
 
-int main()
+int main(void)
 {
     gets(buf);
 

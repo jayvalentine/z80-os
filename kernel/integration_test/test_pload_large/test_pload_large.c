@@ -3,14 +3,15 @@
 #include <stdio.h>
 
 char file[2050];
+int base;
 
-int main()
+int main(void)
 {
     /* Write test file. */
     file[0] = 0x0a;
     file[1] = 0x80;
 
-    int base = 0;
+    base = 0;
     for (int i = 0; i < 16; i++)
     {
         for (int j = 0; j < 128; j++)

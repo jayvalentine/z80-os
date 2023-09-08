@@ -119,7 +119,7 @@ const Inbuilt_T * get_command(void)
     return NULL;
 }
 
-void user_main()
+void user_main(void)
 {
     const SysInfo_T * sysinfo = syscall_sysinfo();
     /* Clear screen, cursor to top-left. */

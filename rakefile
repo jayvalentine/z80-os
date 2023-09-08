@@ -31,7 +31,7 @@ CLEAN.include(
     "**/*.coverage")
 
 rule ".rel" => ".c" do |task|
-    cmd = "sdcc -c -mz80 --opt-code-speed --max-allocs-per-node 10000 --std-sdcc99 "
+    cmd = "sdcc -c -mz80 --sdcccall 1 --opt-code-speed --max-allocs-per-node 10000 --std-sdcc99 "
     cmd += "-o\"#{task.name}\" "
     cmd += "-I#{File.dirname(task.source)} "
     cmd += "-I#{LIB_INCLUDE} "
@@ -48,6 +48,7 @@ rule ".rel" => ".asm" do |task|
     cmd = "sdasz80 -plosgffw "
     cmd += "#{task.name} "
     cmd += task.source
+    puts cmd
     system(cmd)
 end
 
@@ -76,7 +77,7 @@ end
 def compile_sdcc(output_name, object_files, crt0, code_seg, data_seg)
     basename = File.basename(output_name, ".bin")
 
-    cmd = "sdcc --verbose -mz80 --opt-code-speed --max-allocs-per-node 10000 --std-sdcc99 "
+    cmd = "sdcc --verbose -mz80 --sdcccall 1 --opt-code-speed --max-allocs-per-node 10000 --std-sdcc99 "
     cmd += "--no-std-crt0 "
     cmd += "-Wl-b_CODE=0x#{code_seg.to_s(16)} "
     cmd += "-Wl-b_DATA=0x#{data_seg.to_s(16)} "
@@ -206,7 +207,10 @@ end
 
 desc 'Debug a test using Zemu.'
 task 'debug_test', [:test] => ['build:kernel_debug'] do |t, args|
-    zemu_start("#{args[:test]}.bin")
+    test_dir = File.join("kernel", "integration_test", args[:test])
+    test_app = File.join(test_dir, "#{args[:test]}.bin")
+    test_disk = File.join(test_dir, "disk.bin")
+    zemu_start(test_app, test_disk)
 end
 
 namespace 'build' do

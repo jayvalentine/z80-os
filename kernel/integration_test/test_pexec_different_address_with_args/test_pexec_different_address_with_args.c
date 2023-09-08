@@ -6,7 +6,7 @@
 
 const char header[2] = { 0x0a, 0xd0 };
 
-int main()
+int main(void)
 {
     const char * strs[3] =
     {

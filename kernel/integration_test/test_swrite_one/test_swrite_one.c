@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-int main()
+int main(void)
 {
     putchar('F');
     return 0;

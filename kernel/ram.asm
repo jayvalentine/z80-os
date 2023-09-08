@@ -14,6 +14,8 @@ _byte:
     ; Copies data from one RAM bank to another.
     ;
     ; NOT REENTRANT.
+    ;
+    ; TODO: CALLING CONVENTION!!!
     .globl  _ram_copy
 _ram_copy:
     push    IX
@@ -82,8 +84,6 @@ _bank_current:
     .globl  _ram_bank_current
 _ram_bank_current:
     ld      A, (_bank_current)
-    ld      H, #0
-    ld      L, A
     ret
 
     ; void bank_set(uint8_t bank)
@@ -91,11 +91,6 @@ _ram_bank_current:
     ; Sets the current memory bank.
     .globl  _ram_bank_set
 _ram_bank_set:
-    ; Get bank number in A.
-    ld      HL, #2
-    add     HL, SP
-    ld      A, (HL)
-
     ; Pop return address off stack.
     ; We're going to change the memory bank,
     ; so we want to ensure we can return properly.
@@ -106,7 +101,7 @@ _ram_bank_set:
 
     jp      (HL)
 
-    ; uint16_t bank_test(void)
+    ; uint8_t bank_test(void)
     ;
     ; Returns the number of banks.
     .globl  _ram_bank_test
@@ -142,12 +137,11 @@ __ram_bank_test_loop:
     inc     L
     jp      nz, #__ram_bank_test_loop
 
-    ; L is #0, so we have #256 banks.
-    ld      HL, #256
+    ; Return number of banks in A.
+    ld      A, L
     ret
 
 __ram_bank_test_done:
-    ; L holds #banks (less than #256).
-    ; Therefore just set H to #0 to form a #16-bit value.
-    ld      H, #0
+    ; Return number of banks in A.
+    ld      A, L
     ret

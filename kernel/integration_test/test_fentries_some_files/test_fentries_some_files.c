@@ -1,6 +1,6 @@
 #include <syscall.h>
 
-int main()
+int main(void)
 {
     int fd;
     fd = syscall_fopen("file1.txt", FMODE_WRITE);

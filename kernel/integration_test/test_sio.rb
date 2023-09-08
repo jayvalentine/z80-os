@@ -91,7 +91,7 @@ class SIOTest < IntegrationTest
     def test_sbreak
         # Run for a little bit - we expect not to halt.
         @instance.continue 2000
-        assert !@instance.halted?, "Program halted unexpectedly."
+        assert !@instance.halted?, "Program halted unexpectedly (at address %04x)." % @instance.registers["PC"]
 
         # Send break character - 0x18.
         @instance.serial_puts(0x18.chr)

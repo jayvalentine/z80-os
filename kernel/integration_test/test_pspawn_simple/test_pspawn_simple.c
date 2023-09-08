@@ -17,7 +17,7 @@ volatile char ret;
 
 void loop(void);
 
-void main()
+void main(void)
 {
     ret = 255;
 

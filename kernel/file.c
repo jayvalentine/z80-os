@@ -11,7 +11,7 @@
 void disk_read(char * buf, uint32_t sector);
 void disk_write(char * buf, uint32_t sector);
 
-uint16_t current_cache_sector;
+uint32_t current_cache_sector;
 
 DiskInfo_T disk_info;
 
@@ -20,8 +20,6 @@ char temp_sector[512];
 
 /* File descriptor table. */
 FileDescriptor_T fdtable[FILE_LIMIT];
-
-/* Helper functions. */
 
 /* In-place "upper-cases" the given string. */
 void string_toupper(char * s)
@@ -36,47 +34,8 @@ void string_toupper(char * s)
     }
 }
 
-/* Get an unsigned integer (in Z80 little-endian)
- * from a buffer at the given position.
- */
-uint16_t get_uint16_t(char * buf, size_t i)
-{
-    uint16_t var;
-    uint8_t * var_ptr = (uint8_t *)&var;
-
-    var_ptr[0] = buf[i];
-    var_ptr[1] = buf[i+1];
-    
-    return var;
-}
-
-/* Set an unsigned integer (in Z80 little-endian)
- * in a buffer at the given position.
- */
-void set_uint16_t(char * buf, size_t i, uint16_t value)
-{
-    uint16_t var = value;
-    uint8_t * var_ptr = (uint8_t *)&var;
-
-    buf[i] = var_ptr[0];
-    buf[i+1] = var_ptr[1];
-}
-
-/* Get an unsigned long (in little-endian)
- * from a buffer at a given location.
- */
-uint32_t get_uint32_t(char* buf, size_t i)
-{
-    uint32_t var;
-    uint8_t * var_ptr = (uint8_t *)&var;
-
-    var_ptr[0] = buf[i];
-    var_ptr[1] = buf[i+1];
-    var_ptr[2] = buf[i+2];
-    var_ptr[3] = buf[i+3];
-    
-    return var;
-}
+#define GET_UINT16(_buf, _i) (*(uint16_t *)&_buf[_i])
+#define GET_UINT32(_buf, _i) (*(uint32_t *)&_buf[_i])
 
 void read_sector_cached(char * buf, uint32_t sector, bool force_load)
 {
@@ -89,7 +48,7 @@ void read_sector_cached(char * buf, uint32_t sector, bool force_load)
     }
 }
 
-void fdtable_init()
+void fdtable_init(void)
 {
     /* Clear the "used" flag for each fd. */
     for (size_t i = 0; i < FILE_LIMIT; i++)
@@ -98,37 +57,59 @@ void fdtable_init()
     }
 }
 
-int filesystem_init()
+void filesystem_calc_fat_region(void)
 {
-    disk_read(temp_sector, 0);
+    disk_info.fat_region = GET_UINT16(temp_sector, 0x0e);
+}
 
-    /* General disk info. */
-    disk_info.bytes_per_sector = get_uint16_t(temp_sector, 0x0b);
-    disk_info.sectors_per_cluster = temp_sector[0x0d];
-    disk_info.bytes_per_cluster = disk_info.bytes_per_sector * disk_info.sectors_per_cluster;
+void filesystem_calc_root_region(void)
+{
+    static uint16_t sectors_per_fat;
+    static uint16_t number_of_fats;
 
-    /* Calculate start of FAT. */
-    disk_info.fat_region = get_uint16_t(temp_sector, 0x0e);
-
-    uint16_t sectors_per_fat = get_uint16_t(temp_sector, 0x16);
-    uint16_t number_of_fats = temp_sector[0x10];
+    sectors_per_fat = GET_UINT16(temp_sector, 0x16);
+    number_of_fats = (uint16_t)temp_sector[0x10];
 
     /* Calculate start of root directory. */
     disk_info.root_region = disk_info.fat_region + (sectors_per_fat * number_of_fats);
+}
 
-    uint16_t root_directory_size = get_uint16_t(temp_sector, 0x11) / 16;
+void filesystem_calc_data_region(void)
+{
+    static uint16_t root_directory_size;
+
+    root_directory_size = GET_UINT16(temp_sector, 0x11) / 16;
 
     /* Calculate start of data region. */
     disk_info.data_region = disk_info.root_region + root_directory_size;
+}
 
+void filesystem_calc_num_sectors(void)
+{
     /* Calculate number of sectors on disk. */
-    disk_info.num_sectors = get_uint16_t(temp_sector, 0x13);
+    disk_info.num_sectors = GET_UINT16(temp_sector, 0x13);
 
     /* If the small number of sectors is 0, read the large number. */
     if (disk_info.num_sectors == 0)
     {
-        disk_info.num_sectors = get_uint32_t(temp_sector, 0x20);
+        disk_info.num_sectors = GET_UINT32(temp_sector, 0x20);
     }
+}
+
+int filesystem_init(void)
+{
+    disk_read(temp_sector, 0ul);
+
+    /* General disk info. */
+    disk_info.bytes_per_sector = GET_UINT16(temp_sector, (size_t)0x0b);
+    disk_info.sectors_per_cluster = temp_sector[0x0d];
+    disk_info.bytes_per_cluster = disk_info.bytes_per_sector * (uint16_t)disk_info.sectors_per_cluster;
+
+    /* Calculate FAT info. */
+    filesystem_calc_fat_region();
+    filesystem_calc_root_region();
+    filesystem_calc_data_region();
+    filesystem_calc_num_sectors();
 
     /* Technically, the first sector _is_ in the cache. */
     current_cache_sector = 0;
@@ -168,7 +149,10 @@ void filesystem_filename(char * buf, const char * dir_entry)
 
 int filesystem_get_directory_entry(DirectoryEntry_T * dir_entry, const char * filename)
 {
-    uint32_t sector = disk_info.root_region;
+    static uint32_t sector;
+
+    sector = disk_info.root_region;
+    
     bool done = FALSE;
 
     /* Buffer for filename. */
@@ -218,7 +202,9 @@ int filesystem_get_directory_entry(DirectoryEntry_T * dir_entry, const char * fi
 
 int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const char * filename)
 {
-    uint32_t sector = disk_info.root_region;
+    static uint32_t sector;
+    
+    sector = disk_info.root_region;
     bool done = FALSE;
 
     /* Buffer for filename. */
@@ -269,7 +255,9 @@ int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const cha
 
 int filesystem_mark_directory_entry_free(const char * filename)
 {
-    uint32_t sector = disk_info.root_region;
+    static uint32_t sector;
+    
+    sector = disk_info.root_region;
     bool done = FALSE;
 
     /* Buffer for filename. */
@@ -322,47 +310,64 @@ int filesystem_mark_directory_entry_free(const char * filename)
 
 uint16_t fat_next_cluster(uint16_t cluster)
 {
+    static uint32_t fat_offset;
+    static uint32_t fat_sector;
+    static uint16_t cluster_bytes;
+
+    cluster_bytes = cluster * 2;
+    
     /* Calculate offset into FAT of sector to read. */
-    uint32_t fat_offset = (cluster * 2) / disk_info.bytes_per_sector;
-    uint32_t fat_sector = disk_info.fat_region + fat_offset;
+    fat_offset = cluster_bytes / disk_info.bytes_per_sector;
+    fat_sector = disk_info.fat_region + fat_offset;
 
     /* Calculate offset into that sector of the entry we want. */
-    uint16_t entry = (cluster * 2) % disk_info.bytes_per_sector;
+    uint16_t entry = cluster_bytes % disk_info.bytes_per_sector;
 
     /* Read the sector and return the appropriate entry. */
     read_sector_cached(temp_sector, fat_sector, FALSE);
-    return get_uint16_t(temp_sector, entry);
+    return GET_UINT16(temp_sector, entry);
 }
 
 void fat_set_cluster(uint16_t cluster, uint16_t next_cluster)
 {
+    static uint32_t fat_offset;
+    static uint32_t fat_sector;
+    static uint16_t cluster_bytes;
+
+    cluster_bytes = cluster * 2;
+    
     /* Calculate offset into FAT of sector to read. */
-    uint32_t fat_offset = (cluster * 2) / disk_info.bytes_per_sector;
-    uint32_t fat_sector = disk_info.fat_region + fat_offset;
+    fat_offset = cluster_bytes / disk_info.bytes_per_sector;
+    fat_sector = disk_info.fat_region + fat_offset;
 
     /* Calculate offset into that sector of the entry we want. */
-    uint16_t entry = (cluster * 2) % disk_info.bytes_per_sector;
+    uint16_t entry = cluster_bytes % disk_info.bytes_per_sector;
 
     /* Read the sector and set the appropriate entry. */
     read_sector_cached(temp_sector, fat_sector, FALSE);
-    set_uint16_t(temp_sector, entry, next_cluster);
+    GET_UINT16(temp_sector, entry) = next_cluster;
     disk_write(temp_sector, fat_sector);
 }
 
 uint16_t fat_find_free_cluster(void)
 {
+    static uint32_t fat_sector;
+    static uint16_t entry;
+    static uint16_t allocated_cluster;
+    static uint16_t entry_within_sector;
+
     /* Find first free entry in FAT. */
-    uint16_t allocated_cluster = 2;
-    uint16_t entry_within_sector = allocated_cluster;
+    allocated_cluster = 2;
+    entry_within_sector = allocated_cluster;
 
-    uint32_t fat_sector = disk_info.fat_region;
+    fat_sector = disk_info.fat_region;
 
-    uint16_t entry = CLUSTER_EOF;
+    entry = CLUSTER_EOF;
     
     while (TRUE)
     {
         read_sector_cached(temp_sector, fat_sector, FALSE);
-        entry = get_uint16_t(temp_sector, entry_within_sector * 2);
+        entry = GET_UINT16(temp_sector, entry_within_sector * 2);
 
         if (entry == CLUSTER_FREE) break;
 
@@ -370,7 +375,7 @@ uint16_t fat_find_free_cluster(void)
         entry_within_sector++;
 
         /* If we've gone past this sector, get the next one. */
-        if (entry_within_sector > disk_info.bytes_per_sector / 2)
+        if (entry_within_sector > (disk_info.bytes_per_sector / 2))
         {
             entry_within_sector = 0;
             fat_sector++;
@@ -424,7 +429,7 @@ void fat_deallocate_cluster(uint16_t cluster)
 /* Given a file cluster, return the sector in which that cluster starts. */
 uint32_t file_start_sector(uint16_t cluster)
 {
-    return disk_info.data_region + ((cluster - 2) * disk_info.sectors_per_cluster);
+    return disk_info.data_region + (cluster - 2) * disk_info.sectors_per_cluster;
 }
 
 int filesystem_assign_fd(void)
@@ -440,7 +445,9 @@ int filesystem_assign_fd(void)
 
 int file_create(DirectoryEntry_T * entry)
 {
-    uint32_t sector = disk_info.root_region;
+    static uint32_t sector;
+    
+    sector = disk_info.root_region;
 
     while (TRUE)
     {
@@ -528,11 +535,11 @@ int file_open_write(FileDescriptor_T * file)
     char * entry_ext = sep_pos + 1;
 
     /* Copy filename into directory entry, padding with spaces. */
-    memcpy(file_entry.name, entry_filename, strlen(entry_filename));
+    memcpy((char *)(file_entry.name), (const char *)entry_filename, strlen(entry_filename));
     for (size_t i = strlen(entry_filename); i < 8; i++) file_entry.name[i] = ' ';
 
     /* Copy extension into directory entry, padding with spaces. */
-    memcpy(file_entry.ext, entry_ext, strlen(entry_ext));
+    memcpy((char *)(file_entry.ext), (const char *)entry_ext, strlen(entry_ext));
     for (size_t i = strlen(entry_ext); i < 3; i++) file_entry.ext[i] = ' ';
 
     /* Don't set any of the attributes. */
@@ -626,12 +633,13 @@ int file_open(const char * filename, uint8_t mode)
 /* Close the file indicated by the given file descriptor. */
 void file_close(int fd)
 {
+    static DirectoryEntry_T entry;
+
     FileDescriptor_T * file = &fdtable[fd];
 
     /* Update size in directory entry, if opened for writing. */
     if (file->mode == FMODE_WRITE)
     {
-        DirectoryEntry_T entry;
         filesystem_get_directory_entry(&entry, file->name);
         entry.size = file->size;
         filesystem_set_directory_entry(&entry, file->name);
@@ -703,6 +711,8 @@ int file_delete(const char * filename)
 
 int file_readbyte(int fd)
 {
+    static uint32_t sector;
+
     FileDescriptor_T * file = &fdtable[fd];
 
     /* Return EOF if we've hit the end of the file. */
@@ -718,7 +728,7 @@ int file_readbyte(int fd)
     /* Otherwise read a byte from the current cluster. */
 
     /* Read current sector. */
-    uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
+    sector = file_start_sector(file->current_cluster) + file->sector;
 
     read_sector_cached(temp_sector, sector, FALSE);
 
@@ -750,6 +760,8 @@ int file_readbyte(int fd)
 
 int file_readsector(char * ptr, int fd)
 {
+    static uint32_t sector;
+
     FileDescriptor_T * file = &fdtable[fd];
 
     /* Return EOF if we've hit the end of the file. */
@@ -761,7 +773,7 @@ int file_readsector(char * ptr, int fd)
     /* Otherwise read a full sector. */
 
     /* Read current sector. */
-    uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
+    sector = file_start_sector(file->current_cluster) + file->sector;
 
     /* Don't cache the sector - we're unlikely to read it again. */
     disk_read(ptr, sector);
@@ -785,13 +797,15 @@ int file_readsector(char * ptr, int fd)
 
 int file_writesector(char * ptr, size_t offset, size_t n, int fd)
 {
+    static uint32_t sector;
+
     /* Can't write past end of sector. */
     if (offset + n > disk_info.bytes_per_sector) return 1;
 
     FileDescriptor_T * file = &fdtable[fd];
 
     /* Read current sector. */
-    uint32_t sector = file_start_sector(file->current_cluster) + file->sector;
+    sector = file_start_sector(file->current_cluster) + file->sector;
 
     read_sector_cached(temp_sector, sector, FALSE);
 
@@ -988,11 +1002,13 @@ int file_info(const char * filename, FINFO * finfo)
 }
 
 /* Returns the number of file entries in the root directory. */
-uint16_t file_entries()
+uint16_t file_entries(void)
 {
+    static uint32_t sector;
+
     uint16_t entries = 0;
 
-    uint32_t sector = disk_info.root_region;
+    sector = disk_info.root_region;
     
     /* Try to find the file in the root directory. */
     while (sector != disk_info.data_region)
@@ -1031,7 +1047,10 @@ uint16_t file_entries()
  * or an error code on failure (indicating the string is invalid). */
 int file_entry(char * s, uint16_t entry)
 {
-    uint32_t sector = disk_info.root_region;
+    static uint32_t sector;
+
+    sector = disk_info.root_region;
+    
     uint16_t n = 0;
 
     /* Try to find the file in the root directory. */

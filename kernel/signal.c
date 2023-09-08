@@ -5,7 +5,7 @@
 SIGHANDLER_T sighandler_cancel;
 SIGHANDLER_T sighandler_break;
 
-void signal_init()
+void signal_init(void)
 {
     sighandler_cancel = NULL;
     sighandler_break = NULL;

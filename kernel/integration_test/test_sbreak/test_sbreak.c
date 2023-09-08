@@ -16,7 +16,7 @@ void break_handle(uint16_t address)
     longjmp(jmp_env, 1);
 }
 
-int main()
+int main(void)
 {
     syscall_sighandle(break_handle, SIG_CANCEL);
     

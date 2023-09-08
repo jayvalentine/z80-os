@@ -3,7 +3,7 @@
 
 const char file[3] = { 0x0a, 0x80, 0x00 };
 
-int main()
+int main(void)
 {
     int f = syscall_fopen("file.exe", FMODE_WRITE);
     syscall_fwrite(file, 3, f);

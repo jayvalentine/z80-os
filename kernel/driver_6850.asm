@@ -5,23 +5,15 @@
 
     .globl  _driver_6850_tx
 
-    ; driver_6850_tx(char * s, size_t count);
+    ; driver_6850_tx(char * s, size_t count)
+    ;
+    ; s     will be in HL
+    ; count will be in DE
+    ;
     .globl  _driver_6850_tx
     .globl  _driver_6850_tx_done ; Required for benchmarking.
 _driver_6850_tx:
     push    IX
-
-    ld      HL, #4
-    add     HL, SP
-    push    HL
-    pop     IX
-
-    ; Get count into BC, s into DE.
-    ld      C, 2(IX)
-    ld      B, 3(IX)
-
-    ld      E, 0(IX)
-    ld      D, 1(IX)
 
 _driver_6850_tx_loop:
     ; Loop until ready to transmit.
@@ -30,16 +22,16 @@ _driver_6850_tx_loop:
     jp      z, _driver_6850_tx_loop
 
     ; Ready to transmit now!
-    ld      A, (DE)
+    ld      A, (HL)
     out     (UART_PORT_DATA), A
 
-    inc     DE
-    dec     BC
+    inc     HL
+    dec     DE
 
     ; If BC is #0, exit.
     ; Otherwise, continue loop.
-    ld      A, B
-    or      C
+    ld      A, D
+    or      E
     jp      nz, _driver_6850_tx_loop
 
 _driver_6850_tx_done:

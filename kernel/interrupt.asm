@@ -107,11 +107,7 @@ __serial_read_byte:
 __serial_signal_cancel:
     exx
     ei
-    pop     HL
-    push    HL
-    push    HL
     call    _signal_cancel
-    pop     HL
     di
     exx
     
@@ -137,11 +133,9 @@ __timer_handler:
     ld      (0xfffe), SP
 
     ; Call the scheduler to allocate another process.
+    ; New RAM bank is returned in A.
     call    _scheduler_tick
-    push    HL
     call    _ram_bank_set
-    inc     SP
-    inc     SP
 
     ld      SP, (0xfffe)
 

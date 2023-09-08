@@ -22,13 +22,15 @@ int command_chmod(char ** argv, size_t argc)
     /* File in upper-case. */
     utils_toupper(argv[0]);
 
+    /* TODO: SYSCALL FOR THIS! */
+#if 0
     /* Attempt to find the file. */
     char filename[13];
 
     const DiskInfo_T * dinfo = syscall_dinfo();
 
     uint32_t sector = dinfo->root_region;
-
+    
     while (1)
     {
         /* Read this sector of the root directory. */
@@ -101,4 +103,7 @@ int command_chmod(char ** argv, size_t argc)
 
         sector++;
     }
+#endif
+
+    return 0;
 }

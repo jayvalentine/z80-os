@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-int main()
+int main(void)
 {
     while (1)
     {

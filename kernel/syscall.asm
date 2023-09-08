@@ -69,14 +69,35 @@ _syscall_table:
     ; Calculates absolute position of syscall function address
     ; using offset provided in A, then executes the function at
     ; that address.
+    ;
+    ; TODO: NOT REENTRANT!!!
 _syscall_handler:
     di
 
-    ; Save IX, HL, DE, BC
-    push    IX
+    ; Save IX as it will be trashed by syscall shim.
+    ld      (__syscall_ix), IX
+
+    ; Save HL, DE, BC as they may contain arguments.
     push    HL
     push    DE
     push    BC
+
+    ; Store return address from syscall.
+    ; Need to skip the three 16-bit registers on stack.
+    ld      HL, #6
+    add     HL, SP
+    ld      E, (HL)
+    inc     HL
+    ld      D, (HL)
+    ld      (__syscall_ret_address), DE
+
+    ; Set return address to the syscall return handler.
+    ld      DE, #__syscall_ret
+    ld      HL, #6
+    add     HL, SP
+    ld      (HL), E
+    inc     HL
+    ld      (HL), D
 
     ; Check:
     ; * That value in A is even.
@@ -93,43 +114,41 @@ _syscall_handler:
     ld      E, A
     add     HL, DE
     
-    ; Load word into HL.
+    ; Load word into IX.
     ld      E, (HL)
     inc     HL
     ld      D, (HL)
-    ex      DE, HL
-    
-    ; Execute syscall.
-    ; Syscall function will need to pop DE, HL off the stack.
-    call    __execute_syscall
+    push    DE
+    pop     IX
 
-    ; Restore BC, DE, but preserve
-    ; return value in HL.
+    ; Pop registers off stack as they may contain arguments.
+    ; Stack needs to be at same position on entry to the syscall function
+    ; as on entry to the syscall handler.
     pop     BC
     pop     DE
-    inc     SP
-    inc     SP
-    pop     IX
+    pop     HL
+
+    ; Execute syscall.
+    ; Return will return to the syscall return handler.
+    jp      (IX)
 
 __syscall_ret:
     push    AF
-    push    HL
-    push    BC
-    push    DE
-
     call    _status_clr_syscall
-
-    pop     DE
-    pop     BC
-    pop     HL
     pop     AF
 
+    ; Restore IX.
+    ld      IX, (__syscall_ix)
+
+    ; Return from syscall.
     ei
-
-    ret
-
-__execute_syscall:
+    ld      HL, (__syscall_ret_address)
     jp      (HL)
+
+__syscall_ret_address:
+    .word   0
+__syscall_ix:
+    .word   0
 
     .globl  _startup_flags
 
@@ -146,15 +165,12 @@ __invalid_syscall:
     ; None.
     ;
     ; Returns:
-    ; Character received from serial port, in A.
+    ; Character received from serial port, in DE.
     ;
     ; Description:
     ; Busy-waits until serial port receives data,
     ; then returns a single received character.
 _do_sread:
-    push    DE
-    push    HL
-
     ld      A, (_rx_buf_offs_head)
     ld      E, A
 
@@ -181,8 +197,8 @@ __sread_available:
     ld      HL, #_rx_buf_offs_head
     inc     (HL)
 
-    pop     HL
-    pop     DE
+    ld      E, A
+    ld      D, #0
     ret
 
     .globl  _rx_buf_offs_head
@@ -204,9 +220,9 @@ _rx_buf:
     ; Parameters: None
     ;
     ; Returns:
-    ; Pointer to disk info struct, in HL.
+    ; Pointer to disk info struct, in DE.
 _do_dinfo:
-    ld      HL, #_disk_info
+    ld      DE, #_disk_info
     ret
 
     ; #17: sysinfo: Get info about kernel.
@@ -215,9 +231,9 @@ _do_dinfo:
     ; None.
     ;
     ; Returns:
-    ; Pointer to sysinfo struct in HL.
+    ; Pointer to sysinfo struct in DE.
 _do_sysinfo:
-    ld      HL, #_sysinfo
+    ld      DE, #_sysinfo
     ret
 
     .globl  _sysinfo
@@ -225,30 +241,18 @@ _do_sysinfo:
     ; #19: pexit: Exit current process.
     ;
     ; Parameters:
-    ; BC: exit code.
+    ; HL: exit code.
     ;
     ; Returns:
     ; Nothing.
 _do_pexit:
-    ld      HL, #2
-    add     HL, SP
-    ld      C, (HL)
-    inc     HL
-    ld      B, (HL)
-
-    push    BC
-    
     call    _process_exit
 
     ; This syscall doesn't return.
-    ; Set return address to the loop function
-    ; and return.
-    ld      HL, #__pexit_loop
-    push    HL
-    ld      HL, #__syscall_ret
-    push    HL
-
-    ret
+    push    AF
+    call    _status_clr_syscall
+    pop     AF
+    ei
 
 __pexit_loop:
     jp      __pexit_loop

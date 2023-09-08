@@ -6,7 +6,7 @@
 
 const char header[2] = { 0x0a, 0x80 };
 
-int main()
+int main(void)
 {
     int fd = syscall_fopen("test.exe", FMODE_WRITE);
     if (fd < 0) return fd;

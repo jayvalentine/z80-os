@@ -79,7 +79,7 @@ class IntegrationTest < Minitest::Test
             else
                 obj = File.basename(t, ".c") + ".rel"
                 
-                cmd = "sdcc -mz80 -c --std-sdcc99 "
+                cmd = "sdcc -mz80 -c --std-sdcc99 --sdcccall 1 "
                 cmd += "-I#{LIB_INCLUDE} "
                 cmd += "-o #{obj} "
                 cmd += t
@@ -91,7 +91,7 @@ class IntegrationTest < Minitest::Test
             end
         end
         
-        cmd = "sdcc -mz80 --no-std-crt0 "
+        cmd = "sdcc -mz80 --no-std-crt0 --sdcccall 1 "
         cmd += "-Wl-b_CODE=0x%04x " % address
         cmd += "-Wl-b_DATA=0x%04x " % (address + 0x1000)
         cmd += "-o #{File.basename(output_name, ".bin")}.hex "
@@ -125,6 +125,7 @@ class IntegrationTest < Minitest::Test
 
         # Create copy of the "master" disk image for this test case.
         disk_file_name = "#{@test_dir}/disk.bin"
+        FileUtils.rm(disk_file_name) if File.exist?(disk_file_name)
         FileUtils.cp "kernel/integration_test/disk.img", disk_file_name
 
         conf = nil
@@ -151,7 +152,7 @@ class IntegrationTest < Minitest::Test
         # Run, and expect to hit the breakpoint.
         @instance.continue 2000000
         
-        assert @instance.break?, "Did not hit breakpoint (at address %04x)" % @instance.registers["PC"]
+        assert @instance.break?, "Did not hit breakpoint (at address 0x%04x)" % @instance.registers["PC"]
         assert_equal 0x8000, @instance.registers["PC"], "Breakpoint at wrong address (%04x)" % @instance.registers["PC"]
         assert_equal 0, @instance.device("banked_ram").bank, "wrong RAM bank!"
 
@@ -274,6 +275,6 @@ class IntegrationTest < Minitest::Test
 
     def assert_program_finished
         assert @instance.halted?, "Program should have halted (at #{pc_str})."
-        assert_equal 0x8008, @instance.registers["PC"], "Halted at wrong address (at #{pc_str})."
+        assert_equal 0x8009, @instance.registers["PC"], "Halted at wrong address (at #{pc_str})."
     end
 end

@@ -71,6 +71,6 @@ size_t file_write(char * ptr, size_t n, int fd);
 void file_close(int fd);
 int file_info(const char * filename, FINFO * finfo);
 int file_entry(char * s, uint16_t entry);
-uint16_t file_entries();
+uint16_t file_entries(void);
 
 #endif /* _FILE_H */

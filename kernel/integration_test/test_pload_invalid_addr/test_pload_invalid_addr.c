@@ -8,7 +8,7 @@ const char file[7] =
     0x12, 0x34, 0x56, 0x78, 0x9a
 };
 
-int main()
+int main(void)
 {
     /* Write file */
     int fd = syscall_fopen("testprog.exe", FMODE_WRITE);

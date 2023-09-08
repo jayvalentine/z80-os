@@ -119,7 +119,7 @@ uint8_t old_byte;
 #define BREAKPOINTS_MAX 1
 uint8_t breakpoints_set;
 
-void process_commands()
+void process_commands(void)
 {
     uint16_t last_load_address = 0x8000;
 

@@ -89,7 +89,7 @@ class ProcessTest < IntegrationTest
         # Test program will return whatever the user program returns.
         @instance.continue 1000000
         assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x8008, @instance.registers["PC"], "Halted at wrong address (%04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
+        assert_equal 0x8009, @instance.registers["PC"], "Halted at wrong address (%04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
         assert_equal 0x0000, @instance.registers["HL"], "wrong return value"
     end
 
@@ -113,7 +113,7 @@ class ProcessTest < IntegrationTest
         # Test program will return whatever the user program returns.
         @instance.continue 1000000
         assert @instance.halted?, "Program did not halt (at address %04x)" % @instance.registers["PC"]
-        assert_equal 0x8008, @instance.registers["PC"], "Halted at wrong address (%04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
+        assert_equal 0x8009, @instance.registers["PC"], "Halted at wrong address (%04x, bank %d)" % [@instance.registers["PC"], @instance.device("banked_ram").bank]
         assert_equal 0x0000, @instance.registers["HL"], "wrong return value"
     end
 

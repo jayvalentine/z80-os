@@ -1,6 +1,8 @@
 #ifndef _RAM_H
 #define _RAM_H
 
+#include "abi.h"
+
 #include <stdint.h>
 
 #ifdef Z88DK
@@ -9,7 +11,7 @@ void ram_bank_set(uint8_t bank) __z88dk_fastcall;
 void ram_bank_set(uint8_t bank);
 #endif
 
-uint16_t ram_bank_test(void);
+uint8_t ram_bank_test(void);
 uint8_t ram_bank_current(void);
 
 /* ram_copy
@@ -28,6 +30,6 @@ uint8_t ram_bank_current(void);
  * Returns:
  *     Nothing.
  */
-void ram_copy(char * dst, uint8_t bank, char * src, size_t n);
+void ram_copy(char * dst, uint8_t bank, char * src, size_t n) STACKCALL;
 
 #endif

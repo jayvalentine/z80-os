@@ -2,12 +2,12 @@
 
 volatile int val;
 
-void test_func()
+void test_func(void)
 {
     val = 42;
 }
 
-int main()
+int main(void)
 {
     while (1)
     {

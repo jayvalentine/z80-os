@@ -1,6 +1,6 @@
 #include <syscall.h>
 
-int main()
+int main(void)
 {
     int entries = syscall_fentries();
     return entries;
