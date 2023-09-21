@@ -71,7 +71,7 @@ int t_operator_parse(tok_t ** dst_ptr, const char ** input_ptr)
     return 1;
 }
 
-uint8_t t_operator_is_comparison(const tok_t * toks) TGT_FASTCALL
+uint8_t t_operator_is_comparison(const tok_t * toks)
 {
     if (*toks != TOK_OPERATOR) return 0;
     toks++;

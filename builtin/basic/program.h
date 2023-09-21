@@ -9,21 +9,57 @@
 #include "t_variable.h"
 
 #ifdef Z80
-#define TGT_FASTCALL __z88dk_fastcall
+#include <os.h>
+
+extern tok_t end;
+
+#define program_start (&end)
+#define program_max ((tok_t *)USER_PROG_END)
+
 #else
 #define TGT_FASTCALL
+
+extern tok_t program_region[4096];
+
+#define program_start (&program_region[0])
+#define program_max (program_start + 4096)
 #endif
 
-/* Type of an entry in the program return stack.
- * lineno:   Line number to return to.
- * vartoken: Token for associated variable (NULL if N/A).
- *           Must have program lifetime.
+/* If pointers are two bytes wide on the target,
+ * then a line pointer can be the pointer directly.
+ *
+ * Otherwise, it must be an offset from some program start region.
+ * Either way, 64KB of program space is addressable.
  */
-typedef struct _PROGRAM_RETURN_T
-{
-    numeric_t lineno;
-    const tok_t * vartoken;
-} program_return_t;
+#if UINTPTR_MAX == 0xffff
+typedef const tok_t * lineptr_t;
+
+#define GET_LINE(_lineptr) _lineptr
+#define GET_LINEPTR(_line) _line
+
+#else
+extern tok_t * program;
+typedef uint16_t lineptr_t;
+
+#define GET_LINE(_lineptr) (_lineptr == 0xffff ? NULL: (program_start + _lineptr))
+#define GET_LINEPTR(_line) (_line == NULL ? 0xffff : ((uint16_t)(_line - program_start)))
+#endif
+
+/* Lines in the program are split into the following components: 
+ *
+ * 2 bytes:  lineno
+ * 2 bytes:  previous line pointer
+ * 2 bytes:  next line pointer
+ * variable: statement
+ */
+
+/* Macros for accessing program line contents. */
+#define PROG_HDR_SIZE (sizeof(numeric_t) + (sizeof(tok_t *) * 2))
+
+#define PROG_LINENO(_progline) (*(numeric_t *)_progline)
+#define PROG_PREV(_progline) (*(tok_t **)(_progline + sizeof(numeric_t)))
+#define PROG_NEXT(_progline) (*(tok_t **)(_progline + sizeof(numeric_t) + sizeof(tok_t *)))
+#define PROG_STMT(_progline) ((tok_t *)(_progline + PROG_HDR_SIZE))
 
 /* program_end
  *
@@ -59,6 +95,8 @@ void program_list(void);
 
 error_t program_run(void);
 
+lineptr_t program_get_current_line(void);
+
 /* program_current_lineno
  *
  * Purpose:
@@ -86,18 +124,31 @@ numeric_t program_current_lineno(void);
  */
 numeric_t program_next_lineno(void);
 
-/* program_set_next_lineno
+/* program_transfer_control
  *
  * Purpose:
- *     Set the next line number to be executed.
+ *     Set the next line to be executed.
  * 
  * Parameters:
  *     Integer line number.
  * 
  * Returns:
+ *     Line pointer.
+ */
+lineptr_t program_transfer_control(numeric_t lineno);
+
+/* program_transfer_control
+ *
+ * Purpose:
+ *     Set the next line to be executed.
+ * 
+ * Parameters:
+ *     Pointer to line.
+ * 
+ * Returns:
  *     Nothing.
  */
-void program_set_next_lineno(numeric_t lineno);
+void program_transfer_control_direct(lineptr_t line);
 
 /* program_set_numeric
  *
@@ -138,7 +189,7 @@ error_t program_get_numeric(const tok_t * toks, numeric_t * val);
  * Returns:
  *     Pointer to numeric variable, or NULL if undefined.
  */
-numeric_t * program_get_numeric_ref(const tok_t * toks) TGT_FASTCALL;
+numeric_t * program_get_numeric_ref(const tok_t * toks);
 
 /* program_create_array
  *
@@ -171,15 +222,16 @@ error_t program_get_array(const tok_t * toks, tok_t ** array);
 /* program_push_return
  *
  * Purpose:
- *     Push a value onto the program's return stack.
+ *     Push a line onto the program's return stack.
  * 
  * Parameters:
- *     ret: Reference to program_return_t object.
+ *     line:   Line pointer
+ *     vartok: Variable token
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_push_return(const program_return_t * ret);
+error_t program_push_return(lineptr_t line, const tok_t * vartok);
 
 /* program_pop_return
  *
@@ -187,12 +239,13 @@ error_t program_push_return(const program_return_t * ret);
  *     Pop a value from the program's return stack.
  * 
  * Parameters:
- *     ret: Reference to program_return_t object to populate.
+ *     line:   Line pointer
+ *     vartok: Variable token
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_pop_return(program_return_t * ret);
+error_t program_pop_return(lineptr_t * line, const tok_t ** vartok);
 
 /* program_alloc
  *

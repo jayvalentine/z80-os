@@ -147,8 +147,6 @@ const tok_t * t_variable_list(const tok_t * toks)
  */
 error_t t_variable_get_ptr(const tok_t * toks, const tok_t ** next_toks, numeric_t ** value)
 {
-    error_t e;
-
     /* Check that first token is a variable or register. */
     const tok_t * var;
     if (*toks == TOK_VARIABLE)
@@ -175,8 +173,7 @@ error_t t_variable_get_ptr(const tok_t * toks, const tok_t ** next_toks, numeric
         /* Evaluate a sub-expression to get the index. */
         numeric_t index;
         const tok_t * expr_end;
-        e = eval_numeric(&index, toks, &expr_end);
-        ERROR_HANDLE(e);
+        ERROR_HANDLE(eval_numeric(&index, toks, &expr_end));
 
         /* Skip ahead to the next right paren (closing the array access) */
         toks = expr_end;
@@ -186,8 +183,7 @@ error_t t_variable_get_ptr(const tok_t * toks, const tok_t ** next_toks, numeric
         
         /* Get the array. */
         tok_t * arr;
-        e = program_get_array(var, &arr);
-        ERROR_HANDLE(e);
+        ERROR_HANDLE(program_get_array(var, &arr));
 
         /* Bounds checking of index. */
         tok_size_t array_size = ARRAY_SIZE(arr);

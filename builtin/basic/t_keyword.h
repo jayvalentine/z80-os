@@ -7,7 +7,7 @@
 
 #include "t_defs.h"
 
-#define NUM_KEYWORDS 14
+#define NUM_KEYWORDS 16
 
 #define KEYWORD_UNDEFINED 0
 
@@ -27,6 +27,8 @@
 #define KEYWORD_DIM 12
 #define KEYWORD_IF 13
 #define KEYWORD_THEN 14
+#define KEYWORD_JUMPTO 15
+#define KEYWORD_JUMPSUB 16
 
 #define KW_CHECK(_toks, _kw_type) ((*_toks == TOK_KEYWORD) && (*(_toks+1) == _kw_type))
 #define KW_SIZE 2

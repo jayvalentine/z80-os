@@ -68,6 +68,14 @@ const Keyword_T keywords[NUM_KEYWORDS] =
     {
         "THEN",
         KEYWORD_THEN
+    },
+    {
+        "JUMPTO",
+        KEYWORD_JUMPTO
+    },
+    {
+        "JUMPSUB",
+        KEYWORD_JUMPSUB
     }
 };
 
@@ -215,7 +223,30 @@ error_t do_goto(const tok_t * toks)
     if (tok_type != TOK_NUMERIC) return ERROR_SYNTAX;
 
     int lineno = NUMERIC_GET(toks);
-    program_set_next_lineno(lineno);
+
+    lineptr_t line = program_transfer_control(lineno);
+
+#pragma save
+#pragma disable_warning 196 /* Lost const qualifier */
+    tok_t * goto_pos = toks - 1;
+#pragma restore
+
+    *goto_pos = KEYWORD_JUMPTO;
+    *(lineptr_t *)(goto_pos + 2) = line;
+
+    return ERROR_NOERROR;
+}
+
+error_t do_jumpto(const tok_t * toks)
+{
+    /* Next token will be numeric, but we treat it as a direct address. */
+    if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
+    toks++;
+    
+    lineptr_t dest = *(lineptr_t *)toks;
+
+    program_transfer_control_direct(dest);
+
     return ERROR_NOERROR;
 }
 
@@ -260,13 +291,14 @@ error_t do_for(const tok_t * toks)
 
     /* Get top of return stack to see if we're
      * already in the loop or not. */
-    program_return_t tos;
-    error_t e_onstack = program_pop_return(&tos);
+    lineptr_t line;
+    const tok_t * vartok;
+    error_t e_onstack = program_pop_return(&line, &vartok);
 
     /* If the variable in the FOR matches
      * the variable in TOS, then we're already
      * in the loop. */
-    if (e_onstack == ERROR_NOERROR && varcmp(tos.vartoken, var) == 0)
+    if (e_onstack == ERROR_NOERROR && varcmp(vartok, var) == 0)
     {
         numeric_t current_val;
         program_get_numeric(var, &current_val);
@@ -278,7 +310,7 @@ error_t do_for(const tok_t * toks)
 
         /* Push TOS back onto stack (if there was one) -
          * it's nothing to do with this loop. */
-        if (e_onstack == ERROR_NOERROR) program_push_return(&tos);
+        if (e_onstack == ERROR_NOERROR) program_push_return(line, vartok);
     }
 
     /* Now check if we've hit the limit. */
@@ -286,14 +318,13 @@ error_t do_for(const tok_t * toks)
     program_get_numeric(var, &current_val);
     if (current_val >= limit)
     {
-        program_set_next_lineno(tos.lineno+1);
+        program_transfer_control_direct(GET_LINEPTR(PROG_NEXT(GET_LINE(line))));
     }
     else
     {
-        program_return_t new_tos;
-        new_tos.lineno = program_current_lineno();
-        new_tos.vartoken = var;
-        program_push_return(&new_tos);
+        lineptr_t loop_start = program_get_current_line();
+        const tok_t * vartoken = var;
+        program_push_return(loop_start, vartoken);
     }
 
     return ERROR_NOERROR;
@@ -316,8 +347,9 @@ error_t do_next(const tok_t * toks)
 
     /* Pop return value off stack.
      * This should have been set by a FOR. */
-    program_return_t ret;
-    error_t e = program_pop_return(&ret);
+    lineptr_t dest;
+    const tok_t * vartok;
+    error_t e = program_pop_return(&dest, &vartok);
 
     /* If we get an empty-stack error then we have */
     /* a NEXT without a FOR. */
@@ -325,17 +357,15 @@ error_t do_next(const tok_t * toks)
     ERROR_HANDLE(e);
 
     /* Check it's the right variable! */
-    if (varcmp(var, ret.vartoken) != 0) return ERROR_SYNTAX;
-
-    numeric_t dest = ret.lineno;
+    if (varcmp(var, vartok) != 0) return ERROR_SYNTAX;
 
     /* Push a new value onto the stack. */
-    ret.lineno = program_current_lineno();
-    e = program_push_return(&ret);
+    lineptr_t line = program_get_current_line();
+    e = program_push_return(line, vartok);
     ERROR_HANDLE(e);
 
     /* GOTO the loop start. */
-    program_set_next_lineno(dest);
+    program_transfer_control_direct(dest);
 
     return ERROR_NOERROR;
 }
@@ -347,19 +377,46 @@ error_t do_gosub(const tok_t * toks)
 
     /* Get line number from token stream. */
     numeric_t next_lineno = NUMERIC_GET(toks);
-    numeric_t current_lineno = program_current_lineno();
+    lineptr_t current_line = program_get_current_line();
     
     /* Push current line number onto stack. */
-    program_return_t ret;
-    ret.vartoken = NULL;
-    ret.lineno = current_lineno;
+    const tok_t * vartoken = NULL;
 
     /* Push return location onto stack. */
-    program_push_return(&ret);
+    program_push_return(current_line, vartoken);
 
     /* Transfer control to destination line. */
-    program_set_next_lineno(next_lineno);
+    lineptr_t line = program_transfer_control(next_lineno);
+
+#pragma save
+#pragma disable_warning 196 /* Lost const qualifier */
+    tok_t * gosub_pos = toks - 1;
+#pragma restore
+
+    *gosub_pos = KEYWORD_JUMPSUB;
+    *(lineptr_t *)(gosub_pos + 2) = line;
     
+    return ERROR_NOERROR;
+}
+
+error_t do_jumpsub(const tok_t * toks)
+{
+    /* Next token will be numeric, but we treat it as a direct address. */
+    if (*toks != TOK_NUMERIC) return ERROR_SYNTAX;
+    toks++;
+
+    lineptr_t current_line = program_get_current_line();
+
+    /* Push current line number onto stack. */
+    const tok_t * vartoken = NULL;
+
+    /* Push return location onto stack. */
+    program_push_return(current_line, vartoken);
+    
+    /* Transfer control to destination line. */
+    lineptr_t dest = *(lineptr_t *)toks;
+    program_transfer_control_direct(dest);
+
     return ERROR_NOERROR;
 }
 
@@ -368,12 +425,13 @@ error_t do_return(const tok_t * toks)
     toks;
 
     /* Pop top value off stack. */
-    program_return_t ret;
-    error_t e = program_pop_return(&ret);
+    lineptr_t line;
+    const tok_t * vartok;
+    error_t e = program_pop_return(&line, &vartok);
     if (e != ERROR_NOERROR) return e;
 
     /* Transfer control to return line. */
-    program_set_next_lineno(ret.lineno+1);
+    program_transfer_control_direct(GET_LINEPTR(PROG_NEXT(GET_LINE(line))));
     
     return ERROR_NOERROR;
 }
@@ -477,7 +535,7 @@ error_t do_if(const tok_t * toks)
     if (result < 0) return ERROR_SYNTAX;
 
     /* If true, interpret the sub-statement. */
-    if (result)
+    if (result > 0)
     {
         /* Get tokens for sub-statement - skip THEN. */
         const tok_t * sub_stmt = toks;
@@ -502,7 +560,9 @@ const f_interpreter_t keyword_funcs[NUM_KEYWORDS] =
     do_return,
     do_dim,
     do_if,
-    cannot_interpret /* THEN */
+    cannot_interpret, /* THEN */
+    do_jumpto,
+    do_jumpsub,
 };
 
 error_t t_keyword_interpret(kw_code kw, const tok_t * toks)

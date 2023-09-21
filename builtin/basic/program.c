@@ -8,28 +8,11 @@
 #include "t_defs.h"
 #include "t_numeric.h"
 
-#ifdef Z80
-#define TGT_FASTCALL __z88dk_fastcall
-
-#include <os.h>
-
-extern tok_t end;
-
-#define program_start (&end)
-#define program_max ((tok_t *)USER_PROG_END)
-
-#else
-#define TGT_FASTCALL
-
-tok_t program_region[4096];
-
-#define program_start (&program_region[0])
-#define program_max (program_start + 4096)
-#endif
-
 tok_t * program_end_ptr;
 
-numeric_t next_lineno;
+#ifndef Z80
+tok_t program_region[4096];
+#endif
 
 #define PROGSTATE_RUNNING 0
 #define PROGSTATE_READY 1
@@ -80,6 +63,17 @@ context_t program_context;
 
 #define RETURN_STACK_LIMIT 8
 
+/* Type of an entry in the program return stack.
+ * line:     Line to return to.
+ * vartoken: Token for associated variable (NULL if N/A).
+ *           Must have program lifetime.
+ */
+typedef struct _PROGRAM_RETURN_T
+{
+    lineptr_t line;
+    const tok_t * vartoken;
+} program_return_t;
+
 /* The return stack.
  * Each entry is an object containing:
  * A linenumber
@@ -93,24 +87,8 @@ typedef struct _PROGRAM_RETURN_STACK_T
 
 program_return_stack_t program_return_stack;
 
-/* Program listing.
- *
- * Matches line numbers to program statements.
- */
-typedef struct _LISTING_ENTRY_T
-{
-    numeric_t lineno;
-    const tok_t * stmt;
-} listing_entry_t;
-
-typedef struct _LISTING_T
-{
-    int16_t count;
-    int16_t index; /* -1 if invalid. */
-    listing_entry_t entries[100];
-} listing_t;
-
-listing_t program_listing;
+const tok_t * program_current_line;
+tok_t * program_last_inserted_line;
 
 /* program_end
  *
@@ -137,10 +115,10 @@ uint16_t program_free(void)
 
 void program_new(void)
 {
-    program_listing.count = 0;
-    program_listing.index = 0;
-
     program_end_ptr = program_start;
+    program_current_line = program_start;
+    program_last_inserted_line = NULL;
+
     program_state = PROGSTATE_READY;
 
     /* Free registers. */
@@ -160,13 +138,6 @@ void program_new(void)
     program_return_stack.count = 0;
 }
 
-void program_listing_insert(numeric_t lineno, const tok_t * toks)
-{
-    program_listing.entries[program_listing.count].lineno = lineno;
-    program_listing.entries[program_listing.count].stmt = toks;
-    program_listing.count++;
-}
-
 error_t program_insert(const tok_t * toks)
 {
     /* First token should be a numeric. */
@@ -178,48 +149,68 @@ error_t program_insert(const tok_t * toks)
     tok_size_t size = statement_size(toks);
 
     /* Insertion point of statement. */
-    const tok_t * stmt = program_end_ptr;
+    tok_t * line = program_end_ptr;
+
+    /* Set pointer of previous line to this one. */
+    if (program_last_inserted_line != NULL) PROG_NEXT(program_last_inserted_line) = line;
+
+    PROG_LINENO(line) = lineno;
+    PROG_PREV(line) = program_last_inserted_line;
+    PROG_NEXT(line) = NULL;
 
     /* Insert tokens into program memory. */
-    memcpy(program_end_ptr, toks, size);
-    program_end_ptr += size;
+    memcpy(PROG_STMT(line), toks, size);
 
-    /* Insert into listing. */
-    program_listing_insert(lineno, stmt);
+    /* Record that this line has been inserted last so that the next
+     * line inserted can reference it.
+     */
+    program_last_inserted_line = line;
+
+    /* Increment end pointer. */
+    program_end_ptr += size + PROG_HDR_SIZE;
 
     return ERROR_NOERROR;
 }
 
+const tok_t dummy[1] = { 0 };
+
+void program_list_stmt(const tok_t * toks)
+{
+    while (*toks != TOK_TERMINATOR)
+    {
+        toks = t_defs_list(toks);
+    }
+    t_defs_list(toks);
+}
+
 void program_list(void)
 {
-    for (int i = 0; i < program_listing.count; i++)
-    {
-        printf("%d ", program_listing.entries[i].lineno);
+    const tok_t * line = program_start;
 
-        const tok_t * p = program_listing.entries[i].stmt;
-        while (*p != TOK_TERMINATOR)
-        {
-            p = t_defs_list(p);
-        }
-        t_defs_list(p);
+    while (line != NULL && PROG_LINENO(line) != 0)
+    {
+        printf("%d ", PROG_LINENO(line));
+        program_list_stmt(PROG_STMT(line));
+     
+        line = PROG_NEXT(line);
     }
 }
 
 /* Helper function to search for a listing
  * with a given linenumber.
  *
- * Returns listing index or -1 if it can't be found.
+ * Returns line or NULL if it can't be found.
  */
-int16_t program_search_lineno(int lineno) TGT_FASTCALL
+const tok_t * program_search_lineno(int lineno)
 {
-    if (lineno < program_listing.entries[program_listing.index].lineno)
+    const tok_t * line = program_current_line;
+    if (lineno < PROG_LINENO(line))
     {
         /* Search backwards */
-        uint16_t i = program_listing.index - 1;
-        while (program_listing.entries[i].lineno >= lineno)
+        while (PROG_LINENO(line) >= lineno)
         {
-            if (i == 0) return -1;
-            i--;
+            if (PROG_PREV(line) == NULL) return NULL;
+            line = PROG_PREV(line);
         }
 
         /* i now points to the first statement which has a lineno
@@ -228,31 +219,21 @@ int16_t program_search_lineno(int lineno) TGT_FASTCALL
          * we want the statement after that - i.e. the furthest away
          * statement which is >= the search lineno.
          */
-        return i+1;
+        return PROG_NEXT(line);
     }
     else
     {
         /* Search forwards */
-        uint16_t i = program_listing.index + 1;
-        while (program_listing.entries[i].lineno < lineno)
+        while (PROG_LINENO(line) < lineno)
         {
-            if (i == program_listing.count) return -1;
-            i++;
+            if (PROG_NEXT(line) == NULL) return NULL;
+            line = PROG_NEXT(line);
         }
-        return i;
+        return line;
     }
 }
 
-/* Helper function to move to the next line in the program.
- */
-static error_t program_nextline(numeric_t lineno) TGT_FASTCALL
-{
-    int16_t index = program_search_lineno(lineno);
-    if (index == -1) return ERROR_GOTO;
-
-    program_listing.index = index;
-    return ERROR_NOERROR;
-}
+const tok_t * program_next_line;
 
 error_t program_run(void)
 {
@@ -260,8 +241,7 @@ error_t program_run(void)
 
     program_state = PROGSTATE_RUNNING;
 
-    program_listing.index = 0;
-    next_lineno = 0;
+    program_next_line = program_start;
     
     /* Free the variable context. */
     program_context.count = 0;
@@ -273,16 +253,17 @@ error_t program_run(void)
     /* Clear the return stack. */
     program_return_stack.count = 0;
 
-    while (program_listing.index < program_listing.count)
+    while (program_next_line != NULL)
     {
-        const tok_t * stmt = program_listing.entries[program_listing.index].stmt;
+        program_current_line = program_next_line;
+        const tok_t * stmt = PROG_STMT(program_current_line);
 
         /* Shouldn't ever be an allocation or a numeric. */
         if (*stmt == TOK_ALLOC) return program_end(ERROR_SYNTAX);
         if (*stmt == TOK_NUMERIC) return program_end(ERROR_SYNTAX);
 
-        /* Get next line number. */
-        next_lineno = program_current_lineno() + 1;
+        /* By default control transfers to the next line. */
+        program_next_line = PROG_NEXT(program_current_line);
 
         /* Interpret the statement. */
         e = statement_interpret(stmt);
@@ -293,12 +274,16 @@ error_t program_run(void)
         if (e != ERROR_NOERROR) return program_end(e);
 
         /* Move onto next statement. */
-        e = program_nextline(next_lineno);
-        if (e != ERROR_NOERROR) return program_end(e);
+        if (program_next_line == NULL) return program_end(ERROR_GOTO);
     }
 
     program_state = PROGSTATE_READY;
     return ERROR_NOERROR;
+}
+
+lineptr_t program_get_current_line(void)
+{
+    return GET_LINEPTR(program_current_line);
 }
 
 /* program_current_lineno
@@ -314,23 +299,30 @@ error_t program_run(void)
  */
 numeric_t program_current_lineno(void)
 {
-    return program_listing.entries[program_listing.index].lineno;
+    return PROG_LINENO(program_current_line);
 }
 
-/* program_set_next_lineno
+/* program_transfer_control
  *
  * Purpose:
- *     Set the next line number to be executed.
+ *     Set the next line to be executed.
  * 
  * Parameters:
  *     Integer line number.
  * 
  * Returns:
- *     Nothing.
+ *     Line pointer.
  */
-void program_set_next_lineno(numeric_t lineno)
+lineptr_t program_transfer_control(numeric_t lineno)
 {
-    next_lineno = lineno;
+    program_next_line = program_search_lineno(lineno);
+
+    return GET_LINEPTR(program_next_line);
+}
+
+void program_transfer_control_direct(lineptr_t line)
+{
+    program_next_line = GET_LINE(line);
 }
 
 /* program_next_lineno
@@ -347,13 +339,14 @@ void program_set_next_lineno(numeric_t lineno)
  */
 numeric_t program_next_lineno(void)
 {
-    return next_lineno;
+    if (program_next_line == NULL) return -1;
+    return PROG_LINENO(program_next_line);
 }
 
 /* The functions below relate to defining, setting,
  * and getting variables. */
 
-numeric_t * program_get_numeric_ref(const tok_t * toks) TGT_FASTCALL
+numeric_t * program_get_numeric_ref(const tok_t * toks)
 {
     /* Is the variable a register? */
     if (*toks == TOK_REGISTER)
@@ -428,16 +421,17 @@ error_t program_get_numeric(const tok_t * toks, numeric_t * val)
  *     Push a value onto the program's return stack.
  * 
  * Parameters:
- *     ret: Reference to program_return_t object.
+ *     line:   Line pointer
+ *     vartok: Variable token
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_push_return(const program_return_t * ret)
+error_t program_push_return(lineptr_t line, const tok_t * vartok)
 {
-    uint8_t i = program_return_stack.count;
-    program_return_stack.stack[i].lineno = ret->lineno;
-    program_return_stack.stack[i].vartoken = ret->vartoken;
+    program_return_t * ret = &program_return_stack.stack[program_return_stack.count];
+    ret->line = line;
+    ret->vartoken = vartok;
     program_return_stack.count++;
 
     return ERROR_NOERROR;
@@ -449,19 +443,20 @@ error_t program_push_return(const program_return_t * ret)
  *     Pop a value from the program's return stack.
  * 
  * Parameters:
- *     ret: Reference to program_return_t object to populate.
+ *     line:   Line pointer
+ *     vartok: Variable token
  * 
  * Returns:
  *     Error, if any.
  */
-error_t program_pop_return(program_return_t * ret)
+error_t program_pop_return(lineptr_t * line, const tok_t ** vartok)
 {
     if (program_return_stack.count == 0) return ERROR_RETSTACK_EMPTY;
 
     program_return_stack.count--;
-    uint8_t i = program_return_stack.count;
-    ret->lineno = program_return_stack.stack[i].lineno;
-    ret->vartoken = program_return_stack.stack[i].vartoken;
+    program_return_t * ret = &program_return_stack.stack[program_return_stack.count];
+    *line = ret->line;
+    *vartok = ret->vartoken;
 
     return ERROR_NOERROR;
 }
@@ -554,9 +549,11 @@ error_t program_get_array(const tok_t * toks, tok_t ** array)
     /* Is the variable a register? */
     if (*toks == TOK_REGISTER)
     {
-        if (!program_registers[*(toks+1)].defined) return ERROR_UNDEFINED_ARRAY;
+        toks++;
+        register_t * reg = &program_registers[*toks];
+        if (!reg->defined) return ERROR_UNDEFINED_ARRAY;
 
-        *array = program_registers[*(toks+1)].value.ptr;
+        *array = reg->value.ptr;
         return ERROR_NOERROR;
     }
 

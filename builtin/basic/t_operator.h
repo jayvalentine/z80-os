@@ -5,12 +5,6 @@
 
 #include "t_defs.h"
 
-#ifdef Z80
-#define TGT_FASTCALL __z88dk_fastcall
-#else
-#define TGT_FASTCALL
-#endif
-
 typedef uint8_t operator_t;
 
 #define OP_MINUS 0x00
@@ -70,7 +64,7 @@ const tok_t * t_operator_list(const tok_t * toks);
  * Returns:
  *     true if comparison, false otherwise.
  */
-uint8_t t_operator_is_comparison(const tok_t * toks) TGT_FASTCALL;
+uint8_t t_operator_is_comparison(const tok_t * toks);
 
 #endif
 

@@ -20,6 +20,7 @@ typedef uint8_t error_t;
 #define ERROR_UNKNOWN_FUNC 12
 
 #define ERROR_HANDLE(_err) if (_err != ERROR_NOERROR) return _err
+#define ERROR_HANDLE_WITH(_err, _return) if (_err != ERROR_NOERROR) return _return;
 
 void error_display(error_t error);
 

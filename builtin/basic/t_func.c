@@ -47,12 +47,12 @@ void srand16(uint16_t seed)
     r = seed;
 }
 
-numeric_t rand16(void)
+uint16_t rand16(void)
 {
     r ^= r << 7;
     r ^= r >> 9;
     r ^= r << 8;
-    return *(numeric_t *)&r;
+    return r;
 }
 
 error_t t_func_call(const tok_t * toks, const tok_t ** end, numeric_t * ret)
@@ -86,7 +86,8 @@ error_t t_func_call(const tok_t * toks, const tok_t ** end, numeric_t * ret)
         }
         else
         {
-            *ret = (numeric_t)rand16();
+            uint16_t v = rand16();
+            *ret = *(numeric_t *)&v;
 
             /* Set pointer to token after call (current token). */
             *end = toks;

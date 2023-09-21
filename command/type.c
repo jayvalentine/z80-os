@@ -1,14 +1,13 @@
 #include <syscall.h>
 #include <stdio.h>
+#include <file.h>
 
 #include "type.h"
 
-#define TYPE_BUF_SIZE 512
+FILE thefile;
 
 int command_type(char ** argv, size_t argc)
 {
-    char type_buf[TYPE_BUF_SIZE+1];
-
     if (argc < 1)
     {
         puts("Usage: type <files>\n\r");
@@ -17,31 +16,23 @@ int command_type(char ** argv, size_t argc)
 
     for (size_t a = 0; a < argc; a++)
     {
-        int fd = syscall_fopen(argv[a], FMODE_READ);
+        FILE * f = fopen(argv[a], "r");
 
-        if (fd == E_FILENOTFOUND)
+        if (f == NULL)
         {
             printf("Could not find file: %s\n\r", argv[a]);
             return 2;
         }
 
-        size_t bytes;
+        char line[256];
 
         /* Print the contents of the file. */
-        while ((bytes = syscall_fread(type_buf, TYPE_BUF_SIZE, fd)) > 0)
+        while (fgets(line, 256, f) != NULL)
         {
-            /* Get location of first SUB */
-            size_t end_index;
-            for (end_index = 0; end_index < bytes; end_index++)
-            {
-                if (type_buf[end_index] == 0x1a) break;
-            }
-
-            type_buf[end_index] = '\0';
-            puts(type_buf);
+            puts(line);
         }
 
-        syscall_fclose(fd);
+        fclose(f);
     }
 
     return 0;
