@@ -27,6 +27,7 @@ Two-stage bootloader allowing loading of OS images from filesystem
     * Reading files
     * Deleting files
 * Syscalls implemented using Z80 `rst` instruction for hardware abstraction
+* Multi-programming using banked RAM
 
 #### Command Processor
 
@@ -43,7 +44,6 @@ Two-stage bootloader allowing loading of OS images from filesystem
 
 ### Planned Functionality (Long-Term)
 
-* Multi-programming using banked RAM
 * Graphical interface (requires video hardware)
 
 ## System Design
@@ -64,7 +64,7 @@ filesystem as `kernel.bin`, to RAM at `0x0000`. The secondary loader then resets
 the kernel.
 
 The kernel initializes a complete filesystem driver and other operating system components, then loads
-the command-processor (`command.bin`) from the disk and begins executing it.
+the command-processor (`command.exe`) from the disk and begins executing it.
 
 At this point control is handed to the user, who is able to interact with the system via the command-line
 to run programs.
@@ -97,20 +97,19 @@ Low RAM                                  High RAM
       │                        │               │                        │
       │                        │               │                        │
       │                        │               │                        │
-0x6000├────────────────────────┤               │                        │
-      │ Command Processor      │               │                        │
       │                        │               │                        │
       │                        │               │                        │
       │                        │               │                        │
-      │                        │         0xF000├────────────────────────┤
+      │                        │         0xe000├────────────────────────┤
       │                        │               │ Stack                  │
+      │                        │               │                        │
+      │                        │               │                        │
       │                        │         0xF800├────────────────────────┤
       │                        │               │ User Program Args      │
       └────────────────────────┘               └────────────────────────┘
 ~~~~
 
 * Kernel: This is the memory area in which the kernel (including reset vectors) resides
-* Command Processor: This is the memory area in which the command processor resides
 * User Program Area: User programs are loaded into this memory area when executed
 * Stack: Reserved for program stack. Stack pointer is initialized to `0xF7FF` on program startup and grows down.
 * User Program Args: Reserved for user program arguments (`argv` and `argc`).
