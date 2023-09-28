@@ -287,6 +287,12 @@ class IntegrationTest < Minitest::Test
         assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
     end
 
+    # Asserts that the program has returned the given value.
+    def assert_return_equal(value)
+        return_val = (@instance.registers["HL"] & ~(1 << 15)) - (@instance.registers["HL"] & (1 << 15))
+        assert_equal value, return_val, "Wrong return value!"
+    end
+
     def assert_program_finished
         assert @instance.halted?, "Program should have halted (at #{pc_str})."
         assert_equal 0x8009, @instance.registers["PC"], "Halted at wrong address (at #{pc_str})."
