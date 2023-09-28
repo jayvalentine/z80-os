@@ -104,6 +104,36 @@ class SIOTest < IntegrationTest
         assert_equal 0x0000, @instance.registers["HL"], "Wrong return value!"
     end
 
+    # Tests that the break command is received by the current interactive process.
+    def test_sbreak_multiprocess
+        # Run for a little bit - we expect not to halt.
+        assert_running(cycles: 2000)
+
+        # Send a character to the serial terminal.
+        # This should be received by the child process.
+        @instance.serial_puts('A');
+
+        # Send break character - 0x18.
+        @instance.serial_puts(0x18.chr)
+
+        # Now run and expect not to halt.
+        # We should have returned to the parent process.
+        assert_running(cycles: 2000)
+
+        # Send a character to the serial terminal.
+        # This should be received by the parent process.
+        @instance.serial_puts('B')
+
+        # Send another break character.
+        @instance.serial_puts(0x18.chr)
+
+        # Continue - program should continue until completion.
+        assert_halts(cycles: 2000)
+
+        # Check return value.
+        assert_equal 0x0000, @instance.registers["HL"], "Wrong return value!"
+    end
+
     # Tests that the break command is interpreted as a byte when serial port
     # is in binary mode.
     def test_smode_binmode

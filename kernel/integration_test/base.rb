@@ -272,6 +272,20 @@ class IntegrationTest < Minitest::Test
     def pc_str
         "0x#{@instance.registers["PC"].to_s(16)}"
     end
+    
+    # Assert that the program continues to execute for the given
+    # number of cycles.
+    def assert_running(cycles:)
+        @instance.continue cycles
+        assert !@instance.halted?, "Program halted unexpectedly (at address %04x)." % @instance.registers["PC"]
+    end
+
+    # Assert that the program halts after executing for the given
+    # number of cycles.
+    def assert_halts(cycles:)
+        @instance.continue cycles
+        assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
+    end
 
     def assert_program_finished
         assert @instance.halted?, "Program should have halted (at #{pc_str})."
