@@ -15,4 +15,6 @@ typedef uint8_t termstatus_t;
 /* 0 = no data, 1 = data ready */
 #define TERMSTATUS_AVAILABLE (1 << 2)
 
+void terminal_init(void);
+
 #endif

@@ -159,6 +159,9 @@ __invalid_syscall:
     ld      (_startup_flags), A
     rst     8
 
+    .globl  _terminal_available
+    .globl  _terminal_get
+
     ; #1: sread: Read character from serial port.
     ;
     ; Parameters:
@@ -171,47 +174,23 @@ __invalid_syscall:
     ; Busy-waits until serial port receives data,
     ; then returns a single received character.
 _do_sread:
-    ld      A, (_rx_buf_offs_head)
-    ld      E, A
-
     ; Wait for char in buffer.
     ei
 __sread_wait:
-    ld      A, (_rx_buf_offs_tail)
-    cp      E
+    call    _terminal_available
 
     ; If head and tail are equal, there's no data in buffer.
     jp      z, #__sread_wait
     di
 
 __sread_available:
-    ; Calculate offset into buffer.
-    ld      HL, #_rx_buf
-    ld      D, #0
-    add     HL, DE
+    ; Get character in A.
+    call    _terminal_get
 
-    ; Load character into A.
-    ld      A, (HL)
-
-    ; Increment head.
-    ld      HL, #_rx_buf_offs_head
-    inc     (HL)
-
+    ; Load character as int into DE (return value).
     ld      E, A
     ld      D, #0
     ret
-
-    .globl  _rx_buf_offs_head
-    .globl  _rx_buf_offs_tail
-    .globl  _rx_buf
-
-_rx_buf_offs_head:
-    .byte   #0
-_rx_buf_offs_tail:
-    .byte   #0
-
-_rx_buf:
-    .ds     #256
 
     .globl  _disk_info
 

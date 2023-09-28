@@ -53,74 +53,23 @@ __interrupt_handle_ret:
 __interrupt_handler_end:
     reti
 
-    .globl  _rx_buf
-    .globl  _rx_buf_offs_head
-    .globl  _rx_buf_offs_tail
 
-    .globl  _signal_cancel
 
-    ; termstatus_t process_get_terminal_status(void)
-    .globl  _process_get_terminal_status
+    ; void terminal_put(char c)
+    .globl  _terminal_put
 
     ; Needed for tests...
     ; TODO: Find a way around this.
     .globl  __serial_read_handler
 
 __serial_read_handler:
-    ; Save interrupt return address.
-    push    HL
-
-    ; Get current tail of buffer.
-    ld      HL, #_rx_buf
-    ld      D, #0
-    ld      A, (_rx_buf_offs_tail)
-    ld      E, A
-    add     HL, DE
-
-    ; Read data from UART.
+    ; Read data from UART and send to terminal.
     in      A, (UART_PORT_DATA)
-    
-    ; $18 (CANCEL) - triggers SIG_CANCEL
-    cp      #0x18
-    jp      nz, __serial_read_byte
-
-    ; Handle special characters only if in interactive mode.
-    ld      C, A
-
-    push    DE
-    push    BC
-    push    HL
-    call    _process_get_terminal_status
-    pop     HL
-    pop     BC
-    pop     DE
-
-    bit     0, A ; MODE is interactive if lowest bit is clear.
-    jp      z, __serial_signal_cancel
-    
-    ; Need the byte, so restore A.
-    ld      A, C
-
-__serial_read_byte:
-    ; Store received character.
-    ld      (HL), A
-
-    ; Increment tail.
-    ld      HL, #_rx_buf_offs_tail
-    inc     (HL)
-
-    pop     HL
+    call    _terminal_put
     
     jp      __interrupt_handle_ret
 
-__serial_signal_cancel:
-    exx
-    ei
-    call    _signal_cancel
-    di
-    exx
-    
-    jp      __interrupt_handle_ret
+
 
     .globl  _scheduler_tick
     .globl  _ram_bank_set

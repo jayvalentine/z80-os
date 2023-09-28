@@ -66,6 +66,8 @@ void main(void)
 
     scheduler_init();
 
+    terminal_init();
+
 #ifndef DEBUG
     //printf("Z80-OS KERNEL v%s\r\n", &kernel_version);
     //printf("Memory: %d banks\r\n", (int)sysinfo.numbanks);
