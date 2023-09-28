@@ -120,7 +120,8 @@ class SIOTest < IntegrationTest
 
         # Send a character to the serial terminal.
         # This should be received by the child process.
-        #@instance.serial_puts('A');
+        @instance.serial_puts('A')
+        assert_running(cycles: 200000)
 
         # Send break character - 0x18.
         @instance.serial_puts(0x18.chr)
@@ -131,7 +132,8 @@ class SIOTest < IntegrationTest
 
         # Send a character to the serial terminal.
         # This should be received by the parent process.
-        #@instance.serial_puts('B')
+        @instance.serial_puts('B')
+        assert_running(cycles: 200000)
 
         # Send another break character.
         @instance.serial_puts(0x18.chr)

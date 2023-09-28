@@ -62,6 +62,9 @@ int main(void)
         return 0;
     }
 
+    char c = getchar();
+    if (c != 'B') return 3;
+
     while (1)
     {
     }

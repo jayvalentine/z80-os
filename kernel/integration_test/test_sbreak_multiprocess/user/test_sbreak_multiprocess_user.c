@@ -8,6 +8,7 @@
 #include <string.h>
 #include <setjmp.h>
 #include <stdint.h>
+#include <stdio.h>
 
 jmp_buf jmp_env;
 
@@ -32,13 +33,16 @@ int user_main(void)
     int code = setjmp(jmp_env);
     if (code != 0)
     {
-        if (done_cancel != 1) return 10;
+        if (done_cancel != 1) return 11;
         
         /* Should have hit the cancel within this program. */
-        if (cancel_address < 0xc000 || cancel_address >= 0xd000) return 11;
+        if (cancel_address < 0xc000 || cancel_address >= 0xd000) return 12;
 
         return 0;
     }
+
+    char c = getchar();
+    if (c != 'A') return 13;
 
     while (1)
     {
