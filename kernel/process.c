@@ -35,6 +35,7 @@ void process_init(void)
 #ifdef DEBUG
     process_table[0].base_address = 0x8000;
     process_table[0].bank = 0;
+    process_table[0].termstatus = 0;
 #endif
 }
 
@@ -184,6 +185,9 @@ int process_load(const char * filename)
 
     ram_bank_set(current_bank);
 
+    /* Set other process attributes. */
+    process_table[pd].termstatus = 0;
+
     /* Update address. Return process descriptor. */
     return pd;
 }
@@ -192,4 +196,26 @@ void process_exit(int code)
 {
     int s = scheduler_current();
     scheduler_exit(s, code);
+}
+
+/* Gets terminal status of the current process. */
+termstatus_t process_get_terminal_status(void)
+{
+    int current_pd = scheduler_current_pid();
+    return process_table[current_pd].termstatus;
+}
+
+/* Sets terminal mode of the current process. */
+void process_set_terminal_mode(int mode)
+{
+    int current_pd = scheduler_current_pid();
+
+    if (mode)
+    {
+        process_table[current_pd].termstatus |= TERMSTATUS_MODE_BINARY;
+    }
+    else
+    {
+        process_table[current_pd].termstatus &= ~TERMSTATUS_MODE_BINARY;
+    }
 }

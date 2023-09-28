@@ -23,7 +23,7 @@ int main(void)
 
     /* Get a character from serial in. */
     char c = getchar();
-    if (c != 0x18) return 3;
+    if (c != 0x18) return (int)c;
 
     return 0;
 }

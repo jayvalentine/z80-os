@@ -3,7 +3,6 @@
     .equ    UART_PORT_CONTROL, #0b00000000
 
     .globl  _driver_6850_tx
-    .globl  _terminal_mode
 
     .globl  _file_open
     .globl  _file_read
@@ -19,6 +18,7 @@
     .globl  _scheduler_state
     .globl  _process_exit
     .globl  _scheduler_exitcode
+    .globl  _process_set_terminal_mode
 
     .globl  _signal_sethandler
 
@@ -50,7 +50,7 @@ _syscall_table:
     
     .word   _process_load            ; pload
 
-    .word   _terminal_mode           ; smode
+    .word   _process_set_terminal_mode ; smode
 
     .word   _do_sysinfo              ; sysinfo
 

@@ -59,7 +59,8 @@ __interrupt_handler_end:
 
     .globl  _signal_cancel
 
-    .globl  _terminal_current_mode
+    ; termstatus_t process_get_terminal_status(void)
+    .globl  _process_get_terminal_status
 
     ; Needed for tests...
     ; TODO: Find a way around this.
@@ -85,8 +86,16 @@ __serial_read_handler:
 
     ; Handle special characters only if in interactive mode.
     ld      C, A
-    ld      A, (_terminal_current_mode)
-    cp      #0
+
+    push    DE
+    push    BC
+    push    HL
+    call    _process_get_terminal_status
+    pop     HL
+    pop     BC
+    pop     DE
+
+    bit     0, A ; MODE is interactive if lowest bit is clear.
     jp      z, __serial_signal_cancel
     
     ; Need the byte, so restore A.

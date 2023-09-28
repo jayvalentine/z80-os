@@ -118,6 +118,11 @@ int scheduler_current(void)
     return current_scheduled;
 }
 
+int scheduler_current_pid(void)
+{
+    return schedule_table[current_scheduled].pid;
+}
+
 int scheduler_next(void)
 {
     if (current_scheduled >= 0 && schedule_table[current_scheduled].state == TASK_RUNNING)

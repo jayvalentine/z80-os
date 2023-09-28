@@ -4,10 +4,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <include/terminal.h>
+
 typedef struct _ProcessDescriptor_T
 {
     uintptr_t base_address;
     uint8_t bank;
+    termstatus_t termstatus;
 } ProcessDescriptor_T;
 
 const ProcessDescriptor_T * process_info(int pid);
