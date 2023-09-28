@@ -2,28 +2,14 @@
 
 #include <include/interrupt.h>
 
-uint8_t serial_current_mode;
+uint8_t terminal_current_mode;
 
-#define BUFFER_SIZE 256
-
-typedef struct _CircularBuffer_T
+void terminal_init(void)
 {
-    char * head;
-    char * tail;
-    char buf[BUFFER_SIZE];
-} CircularBuffer_T;
-
-CircularBuffer_T tx_buf;
-
-void serial_init(void)
-{
-    tx_buf.head = tx_buf.buf;
-    tx_buf.tail = tx_buf.buf;
-
-    serial_current_mode = 0;
+    terminal_current_mode = 0;
 }
 
-void serial_mode(uint8_t mode)
+void terminal_mode(uint8_t mode)
 {
-    serial_current_mode = mode;
+    terminal_current_mode = mode;
 }

@@ -59,7 +59,7 @@ __interrupt_handler_end:
 
     .globl  _signal_cancel
 
-    .globl  _serial_current_mode
+    .globl  _terminal_current_mode
 
     ; Needed for tests...
     ; TODO: Find a way around this.
@@ -85,7 +85,7 @@ __serial_read_handler:
 
     ; Handle special characters only if in interactive mode.
     ld      C, A
-    ld      A, (_serial_current_mode)
+    ld      A, (_terminal_current_mode)
     cp      #0
     jp      z, __serial_signal_cancel
     

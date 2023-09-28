@@ -3,7 +3,7 @@
     .equ    UART_PORT_CONTROL, #0b00000000
 
     .globl  _driver_6850_tx
-    .globl  _serial_mode
+    .globl  _terminal_mode
 
     .globl  _file_open
     .globl  _file_read
@@ -50,7 +50,7 @@ _syscall_table:
     
     .word   _process_load            ; pload
 
-    .word   _serial_mode             ; smode
+    .word   _terminal_mode           ; smode
 
     .word   _do_sysinfo              ; sysinfo
 
