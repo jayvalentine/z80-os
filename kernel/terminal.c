@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 struct _TerminalBuf
 {
@@ -25,7 +26,7 @@ char terminal_get(void)
     return terminal_buf.data[terminal_buf.tail++];
 }
 
-uint8_t terminal_available(void)
+bool terminal_available(void)
 {
     return terminal_buf.head != terminal_buf.tail;
 }

@@ -2,6 +2,7 @@
 #define _TERMINAL_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /* Type used for representing a process's terminal status. */
 typedef uint8_t termstatus_t;
@@ -16,5 +17,9 @@ typedef uint8_t termstatus_t;
 #define TERMSTATUS_AVAILABLE (1 << 2)
 
 void terminal_init(void);
+
+void terminal_put(char c);
+char terminal_get(void);
+bool terminal_available(void);
 
 #endif
