@@ -44,6 +44,12 @@ const ProcessDescriptor_T * process_info(int pid)
     return &process_table[pid];
 }
 
+ProcessDescriptor_T * process_current(void)
+{
+    int pid = scheduler_current();
+    return &process_table[pid];
+}
+
 #define process_argc ((char *)0xf800)
 #define process_argv ((char *)0xf810)
 #define process_args ((char *)0xf820)
@@ -196,26 +202,4 @@ void process_exit(int code)
 {
     int s = scheduler_current();
     scheduler_exit(s, code);
-}
-
-/* Gets terminal status of the current process. */
-termstatus_t process_get_terminal_status(void)
-{
-    int current_pd = scheduler_current_pid();
-    return process_table[current_pd].termstatus;
-}
-
-/* Sets terminal mode of the current process. */
-void process_set_terminal_mode(int mode)
-{
-    int current_pd = scheduler_current_pid();
-
-    if (mode)
-    {
-        process_table[current_pd].termstatus |= TERMSTATUS_MODE_BINARY;
-    }
-    else
-    {
-        process_table[current_pd].termstatus &= ~TERMSTATUS_MODE_BINARY;
-    }
 }

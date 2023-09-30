@@ -18,6 +18,15 @@ typedef uint8_t termstatus_t;
 
 void terminal_init(void);
 
+/* terminal_set_mode
+ *
+ * Sets the terminal mode based on parameter:
+ * 
+ * Zero      - set mode to interactive
+ * Non-zero  - set mode to binary
+ */
+void terminal_set_mode(int mode);
+
 void terminal_put(char c);
 char terminal_get(void);
 bool terminal_available(void);

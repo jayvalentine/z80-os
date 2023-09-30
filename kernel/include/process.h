@@ -13,10 +13,23 @@ typedef struct _ProcessDescriptor_T
     termstatus_t termstatus;
 } ProcessDescriptor_T;
 
-const ProcessDescriptor_T * process_info(int pid);
 
 int process_spawn(int pd, char ** argv, size_t argc);
 int process_load(const char * filename);
 void process_init(void);
+
+/* process_current
+ *
+ * Returns a pointer to the process descriptor
+ * for the current process.
+ */
+ProcessDescriptor_T * process_current(void);
+
+/* process_info
+ *
+ * Returns a read-only pointer to the process descriptor
+ * for the process with given process ID.
+ */
+const ProcessDescriptor_T * process_info(int pid);
 
 #endif

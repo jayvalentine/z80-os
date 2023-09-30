@@ -18,7 +18,7 @@
     .globl  _scheduler_state
     .globl  _process_exit
     .globl  _scheduler_exitcode
-    .globl  _process_set_terminal_mode
+    .globl  _terminal_set_mode
 
     .globl  _signal_sethandler
 
@@ -50,7 +50,7 @@ _syscall_table:
     
     .word   _process_load            ; pload
 
-    .word   _process_set_terminal_mode ; smode
+    .word   _terminal_set_mode       ; smode
 
     .word   _do_sysinfo              ; sysinfo
 
