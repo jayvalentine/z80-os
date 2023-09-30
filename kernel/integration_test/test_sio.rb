@@ -146,6 +146,44 @@ class SIOTest < IntegrationTest
         assert_return_equal(0)
     end
 
+    # Tests that the break command kills a process if no handler is registered.
+    def test_sbreak_kills_by_default
+        # Compile and load the code for the child process.
+        #
+        # This is at a different address to the parent so that
+        # we can be sure the correct SIG_CANCEL handler is being called
+        # in each case.
+        compile_user_code(0xc000)
+        load_user_program(0xc000)
+
+        # Run for some time - we expect not to halt.
+        # It takes a while to write the child process to disk.
+        assert_running(cycles: 10000000)
+
+        # Send break character - 0x18.
+        # The child process should exit.
+        @instance.serial_puts(0x18.chr)
+
+        # Now run and expect not to halt.
+        # We should have returned to the parent process.
+        assert_running(cycles: 200000)
+
+        # Send a character to the serial terminal.
+        # This should be received by the parent process.
+        @instance.serial_puts('C')
+        assert_running(cycles: 200000)
+
+        # Send another break character.
+        @instance.serial_puts(0x18.chr)
+
+        # Continue - program should continue until completion.
+        @instance.continue 200000
+        assert_program_finished
+
+        # Check return value.
+        assert_return_equal(0)
+    end
+
     # Tests that the break command is interpreted as a byte when serial port
     # is in binary mode.
     def test_smode_binmode
