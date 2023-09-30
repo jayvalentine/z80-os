@@ -12,9 +12,9 @@
     .equ    STATUS_SETMASK_INT, 0b00000010
     .equ    STATUS_CLRMASK_INT, 0b11111101
 
-    ; SYSCALL status is bit #2 of the status register.
-    .equ    STATUS_SETMASK_SYSCALL, 0b00000100
-    .equ    STATUS_CLRMASK_SYSCALL, 0b11111011
+    ; KERNEL status is bit #2 of the status register.
+    .equ    STATUS_SETMASK_KERNEL, 0b00000100
+    .equ    STATUS_CLRMASK_KERNEL, 0b11111011
 
     ; DISK status is bit #3 of the status register.
     .equ    STATUS_SETMASK_DISK, 0b00001000
@@ -23,8 +23,9 @@
     .globl  _status_init
     .globl  _status_set_int
     .globl  _status_clr_int
-    .globl  _status_set_syscall
-    .globl  _status_clr_syscall
+    .globl  _status_set_kernel
+    .globl  _status_clr_kernel
+    .globl  _status_is_set_kernel
     .globl  _status_set_disk
     .globl  _status_clr_disk
 
@@ -53,11 +54,11 @@ _status_clr_int:
     pop     AF
     ret
 
-    ; void status_clr_syscall(void)
-_status_clr_syscall:
+    ; void status_clr_kernel(void)
+_status_clr_kernel:
     push    AF
     ld      A, (_current_status)        ; Get current status
-    or      A, #STATUS_SETMASK_SYSCALL   ; OR mask to set SYSCALL bit (LED off)
+    or      A, #STATUS_SETMASK_KERNEL   ; OR mask to set KERNEL bit (LED off)
     ld      (_current_status), A        ; Write back to keep track
 
     out     (0x80), A ; Output to port.
@@ -89,11 +90,11 @@ _status_set_int:
     pop     AF
     ret
 
-    ; void status_set_syscall(void)
-_status_set_syscall:
+    ; void status_set_kernel(void)
+_status_set_kernel:
     push    AF
     ld      A, (_current_status)        ; Get current status
-    and     A, #STATUS_CLRMASK_SYSCALL   ; AND mask to clear SYSCALL bit (LED on)
+    and     A, #STATUS_CLRMASK_KERNEL   ; AND mask to clear KERNEL bit (LED on)
     ld      (_current_status), A        ; Write back to keep track
 
     out     (0x80), A ; Output to port.
@@ -111,4 +112,21 @@ _status_set_disk:
     out     (0x80), A ; Output to port.
 
     pop     AF
+    ret
+
+    ; bool status_is_set_kernel(void)
+_status_is_set_kernel:
+    ; Check if KERNEL flag in current status is set.
+    ;
+    ; Remember that the current status flags are inverted
+    ; (i.e. active LOW).
+    ld      A, (_current_status)
+    bit     2, A
+    jp      z, __status_is_set_kernel_true
+
+    ld      A, #0
+    ret
+
+__status_is_set_kernel_true:
+    ld      A, #1
     ret

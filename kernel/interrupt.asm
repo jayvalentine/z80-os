@@ -73,11 +73,18 @@ __serial_read_handler:
 
     .globl  _scheduler_tick
     .globl  _ram_bank_set
+    .globl  _signal_get_handler
+    .globl  _status_is_set_kernel
 
     ; These two symbols need to be global for benchmarking.
     .globl  __timer_handler
     .globl  __timer_handler_end
 __timer_handler:
+    ; Skip timer handler if we are currently executing in kernel space.
+    call    _status_is_set_kernel
+    cp      #0
+    jp      nz, __timer_handler_end
+
     ; Switch to user register set and stack all registers.
     exx
     ex      AF, AF'
@@ -95,6 +102,56 @@ __timer_handler:
     call    _scheduler_tick
     call    _ram_bank_set
 
+    ; Check if there are any signals to handle for the
+    ; current process.
+    ;
+    ; Will return handler address in DE (0 if no signal).
+    call    _signal_get_handler
+    ld      A, D
+    or      E
+
+    jp      z, __timer_handler_ret_to_process
+
+    ; Return to process, calling signal handler.
+    ; DE holds signal handler address.
+__timer_handler_ret_to_handler:
+    ld      SP, (0xfffe)
+
+    ; Return address at SP+12
+    ; Overwrite with handler address.
+    ; Save original return address in BC.
+    ld      HL, #12
+    add     HL, SP
+    ld      C, (HL)
+    ld      (HL), E
+    inc     HL
+    ld      B, (HL)
+    ld      (HL), D
+
+    ; Ensure HL holds original return address.
+    push    BC
+    pop     HL
+
+
+
+    ; Restore all registers aside from HL.
+    pop     IY
+    pop     IX
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+    pop     AF
+
+    ex      AF, AF'
+    exx
+
+    jp      __timer_handler_end
+
+
+
+    ; Return to process with no signal handler.
+__timer_handler_ret_to_process:
     ld      SP, (0xfffe)
 
     ; Now unstack all registers and switch back

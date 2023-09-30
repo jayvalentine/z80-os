@@ -35,4 +35,6 @@ SIGHANDLER_T signal_get_handler(void)
         /* Return signal handler for current process. */
         return p->sighandlers.cancel;
     }
+
+    return 0;
 }

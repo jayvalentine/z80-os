@@ -27,8 +27,8 @@ void signal_set(uint8_t);
 
 /* signal_get_handler
  *
- * Gets the address of the handler for the current signal,
- * or 0 if no signal is active.
+ * Gets the address of the handler for the active signal
+ * for the current process, or 0 if no signal is active.
  */
 SIGHANDLER_T signal_get_handler(void);
 

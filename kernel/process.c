@@ -36,6 +36,9 @@ void process_init(void)
     process_table[0].base_address = 0x8000;
     process_table[0].bank = 0;
     process_table[0].termstatus = 0;
+    process_table[0].sigstatus = 0;
+    process_table[0].sighandlers.cancel = NULL;
+    process_table[0].sighandlers.brk = NULL;
 #endif
 }
 

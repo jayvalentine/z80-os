@@ -61,8 +61,10 @@ _syscall_table:
 
     .globl  _syscall_handler
 
-    .globl  _status_set_syscall
-    .globl  _status_clr_syscall
+    .globl  _status_set_kernel
+    .globl  _status_clr_kernel
+
+    .globl  _in_kernel
 
     ; Syscall handler.
     ;
@@ -105,7 +107,7 @@ _syscall_handler:
     jp      nz, #__invalid_syscall
 
     push    AF
-    call    _status_set_syscall
+    call    _status_set_kernel
     pop     AF
 
     ; Calculate position of word in syscall table.
@@ -134,7 +136,7 @@ _syscall_handler:
 
 __syscall_ret:
     push    AF
-    call    _status_clr_syscall
+    call    _status_clr_kernel
     pop     AF
 
     ; Restore IX.
@@ -175,13 +177,16 @@ __invalid_syscall:
     ; then returns a single received character.
 _do_sread:
     ; Wait for char in buffer.
-    ei
 __sread_wait:
-    call    _terminal_available
-
-    ; If head and tail are equal, there's no data in buffer.
-    jp      z, #__sread_wait
+    ; Allow some time for an interrupt if there is one.
+    ei
+    nop
     di
+
+    ; Check if a character is available at the terminal.
+    call    _terminal_available
+    cp      #0
+    jp      z, #__sread_wait
 
 __sread_available:
     ; Get character in A.
@@ -229,7 +234,7 @@ _do_pexit:
 
     ; This syscall doesn't return.
     push    AF
-    call    _status_clr_syscall
+    call    _status_clr_kernel
     pop     AF
     ei
 

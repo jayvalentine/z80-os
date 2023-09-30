@@ -49,8 +49,10 @@ void terminal_put(char c)
     {
         signal_set(SIGSTAT_CANCEL);
     }
-    
-    terminal_buf.data[terminal_buf.head++] = c;
+    else
+    {
+        terminal_buf.data[terminal_buf.head++] = c;
+    }
 }
 
 char terminal_get(void)

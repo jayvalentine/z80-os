@@ -96,8 +96,8 @@ class SIOTest < IntegrationTest
         # Send break character - 0x18.
         @instance.serial_puts(0x18.chr)
 
-        # Now run and expect to halt.
-        @instance.continue 2000
+        # Now run and expect to halt on the next scheduler tick.
+        @instance.continue 200000
         assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
 
         # Check return value.

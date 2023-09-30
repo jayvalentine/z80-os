@@ -32,6 +32,8 @@ char input[256];
 
 uint8_t startup_flags;
 
+uint8_t in_kernel;
+
 typedef void (*proc_t)(void);
 
 void interrupt_disable(void);
@@ -45,6 +47,7 @@ void main(void)
     interrupt_disable();
 
     status_init();
+    status_set_kernel();
 
     disk_init();
     filesystem_init();
@@ -102,6 +105,7 @@ void main(void)
     int e2 = process_spawn(pd, NULL, 0);
 #endif
 
+    status_clr_kernel();
     interrupt_enable();
 
     while (1) {}
