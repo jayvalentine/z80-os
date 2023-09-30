@@ -194,6 +194,8 @@ int process_load(const char * filename)
     /* Set other process attributes. */
     process_table[pd].termstatus = 0;
     process_table[pd].sigstatus = 0;
+    process_table[pd].sighandlers.cancel = NULL;
+    process_table[pd].sighandlers.brk = NULL;
 
     /* Update address. Return process descriptor. */
     return pd;

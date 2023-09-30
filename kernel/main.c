@@ -21,7 +21,6 @@
 #include <include/status.h>
 #include <include/file.h>
 #include <include/disk.h>
-#include <include/signal.h>
 #include <include/ram.h>
 #include <include/process.h>
 #include <include/memory.h>
@@ -49,7 +48,6 @@ void main(void)
 
     disk_init();
     filesystem_init();
-    signal_init();
 
     /* Get number of RAM banks. */
     uint8_t banks = ram_bank_test();

@@ -13,6 +13,7 @@ typedef struct _ProcessDescriptor_T
     uint8_t bank;
     termstatus_t termstatus;
     sigstatus_t sigstatus;
+    sighandlers_t sighandlers;
 } ProcessDescriptor_T;
 
 
