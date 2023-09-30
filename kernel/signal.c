@@ -1,6 +1,10 @@
 #include <stddef.h>
 #include <syscall.h>
 #include <stdio.h>
+#include <stdint.h>
+
+#include <include/process.h>
+#include <include/bits.h>
 
 SIGHANDLER_T sighandler_cancel;
 SIGHANDLER_T sighandler_break;
@@ -11,20 +15,18 @@ void signal_init(void)
     sighandler_break = NULL;
 }
 
-#ifdef Z88DK
-void signal_cancel(uint16_t address) __z88dk_fastcall
-#else
+void signal_set(uint8_t signal)
+{
+    ProcessDescriptor_T * p = process_current();
+    BIT_SET(p->sigstatus, signal);
+}
+
 void signal_cancel(uint16_t address)
-#endif
 {
     if (sighandler_cancel != NULL) sighandler_cancel(address);
 }
 
-#ifdef Z88DK
-void signal_break(uint16_t address) __z88dk_fastcall
-#else
 void signal_break(uint16_t address)
-#endif
 {
     if (sighandler_break != NULL) sighandler_break(address);
 }

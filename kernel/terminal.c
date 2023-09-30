@@ -1,6 +1,9 @@
 #include <include/terminal.h>
 #include <include/process.h>
 #include <include/bits.h>
+#include <include/signal.h>
+
+#define ASCII_CANCEL 0x18
 
 struct _TerminalBuf
 {
@@ -39,7 +42,13 @@ void terminal_set_mode(int mode)
 
 void terminal_put(char c)
 {
-    // TODO: Handle SIG_CANCEL here!
+    /* If the character is the CANCEL byte and the terminal is
+     * in interactive mode, then trigger SIG_CANCEL.
+     */
+    if (c == ASCII_CANCEL && BIT_IS_CLR(terminal_status(), TERMSTATUS_MODE_BINARY))
+    {
+        signal_set(SIGSTAT_CANCEL);
+    }
     
     terminal_buf.data[terminal_buf.head++] = c;
 }
