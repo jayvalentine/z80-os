@@ -97,6 +97,9 @@ __timer_handler:
 
     ld      (0xfffe), SP
 
+    ; Set stack to kernel space.
+    ld      SP, #0x7ffe
+
     ; Call the scheduler to allocate another process.
     ; New RAM bank is returned in A.
     call    _scheduler_tick
