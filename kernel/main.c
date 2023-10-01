@@ -32,8 +32,6 @@ char input[256];
 
 uint8_t startup_flags;
 
-uint8_t in_kernel;
-
 typedef void (*proc_t)(void);
 
 void interrupt_disable(void);

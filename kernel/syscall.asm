@@ -65,8 +65,6 @@ _syscall_table:
     .globl  _status_set_kernel
     .globl  _status_clr_kernel
 
-    .globl  _in_kernel
-
     ; Syscall handler.
     ;
     ; Calculates absolute position of syscall function address
@@ -215,6 +213,3 @@ __sysinfo_numbanks:
     .globl  _kernel_version
 _kernel_version:
     .asciz  "0.6.0"
-
-__test:
-    .asciz  "CANCEL handler: #0b04x\n\r"
