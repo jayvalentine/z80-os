@@ -18,6 +18,9 @@ The kernel is intended to run with 32KB of RAM and provides user interaction via
 User programs are each allocated a 32KB page of banked RAM, allowing the multiple programs to be executing
 concurrently.
 
+This repository also contains some builtin utility programs, such as a BASIC
+interpreter.
+
 ### Current Functionality
 
 #### Bootloader
