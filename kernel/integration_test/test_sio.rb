@@ -104,6 +104,24 @@ class SIOTest < IntegrationTest
         assert_equal 0x0000, @instance.registers["HL"], "Wrong return value!"
     end
 
+    # Tests that the break command is received correctly while waiting for input
+    # from the serial terminal.
+    def test_sbreak_waiting_for_input
+        # Run for a little bit - we expect not to halt.
+        @instance.continue 2000
+        assert !@instance.halted?, "Program halted unexpectedly (at address %04x)." % @instance.registers["PC"]
+
+        # Send break character - 0x18.
+        @instance.serial_puts(0x18.chr)
+
+        # Now run and expect to halt on the next scheduler tick.
+        @instance.continue 200000
+        assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
+
+        # Check return value.
+        assert_equal 0x0000, @instance.registers["HL"], "Wrong return value!"
+    end
+
     # Tests that the break command is received by the current interactive process.
     def test_sbreak_multiprocess
         # Compile and load the code for the child process.
