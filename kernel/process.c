@@ -47,10 +47,16 @@ const ProcessDescriptor_T * process_info(int pid)
     return &process_table[pid];
 }
 
+ProcessDescriptor_T * process_current_ptr;
+
 ProcessDescriptor_T * process_current(void)
 {
-    int pid = scheduler_current();
-    return &process_table[pid];
+    return process_current_ptr;
+}
+
+void process_set_current(int pid)
+{
+    process_current_ptr = &process_table[pid];
 }
 
 #define process_argc ((char *)0xf800)
@@ -206,6 +212,6 @@ int process_load(const char * filename)
 
 void process_exit(int code)
 {
-    int s = scheduler_current();
+    int s = scheduler_current_pid();
     scheduler_exit(s, code);
 }

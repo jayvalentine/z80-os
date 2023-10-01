@@ -28,6 +28,13 @@ void process_init(void);
  */
 ProcessDescriptor_T * process_current(void);
 
+/* process_set_current
+ *
+ * Sets the current process pointer to that
+ * of the process with the given PID.
+ */
+void process_set_current(int pid);
+
 /* process_info
  *
  * Returns a read-only pointer to the process descriptor

@@ -118,9 +118,12 @@ int scheduler_current(void)
     return current_scheduled;
 }
 
+/* Cache PID of current process for better performance. */
+int schedule_current_pid;
+
 int scheduler_current_pid(void)
 {
-    return schedule_table[current_scheduled].pid;
+    return schedule_current_pid;
 }
 
 int scheduler_next(void)
@@ -140,7 +143,10 @@ int scheduler_next(void)
     }
 
     schedule_table[current_scheduled].state = TASK_RUNNING;
-    return schedule_table[current_scheduled].pid;
+    schedule_current_pid = schedule_table[current_scheduled].pid;
+    process_set_current(schedule_current_pid);
+
+    return schedule_current_pid;
 }
 
 uint8_t scheduler_tick(void)
