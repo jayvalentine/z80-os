@@ -234,9 +234,18 @@ class IntegrationTest < Minitest::Test
     end
 
     def schedule_table
-        #kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
-        addr = 0x6474
+        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map") do |s|
+            if /([0-9a-fA-F]+)\s+(\S+)/ =~ s
+                addr = "0x#{$1}"
+                label = $2
+                [label, addr]
+            else
+                nil
+            end
+        end
+        addr = kernel_symbols.find_by_name("_schedule_table").address
 
+        s = []
         16.times do |i|
             base = addr + (i * 7)
             state = get_int8(base)
@@ -244,19 +253,20 @@ class IntegrationTest < Minitest::Test
             pid = get_int16(base+3)
             exitcode = get_int16(base+5)
 
-            puts "SCHEDULE TABLE #{i}"
-            puts "    STATE: %d" % state
-            puts "    EVENT: %d" % event
-            puts "    PID:   %d" % pid
-            puts "    EXIT:  %d" % exitcode
+            s << "SCHEDULE TABLE #{i}"
+            s << "    STATE: %d" % state
+            s << "    EVENT: %d" % event
+            s << "    PID:   %d" % pid
+            s << "    EXIT:  %d" % exitcode
         end
+        s.join("\n")
     end
 
-    def get_stack
+    def stack_string
         sp = @instance.registers["SP"]
         stack = []
         16.times do |i|
-            offset = i * 2
+            offset = (i-8) * 2
             lo_addr = sp + offset
             hi_addr = lo_addr + 1
             
@@ -264,27 +274,62 @@ class IntegrationTest < Minitest::Test
             hi = @instance.memory(hi_addr)
 
             val = (hi << 8) | lo
-            stack << val
+
+            if offset == 0
+                stack << "    %04x: %04x <- SP" % [lo_addr, val]
+            else
+                stack << "    %04x: %04x" % [lo_addr, val]
+            end
         end
-        stack
+        stack.join("\n")
     end
 
     def pc_str
         "0x#{@instance.registers["PC"].to_s(16)}"
+    end
+
+    def detailed_message
+        msg = ""
+        msg += "\nSTATE:\n"
+        msg += "Stack:\n#{stack_string()}\n"
+        msg += schedule_table()
+        msg += "\nTrace:\n"
+
+        count = 0
+        last = nil
+        @instance.addrs.reverse.each do |a|
+            if a == last
+                msg += "."
+            else
+                msg += "\n    %04x" % a
+                count += 1
+            end
+
+            last = a
+            break if count >= 4096
+        end
+
+        msg
     end
     
     # Assert that the program continues to execute for the given
     # number of cycles.
     def assert_running(cycles:)
         @instance.continue cycles
-        assert !@instance.halted?, "Program halted unexpectedly (at address %04x)." % @instance.registers["PC"]
+
+        msg = "Program halted unexpectedly (at address #{pc_str})."
+        unless ENV["Z80_TEST_DETAILED"].nil?
+            msg += detailed_message()
+        end
+
+        assert !@instance.halted?, msg
     end
 
     # Assert that the program halts after executing for the given
     # number of cycles.
     def assert_halts(cycles:)
         @instance.continue cycles
-        assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
+        assert @instance.halted?, "Program did not halt when expected (at address #{pc_str})"
     end
 
     # Asserts that the program has returned the given value.
