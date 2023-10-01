@@ -213,7 +213,7 @@ class SIOTest < IntegrationTest
         @instance.serial_puts(0x18.chr)
 
         # Now run and expect to halt.
-        @instance.continue 2000
+        @instance.continue 4000
         assert @instance.halted?, "Program did not halt when expected."
 
         # Check return value.

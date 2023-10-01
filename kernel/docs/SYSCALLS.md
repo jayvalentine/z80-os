@@ -22,5 +22,5 @@ Writes `count` bytes pointed to by `s` to the terminal.
 
 #### 2: `int sread(void)`
 
-Blocks until a byte is available from the terminal, then returns
-the received byte, zero-extended to 16 bits.
+Returns a byte received from the terminal, zero-extended to 16 bits.
+If no byte is available, returns `-1`.

@@ -143,8 +143,9 @@ __syscall_ret:
     ld      IX, (__syscall_ix)
 
     ; Return from syscall.
-    ei
+    ; Re-enable interrupts just before returning.
     ld      HL, (__syscall_ret_address)
+    ei
     jp      (HL)
 
 __syscall_ret_address:
@@ -173,21 +174,18 @@ __invalid_syscall:
     ; Character received from serial port, in DE.
     ;
     ; Description:
-    ; Busy-waits until serial port receives data,
-    ; then returns a single received character.
+    ; Returns a single received character, or -1
+    ; if none available.
 _do_sread:
-    ; Wait for char in buffer.
-__sread_wait:
-    ; Allow some time for an interrupt if there is one.
-    ei
-    nop
-    di
-
     ; Check if a character is available at the terminal.
     call    _terminal_available
     cp      #0
-    jp      z, #__sread_wait
+    jp      nz, #__sread_available
 
+    ; No character available - return -1.
+    ld      DE, #-1
+    ret
+    
 __sread_available:
     ; Get character in A.
     call    _terminal_get
