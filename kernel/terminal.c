@@ -55,12 +55,9 @@ void terminal_put(char c)
     }
 }
 
-char terminal_get(void)
+int terminal_get(void)
 {
-    return terminal_buf.data[terminal_buf.tail++];
-}
-
-bool terminal_available(void)
-{
-    return terminal_buf.head != terminal_buf.tail;
+    if (terminal_buf.head == terminal_buf.tail) return -1;
+    
+    return (int)terminal_buf.data[terminal_buf.tail++];
 }

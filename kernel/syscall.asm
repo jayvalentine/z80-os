@@ -18,6 +18,7 @@
     .globl  _scheduler_state
     .globl  _process_exit
     .globl  _scheduler_exitcode
+    .globl  _terminal_get
     .globl  _terminal_set_mode
 
     .globl  _signal_sethandler
@@ -25,7 +26,7 @@
     ; Syscall table.
 _syscall_table:
     .word   _driver_6850_tx         ; swrite
-    .word   _do_sread               ; sread
+    .word   _terminal_get           ; sread
 
     ; DREAD, DWRITE no longer supported.
     .word   __invalid_syscall
@@ -161,39 +162,6 @@ __invalid_syscall:
     ld      A, #0x01
     ld      (_startup_flags), A
     rst     8
-
-    .globl  _terminal_available
-    .globl  _terminal_get
-
-    ; #1: sread: Read character from serial port.
-    ;
-    ; Parameters:
-    ; None.
-    ;
-    ; Returns:
-    ; Character received from serial port, in DE.
-    ;
-    ; Description:
-    ; Returns a single received character, or -1
-    ; if none available.
-_do_sread:
-    ; Check if a character is available at the terminal.
-    call    _terminal_available
-    cp      #0
-    jp      nz, #__sread_available
-
-    ; No character available - return -1.
-    ld      DE, #-1
-    ret
-    
-__sread_available:
-    ; Get character in A.
-    call    _terminal_get
-
-    ; Load character as int into DE (return value).
-    ld      E, A
-    ld      D, #0
-    ret
 
     .globl  _disk_info
 

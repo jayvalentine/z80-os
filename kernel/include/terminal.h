@@ -28,7 +28,12 @@ void terminal_init(void);
 void terminal_set_mode(int mode);
 
 void terminal_put(char c);
-char terminal_get(void);
-bool terminal_available(void);
+
+/* terminal_get
+ *
+ * Returns byte from terminal, or -1
+ * if no byte available.
+ */
+int terminal_get(void);
 
 #endif
