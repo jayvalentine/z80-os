@@ -35,12 +35,28 @@ void process_init(void)
 #ifdef DEBUG
     process_table[0].base_address = 0x8000;
     process_table[0].bank = 0;
+    process_table[0].termstatus = 0;
+    process_table[0].sigstatus = 0;
+    process_table[0].sighandlers.cancel = NULL;
+    process_table[0].sighandlers.brk = NULL;
 #endif
 }
 
 const ProcessDescriptor_T * process_info(int pid)
 {
     return &process_table[pid];
+}
+
+ProcessDescriptor_T * process_current_ptr;
+
+ProcessDescriptor_T * process_current(void)
+{
+    return process_current_ptr;
+}
+
+void process_set_current(int pid)
+{
+    process_current_ptr = &process_table[pid];
 }
 
 #define process_argc ((char *)0xf800)
@@ -184,12 +200,18 @@ int process_load(const char * filename)
 
     ram_bank_set(current_bank);
 
+    /* Set other process attributes. */
+    process_table[pd].termstatus = 0;
+    process_table[pd].sigstatus = 0;
+    process_table[pd].sighandlers.cancel = NULL;
+    process_table[pd].sighandlers.brk = NULL;
+
     /* Update address. Return process descriptor. */
     return pd;
 }
 
 void process_exit(int code)
 {
-    int s = scheduler_current();
+    int s = scheduler_current_pid();
     scheduler_exit(s, code);
 }

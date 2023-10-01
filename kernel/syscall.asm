@@ -3,7 +3,6 @@
     .equ    UART_PORT_CONTROL, #0b00000000
 
     .globl  _driver_6850_tx
-    .globl  _serial_mode
 
     .globl  _file_open
     .globl  _file_read
@@ -19,13 +18,15 @@
     .globl  _scheduler_state
     .globl  _process_exit
     .globl  _scheduler_exitcode
+    .globl  _terminal_get
+    .globl  _terminal_set_mode
 
     .globl  _signal_sethandler
 
     ; Syscall table.
 _syscall_table:
     .word   _driver_6850_tx         ; swrite
-    .word   _do_sread               ; sread
+    .word   _terminal_get           ; sread
 
     ; DREAD, DWRITE no longer supported.
     .word   __invalid_syscall
@@ -50,7 +51,7 @@ _syscall_table:
     
     .word   _process_load            ; pload
 
-    .word   _serial_mode             ; smode
+    .word   _terminal_set_mode       ; smode
 
     .word   _do_sysinfo              ; sysinfo
 
@@ -61,8 +62,8 @@ _syscall_table:
 
     .globl  _syscall_handler
 
-    .globl  _status_set_syscall
-    .globl  _status_clr_syscall
+    .globl  _status_set_kernel
+    .globl  _status_clr_kernel
 
     ; Syscall handler.
     ;
@@ -105,7 +106,7 @@ _syscall_handler:
     jp      nz, #__invalid_syscall
 
     push    AF
-    call    _status_set_syscall
+    call    _status_set_kernel
     pop     AF
 
     ; Calculate position of word in syscall table.
@@ -134,15 +135,16 @@ _syscall_handler:
 
 __syscall_ret:
     push    AF
-    call    _status_clr_syscall
+    call    _status_clr_kernel
     pop     AF
 
     ; Restore IX.
     ld      IX, (__syscall_ix)
 
     ; Return from syscall.
-    ei
+    ; Re-enable interrupts just before returning.
     ld      HL, (__syscall_ret_address)
+    ei
     jp      (HL)
 
 __syscall_ret_address:
@@ -158,60 +160,6 @@ __invalid_syscall:
     ld      A, #0x01
     ld      (_startup_flags), A
     rst     8
-
-    ; #1: sread: Read character from serial port.
-    ;
-    ; Parameters:
-    ; None.
-    ;
-    ; Returns:
-    ; Character received from serial port, in DE.
-    ;
-    ; Description:
-    ; Busy-waits until serial port receives data,
-    ; then returns a single received character.
-_do_sread:
-    ld      A, (_rx_buf_offs_head)
-    ld      E, A
-
-    ; Wait for char in buffer.
-    ei
-__sread_wait:
-    ld      A, (_rx_buf_offs_tail)
-    cp      E
-
-    ; If head and tail are equal, there's no data in buffer.
-    jp      z, #__sread_wait
-    di
-
-__sread_available:
-    ; Calculate offset into buffer.
-    ld      HL, #_rx_buf
-    ld      D, #0
-    add     HL, DE
-
-    ; Load character into A.
-    ld      A, (HL)
-
-    ; Increment head.
-    ld      HL, #_rx_buf_offs_head
-    inc     (HL)
-
-    ld      E, A
-    ld      D, #0
-    ret
-
-    .globl  _rx_buf_offs_head
-    .globl  _rx_buf_offs_tail
-    .globl  _rx_buf
-
-_rx_buf_offs_head:
-    .byte   #0
-_rx_buf_offs_tail:
-    .byte   #0
-
-_rx_buf:
-    .ds     #256
 
     .globl  _disk_info
 
@@ -250,7 +198,7 @@ _do_pexit:
 
     ; This syscall doesn't return.
     push    AF
-    call    _status_clr_syscall
+    call    _status_clr_kernel
     pop     AF
     ei
 
@@ -264,7 +212,4 @@ __sysinfo_numbanks:
 
     .globl  _kernel_version
 _kernel_version:
-    .asciz  "0.5.0"
-
-__test:
-    .asciz  "CANCEL handler: #0b04x\n\r"
+    .asciz  "0.6.0"

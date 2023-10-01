@@ -1,7 +1,5 @@
     .globl  _break_handler
 
-    .globl  _signal_break
-
 _break_handler:
     ; Save all registers onto stack.
     push    AF
@@ -40,7 +38,8 @@ _break_handler:
 
     ; Pass struct to break signal handler.
     ld      HL, #_debug_args
-    call    _signal_break
+    ; TODO: Reimplement BREAK for multiprocess.
+    ; call    _signal_break
 
     ; Set return address to address of BREAK instruction.
     pop     HL

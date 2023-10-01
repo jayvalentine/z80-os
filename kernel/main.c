@@ -21,12 +21,10 @@
 #include <include/status.h>
 #include <include/file.h>
 #include <include/disk.h>
-#include <include/signal.h>
 #include <include/ram.h>
 #include <include/process.h>
 #include <include/memory.h>
 #include <include/scheduler.h>
-#include <include/serial.h>
 
 extern SysInfo_T sysinfo;
 
@@ -47,12 +45,10 @@ void main(void)
     interrupt_disable();
 
     status_init();
+    status_set_kernel();
 
     disk_init();
     filesystem_init();
-    signal_init();
-
-    serial_init();
 
     /* Get number of RAM banks. */
     uint8_t banks = ram_bank_test();
@@ -68,6 +64,8 @@ void main(void)
     process_init();
 
     scheduler_init();
+
+    terminal_init();
 
 #ifndef DEBUG
     //printf("Z80-OS KERNEL v%s\r\n", &kernel_version);
@@ -105,6 +103,7 @@ void main(void)
     int e2 = process_spawn(pd, NULL, 0);
 #endif
 
+    status_clr_kernel();
     interrupt_enable();
 
     while (1) {}

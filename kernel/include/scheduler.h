@@ -127,6 +127,19 @@ TaskState_T scheduler_state(int pid);
  */
 int scheduler_current(void);
 
+/* scheduler_current_pid
+ *
+ * Purpose:
+ *     Gets the PID of the currently-executing task.
+ * 
+ * Parameters:
+ *     None.
+ * 
+ * Returns:
+ *     Process ID.
+ */
+int scheduler_current_pid(void);
+
 /* scheduler_block
  *
  * Purpose:

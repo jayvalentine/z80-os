@@ -8,19 +8,19 @@ Each process can be in one of several states:
 
 * `RUNNING` - Process is currently executing on the CPU
 * `READY` - Process is ready to be executed when a time slice is available
-* `WAITING` - Process is waiting on an event to occur
+* `BLOCKED` - Process is waiting on an event to occur
 * `FINISHED` - Process has exited and is waiting to be cleaned up by the scheduler
 
 The transitions between events is described below:
 
 ```
 RUNNING -> scheduler tick -> READY
-RUNNING -> wait syscall -> WAITING
+RUNNING -> wait syscall -> BLOCKED
 RUNNING -> exit syscall -> FINISHED
 
 READY -> scheduler tick -> RUNNING
 
-WAITING -> waited event occurs -> READY
+BLOCKED -> waited event occurs -> READY
 ```
 
 ## Events

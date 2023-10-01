@@ -10,10 +10,10 @@ void status_set_int(void);
 /* Clear interrupt status. */
 void status_clr_int(void);
 
-/* Set syscall status. */
-void status_set_syscall(void);
+/* Set kernel status. */
+void status_set_kernel(void);
 
-/* Clear syscall status. */
-void status_clr_syscall(void);
+/* Clear kernel status. */
+void status_clr_kernel(void);
 
 #endif

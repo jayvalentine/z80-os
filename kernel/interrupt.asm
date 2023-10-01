@@ -53,73 +53,38 @@ __interrupt_handle_ret:
 __interrupt_handler_end:
     reti
 
-    .globl  _rx_buf
-    .globl  _rx_buf_offs_head
-    .globl  _rx_buf_offs_tail
 
-    .globl  _signal_cancel
 
-    .globl  _serial_current_mode
+    ; void terminal_put(char c)
+    .globl  _terminal_put
 
     ; Needed for tests...
     ; TODO: Find a way around this.
     .globl  __serial_read_handler
 
 __serial_read_handler:
-    ; Save interrupt return address.
-    push    HL
-
-    ; Get current tail of buffer.
-    ld      HL, #_rx_buf
-    ld      D, #0
-    ld      A, (_rx_buf_offs_tail)
-    ld      E, A
-    add     HL, DE
-
-    ; Read data from UART.
+    ; Read data from UART and send to terminal.
     in      A, (UART_PORT_DATA)
-    
-    ; $18 (CANCEL) - triggers SIG_CANCEL
-    cp      #0x18
-    jp      nz, __serial_read_byte
-
-    ; Handle special characters only if in interactive mode.
-    ld      C, A
-    ld      A, (_serial_current_mode)
-    cp      #0
-    jp      z, __serial_signal_cancel
-    
-    ; Need the byte, so restore A.
-    ld      A, C
-
-__serial_read_byte:
-    ; Store received character.
-    ld      (HL), A
-
-    ; Increment tail.
-    ld      HL, #_rx_buf_offs_tail
-    inc     (HL)
-
-    pop     HL
+    call    _terminal_put
     
     jp      __interrupt_handle_ret
 
-__serial_signal_cancel:
-    exx
-    ei
-    call    _signal_cancel
-    di
-    exx
-    
-    jp      __interrupt_handle_ret
+
 
     .globl  _scheduler_tick
     .globl  _ram_bank_set
+    .globl  _signal_get_handler
+    .globl  _status_is_set_kernel
 
     ; These two symbols need to be global for benchmarking.
     .globl  __timer_handler
     .globl  __timer_handler_end
 __timer_handler:
+    ; Skip timer handler if we are currently executing in kernel space.
+    call    _status_is_set_kernel
+    cp      #0
+    jp      nz, __timer_handler_end
+
     ; Switch to user register set and stack all registers.
     exx
     ex      AF, AF'
@@ -132,11 +97,64 @@ __timer_handler:
 
     ld      (0xfffe), SP
 
+    ; Set stack to kernel space.
+    ld      SP, #0x7ffe
+
     ; Call the scheduler to allocate another process.
     ; New RAM bank is returned in A.
     call    _scheduler_tick
     call    _ram_bank_set
 
+    ; Check if there are any signals to handle for the
+    ; current process.
+    ;
+    ; Will return handler address in DE (0 if no signal).
+    call    _signal_get_handler
+    ld      A, D
+    or      E
+
+    jp      z, __timer_handler_ret_to_process
+
+    ; Return to process, calling signal handler.
+    ; DE holds signal handler address.
+__timer_handler_ret_to_handler:
+    ld      SP, (0xfffe)
+
+    ; Return address at SP+12
+    ; Overwrite with handler address.
+    ; Save original return address in BC.
+    ld      HL, #12
+    add     HL, SP
+    ld      C, (HL)
+    ld      (HL), E
+    inc     HL
+    ld      B, (HL)
+    ld      (HL), D
+
+    ; Ensure HL holds original return address.
+    push    BC
+    pop     HL
+
+
+
+    ; Restore all registers aside from HL.
+    pop     IY
+    pop     IX
+    pop     BC
+    pop     DE
+    inc     SP
+    inc     SP
+    pop     AF
+
+    ex      AF, AF'
+    exx
+
+    jp      __timer_handler_end
+
+
+
+    ; Return to process with no signal handler.
+__timer_handler_ret_to_process:
     ld      SP, (0xfffe)
 
     ; Now unstack all registers and switch back

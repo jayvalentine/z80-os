@@ -4,16 +4,42 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <include/terminal.h>
+#include <include/signal.h>
+
 typedef struct _ProcessDescriptor_T
 {
     uintptr_t base_address;
     uint8_t bank;
+    termstatus_t termstatus;
+    sigstatus_t sigstatus;
+    sighandlers_t sighandlers;
 } ProcessDescriptor_T;
 
-const ProcessDescriptor_T * process_info(int pid);
 
 int process_spawn(int pd, char ** argv, size_t argc);
 int process_load(const char * filename);
 void process_init(void);
+
+/* process_current
+ *
+ * Returns a pointer to the process descriptor
+ * for the current process.
+ */
+ProcessDescriptor_T * process_current(void);
+
+/* process_set_current
+ *
+ * Sets the current process pointer to that
+ * of the process with the given PID.
+ */
+void process_set_current(int pid);
+
+/* process_info
+ *
+ * Returns a read-only pointer to the process descriptor
+ * for the process with given process ID.
+ */
+const ProcessDescriptor_T * process_info(int pid);
 
 #endif

@@ -1,9 +1,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <include/file.h>
-#include <include/defs.h>
 
 #define CLUSTER_EOF 0xffff
 #define CLUSTER_FREE 0x0000
@@ -153,7 +153,7 @@ int filesystem_get_directory_entry(DirectoryEntry_T * dir_entry, const char * fi
 
     sector = disk_info.root_region;
     
-    bool done = FALSE;
+    bool done = false;
 
     /* Buffer for filename. */
     char buf[FILENAME_BUF_LEN];
@@ -162,7 +162,7 @@ int filesystem_get_directory_entry(DirectoryEntry_T * dir_entry, const char * fi
     while (!done)
     {
         /* Read the sector. */
-        read_sector_cached(temp_sector, sector, TRUE);
+        read_sector_cached(temp_sector, sector, true);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint16_t f = 0; f < 512; f += 32)
@@ -189,7 +189,7 @@ int filesystem_get_directory_entry(DirectoryEntry_T * dir_entry, const char * fi
             {
                 /* We've found the file! */
                 memcpy((char *) dir_entry, &temp_sector[f], 32);
-                done = TRUE;
+                done = true;
                 break;
             }
         }
@@ -205,7 +205,7 @@ int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const cha
     static uint32_t sector;
     
     sector = disk_info.root_region;
-    bool done = FALSE;
+    bool done = false;
 
     /* Buffer for filename. */
     char buf[FILENAME_BUF_LEN];
@@ -214,7 +214,7 @@ int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const cha
     while (!done)
     {
         /* Read the sector. */
-        read_sector_cached(temp_sector, sector, TRUE);
+        read_sector_cached(temp_sector, sector, true);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint16_t f = 0; f < 512; f += 32)
@@ -242,7 +242,7 @@ int filesystem_set_directory_entry(const DirectoryEntry_T * dir_entry, const cha
                 /* We've found the file! */
                 memcpy(&temp_sector[f], (char *) dir_entry, 32);
                 disk_write(temp_sector, sector);
-                done = TRUE;
+                done = true;
                 break;
             }
         }
@@ -258,7 +258,7 @@ int filesystem_mark_directory_entry_free(const char * filename)
     static uint32_t sector;
     
     sector = disk_info.root_region;
-    bool done = FALSE;
+    bool done = false;
 
     /* Buffer for filename. */
     char buf[FILENAME_BUF_LEN];
@@ -267,7 +267,7 @@ int filesystem_mark_directory_entry_free(const char * filename)
     while (!done)
     {
         /* Read the sector. */
-        read_sector_cached(temp_sector, sector, TRUE);
+        read_sector_cached(temp_sector, sector, true);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint16_t f = 0; f < 512; f += 32)
@@ -297,7 +297,7 @@ int filesystem_mark_directory_entry_free(const char * filename)
                  * this entry as free. */
                 temp_sector[f] = 0xe5u;
                 disk_write(temp_sector, sector);
-                done = TRUE;
+                done = true;
                 break;
             }
         }
@@ -324,7 +324,7 @@ uint16_t fat_next_cluster(uint16_t cluster)
     uint16_t entry = cluster_bytes % disk_info.bytes_per_sector;
 
     /* Read the sector and return the appropriate entry. */
-    read_sector_cached(temp_sector, fat_sector, FALSE);
+    read_sector_cached(temp_sector, fat_sector, false);
     return GET_UINT16(temp_sector, entry);
 }
 
@@ -344,7 +344,7 @@ void fat_set_cluster(uint16_t cluster, uint16_t next_cluster)
     uint16_t entry = cluster_bytes % disk_info.bytes_per_sector;
 
     /* Read the sector and set the appropriate entry. */
-    read_sector_cached(temp_sector, fat_sector, FALSE);
+    read_sector_cached(temp_sector, fat_sector, false);
     GET_UINT16(temp_sector, entry) = next_cluster;
     disk_write(temp_sector, fat_sector);
 }
@@ -364,9 +364,9 @@ uint16_t fat_find_free_cluster(void)
 
     entry = CLUSTER_EOF;
     
-    while (TRUE)
+    while (true)
     {
-        read_sector_cached(temp_sector, fat_sector, FALSE);
+        read_sector_cached(temp_sector, fat_sector, false);
         entry = GET_UINT16(temp_sector, entry_within_sector * 2);
 
         if (entry == CLUSTER_FREE) break;
@@ -449,9 +449,9 @@ int file_create(DirectoryEntry_T * entry)
     
     sector = disk_info.root_region;
 
-    while (TRUE)
+    while (true)
     {
-        read_sector_cached(temp_sector, sector, FALSE);
+        read_sector_cached(temp_sector, sector, false);
 
         for (size_t f = 0; f < 512; f += 32)
         {
@@ -730,7 +730,7 @@ int file_readbyte(int fd)
     /* Read current sector. */
     sector = file_start_sector(file->current_cluster) + file->sector;
 
-    read_sector_cached(temp_sector, sector, FALSE);
+    read_sector_cached(temp_sector, sector, false);
 
     /* Get byte. */
     uint8_t byte = temp_sector[file->fpos_within_sector];
@@ -807,7 +807,7 @@ int file_writesector(char * ptr, size_t offset, size_t n, int fd)
     /* Read current sector. */
     sector = file_start_sector(file->current_cluster) + file->sector;
 
-    read_sector_cached(temp_sector, sector, FALSE);
+    read_sector_cached(temp_sector, sector, false);
 
     /* Overwrite bytes in memory, write back to disk. */
     memcpy(temp_sector + offset, ptr, n);
@@ -1014,7 +1014,7 @@ uint16_t file_entries(void)
     while (sector != disk_info.data_region)
     {
         /* Read the sector. */
-        read_sector_cached(temp_sector, sector, TRUE);
+        read_sector_cached(temp_sector, sector, true);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint16_t f = 0; f < 512; f += 32)
@@ -1057,7 +1057,7 @@ int file_entry(char * s, uint16_t entry)
     while (sector != disk_info.data_region)
     {
         /* Read the sector. */
-        read_sector_cached(temp_sector, sector, TRUE);
+        read_sector_cached(temp_sector, sector, true);
 
         /* Iterate over the files, looking for the one we want. */
         for (uint16_t f = 0; f < 512; f += 32)
