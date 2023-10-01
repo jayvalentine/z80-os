@@ -1,15 +1,22 @@
 # ZEBRA Z80 Operating System
 
-ZEBRA is an operating system for a Z80 computer, implemented mostly in C with some assembler.
+ZEBRA is a multi-tasking operating system for Z80 computers, implemented mostly in C with some assembler.
 
 ## License
 
 This software is licensed under GPLv3. For the full license terms, see [here](LICENSE).
 
+## Contributing
+
+If you are interested in getting the OS set up for your own system please get in touch!
+
 ## Overview
 
-This is an operating system for a custom Z80 modular computer I have built.
-It is intended to run with 64KB of RAM and provides user interaction via a 5v serial interface.
+The operating system targets my custom Z80 modular computer.
+
+The kernel is intended to run with 32KB of RAM and provides user interaction via a serial interface.
+User programs are each allocated a 32KB page of banked RAM, allowing the multiple programs to be executing
+concurrently.
 
 ### Current Functionality
 
@@ -19,15 +26,17 @@ Two-stage bootloader allowing loading of OS images from filesystem
 
 #### Kernel
 
-* Interrupt-driven serial I/O driver
-* CF-card driver
-* FAT16 "flat" filesystem (no directory handling)
-  supporting the following operations:
+* System:
+  * Multi-tasking using banked RAM
+  * Syscalls for hardware abstraction, implemented using Z80 `rst` instruction
+  * FAT16 "flat" filesystem (no directory handling)
+    supporting the following operations:
     * Writing new files (no "append" mode)
     * Reading files
     * Deleting files
-* Syscalls implemented using Z80 `rst` instruction for hardware abstraction
-* Multi-programming using banked RAM
+* Hardware:
+  * TTL serial I/O
+  * CompactFlash card for data storage
 
 #### Command Processor
 

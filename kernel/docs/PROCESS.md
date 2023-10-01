@@ -15,10 +15,9 @@ Each process table entry maintains a set of flags indicating the signals that ha
 for a process.
 
 When a process is scheduled, the signal flags are checked in priority order.
-Each signal for which the flag is set is handled. If a signal causes the process
-to exit, then no further signals are handled.
+The first signal for which a flag is set is handled.
 
 ### Signal Handling
 
-Each signal has a default handler set by the kernel. Some signals can have a handler
+Each signal has a default handler set on startup. Some signals can have a handler
 set by the process which will be called instead.
