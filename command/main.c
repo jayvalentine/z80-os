@@ -143,10 +143,12 @@ void user_main(void)
     while (1)
     {
         int code = setjmp(jmp_env);
-        syscall_sighandle((SIGHANDLER_T)0, 0);
+        syscall_sighandle(&cancel, 0);
 
         if (code == 0) code = exitcode;
-        printf("(%u) > ", code);
+
+        if (code == -1) puts("\r\nProgram cancelled by user.\r\n");
+        printf("(%d) > ", code);
 
         /* Get user input and parse into cmd and argv */
         gets(input);
@@ -178,13 +180,11 @@ void user_main(void)
             }
             else
             {
-                syscall_sighandle(&cancel, 0);
                 exitcode = syscall_pexec(pd, argv, argc);
             }
         }
         else
         {
-            syscall_sighandle(&cancel, 0);
             exitcode = command_to_run->run(argv, argc);
         }
     }
