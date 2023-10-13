@@ -37,7 +37,6 @@ rule ".rel" => ".c" do |task|
     cmd += "-o\"#{task.name}\" "
     cmd += "-I#{File.dirname(task.source)} "
     cmd += "-I#{LIB_INCLUDE} "
-    cmd += "-DDEBUG "
     cmd += "-DZ80 "
     cmd += "--Werror "
     cmd += "#{task.source}"
@@ -46,7 +45,29 @@ rule ".rel" => ".c" do |task|
     FileUtils.rm("#{File.dirname(task.source)}/#{File.basename(task.source, ".c")}.asm")
 end
 
+rule ".debug.rel" => ".c" do |task|
+    cmd = "sdcc -c -mz80 --sdcccall 1 --opt-code-speed --max-allocs-per-node #{MAX_ALLOCS} --std-sdcc99 "
+    cmd += "-o\"#{task.name}\" "
+    cmd += "-I#{File.dirname(task.source)} "
+    cmd += "-I#{LIB_INCLUDE} "
+    cmd += "-DDEBUG "
+    cmd += "-DZ80 "
+    cmd += "--Werror "
+    cmd += "#{task.source}"
+    puts cmd
+    system(cmd)
+    FileUtils.rm("#{File.dirname(task.source)}/#{File.basename(task.source, ".c")}.debug.asm")
+end
+
 rule ".rel" => ".asm" do |task|
+    cmd = "sdasz80 -plosgffw "
+    cmd += "#{task.name} "
+    cmd += task.source
+    puts cmd
+    system(cmd)
+end
+
+rule ".debug.rel" => ".asm" do |task|
     cmd = "sdasz80 -plosgffw "
     cmd += "#{task.name} "
     cmd += task.source
@@ -297,6 +318,7 @@ namespace 'build' do
     kernel_dependencies = FileList.new("kernel/*.c", "kernel/*.asm") do |fl|
         fl.exclude(/reset/)
     end.ext(".rel")
+    kernel_dependencies_debug = kernel_dependencies.ext(".debug.rel")
 
     desc "Build kernel image"
     task 'kernel' => ['lib:stdlib', 'kernel/reset.rel'] + kernel_dependencies do
@@ -313,8 +335,8 @@ namespace 'build' do
     end
 
     desc "Build kernel image in debug mode for tests"
-    task 'kernel_debug' => ['lib:stdlib', 'kernel/reset.rel'] + kernel_dependencies do
-        success = compile_sdcc("kernel_debug.bin", kernel_dependencies, 'kernel/reset.rel', 0x0060, 0x6000)
+    task 'kernel_debug' => ['lib:stdlib', 'kernel/reset.rel'] + kernel_dependencies_debug do
+        success = compile_sdcc("kernel_debug.bin", kernel_dependencies_debug, 'kernel/reset.rel', 0x0060, 0x6000)
 
         if success
             system("z88dk-dis -o 0x0000 kernel_debug.bin > kernel_debug.diss")
