@@ -212,17 +212,25 @@ def unit_test(directory)
     end
 end
 
+VIRTDISK = "/mnt/VIRTDISK"
+
 desc 'Start an instance of Z80-OS in the Zemu interactive debugger.'
 task 'debug' => ['build:kernel', 'build:command'] + BUILTINS.map{ |b| "build:builtin:#{b[1]}" } do
-    #unless File.exist?("disk_copy.bin")
-    #    FileUtils.cp "zemu/disk.img", "disk_copy.bin"
-    #end
+    # Abort if the destination directory does not exist.
+    unless File.exist?("disk_copy.bin") && Dir.exist?(VIRTDISK)
+        abort("Virtual disk not mounted at '#{VIRTDISK}'")
+    end
 
-    #FileUtils.cp("command.exe", "/mnt/MAKEDISK")
+    FileUtils.rm(Dir.glob(File.join(VIRTDISK, "*.exe")))
+    while !Dir.glob(File.join(VIRTDISK, "*.exe")).empty?
+        sleep(1)
+    end
 
-    #BUILTINS.each do |_, name|
-    #    FileUtils.cp("#{name}.exe", "/mnt/MAKEDISK")
-    #end
+    FileUtils.cp("command.exe", VIRTDISK)
+
+    BUILTINS.each do |_, name|
+        FileUtils.cp("#{name}.exe", VIRTDISK)
+    end
 
     zemu_start()
 end
