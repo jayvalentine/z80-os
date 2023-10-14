@@ -130,7 +130,7 @@ class IntegrationTest < Minitest::Test
 
         conf = nil
         create_config_time = Benchmark.realtime do
-            conf = zemu_config(binary_name, binary, disk_file_name)
+            conf = zemu_config(binary_name, binary, disk_file_name, "kernel_debug.bin")
         end
 
         log("create config:  #{create_config_time}s")

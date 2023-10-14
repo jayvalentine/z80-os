@@ -32,47 +32,44 @@ CLEAN.include(
     "**/*.log",
     "**/*.coverage")
 
-rule ".rel" => ".c" do |task|
+# Compiles a single C file into an SDCC .rel (object) file.
+def compile(source, output, defines, includes)
     cmd = "sdcc -c -mz80 --sdcccall 1 --opt-code-speed --max-allocs-per-node #{MAX_ALLOCS} --std-sdcc99 "
-    cmd += "-o\"#{task.name}\" "
-    cmd += "-I#{File.dirname(task.source)} "
-    cmd += "-I#{LIB_INCLUDE} "
-    cmd += "-DZ80 "
+    cmd += "-o\"#{output}\" "
+    
+    includes.each { |i| cmd += "-I#{i} " }
+    defines.each { |d| cmd += "-D#{d} " }
+
     cmd += "--Werror "
-    cmd += "#{task.source}"
+    
+    cmd += "#{source}"
     puts cmd
     system(cmd)
-    FileUtils.rm("#{File.dirname(task.source)}/#{File.basename(task.source, ".c")}.asm")
+    FileUtils.rm("#{File.dirname(output)}/#{File.basename(output, ".*")}.asm")
+end
+
+def assemble(source, output)
+    cmd = "sdasz80 -plosgffw "
+    cmd += "#{output} "
+    cmd += source
+    puts cmd
+    system(cmd)
+end
+
+rule ".rel" => ".c" do |task|
+    compile(task.source, task.name, %w(Z80), [File.dirname(task.source), LIB_INCLUDE])
 end
 
 rule ".debug.rel" => ".c" do |task|
-    cmd = "sdcc -c -mz80 --sdcccall 1 --opt-code-speed --max-allocs-per-node #{MAX_ALLOCS} --std-sdcc99 "
-    cmd += "-o\"#{task.name}\" "
-    cmd += "-I#{File.dirname(task.source)} "
-    cmd += "-I#{LIB_INCLUDE} "
-    cmd += "-DDEBUG "
-    cmd += "-DZ80 "
-    cmd += "--Werror "
-    cmd += "#{task.source}"
-    puts cmd
-    system(cmd)
-    FileUtils.rm("#{File.dirname(task.source)}/#{File.basename(task.source, ".c")}.debug.asm")
+    compile(task.source, task.name, %w(Z80 DEBUG), [File.dirname(task.source), LIB_INCLUDE])
 end
 
 rule ".rel" => ".asm" do |task|
-    cmd = "sdasz80 -plosgffw "
-    cmd += "#{task.name} "
-    cmd += task.source
-    puts cmd
-    system(cmd)
+    assemble(task.source, task.name)
 end
 
 rule ".debug.rel" => ".asm" do |task|
-    cmd = "sdasz80 -plosgffw "
-    cmd += "#{task.name} "
-    cmd += task.source
-    puts cmd
-    system(cmd)
+    assemble(task.source, task.name)
 end
 
 def get_addr(map, label)
@@ -216,14 +213,16 @@ def unit_test(directory)
 end
 
 desc 'Start an instance of Z80-OS in the Zemu interactive debugger.'
-task 'debug' => ['build:kernel_debug', 'build:command'] + BUILTINS.map{ |b| "build:builtin:#{b[1]}" } do
-    unless File.exist?("disk_copy.bin")
-        FileUtils.cp "zemu/disk.img", "disk_copy.bin"
-    end
+task 'debug' => ['build:kernel', 'build:command'] + BUILTINS.map{ |b| "build:builtin:#{b[1]}" } do
+    #unless File.exist?("disk_copy.bin")
+    #    FileUtils.cp "zemu/disk.img", "disk_copy.bin"
+    #end
 
-    BUILTINS.each do |_, name|
-        FileUtils.cp("#{name}.exe", "/mnt/MAKEDISK")
-    end
+    #FileUtils.cp("command.exe", "/mnt/MAKEDISK")
+
+    #BUILTINS.each do |_, name|
+    #    FileUtils.cp("#{name}.exe", "/mnt/MAKEDISK")
+    #end
 
     zemu_start()
 end
@@ -233,7 +232,7 @@ task 'debug_test', [:test] => ['build:kernel_debug'] do |t, args|
     test_dir = File.join("kernel", "integration_test", args[:test])
     test_app = File.join(test_dir, "#{args[:test]}.bin")
     test_disk = File.join(test_dir, "disk.bin")
-    zemu_start(test_app, test_disk)
+    zemu_start("kernel_debug.bin", test_app, test_disk)
 end
 
 namespace 'build' do

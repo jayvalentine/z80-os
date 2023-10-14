@@ -104,6 +104,7 @@ class BankedMemory < Displayable
         # If address falls within range, set value in
         # memory contents.
         if (addr >= address) && (addr < (address + size))
+            #puts "Write %04x: %02x" % [addr, value]
             offset = addr - address
             @contents[@current_bank][offset] = value
         end
@@ -325,7 +326,7 @@ def pad(array, size, value)
     end
 end
 
-def zemu_config(instance_name, binary, disk)
+def zemu_config(instance_name, binary, disk, kernel_bin="kernel.bin")
     conf = Zemu::Config.new do
         name instance_name
 
@@ -338,7 +339,7 @@ def zemu_config(instance_name, binary, disk)
             size    0x8000
             
             # Pad with halts so we detect out-of-bounds accesses.
-            contents pad(from_binary("kernel_debug.bin"), 0x8000, 0x76)
+            contents pad(from_binary(kernel_bin), 0x8000, 0x76)
         end)
 
         add_memory (BankedMemory.new do
@@ -398,8 +399,8 @@ def zemu_config(instance_name, binary, disk)
     conf
 end
 
-def zemu_start(binary_file="command.bin", disk="disk_copy.bin")
-    config = zemu_config("debug", binary_file, disk)
+def zemu_start(kernel="kernel.bin", binary_file="command.bin", disk="disk_copy.bin")
+    config = zemu_config("debug", binary_file, disk, kernel)
 
     Zemu.start_interactive(config, print_serial: false)
 end
