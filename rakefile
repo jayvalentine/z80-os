@@ -232,6 +232,8 @@ task 'debug' => ['build:kernel', 'build:command'] + BUILTINS.map{ |b| "build:bui
         FileUtils.cp("#{name}.exe", VIRTDISK)
     end
 
+    sleep(5)
+
     zemu_start()
 end
 
