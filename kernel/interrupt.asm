@@ -93,21 +93,22 @@ __interrupt_timer_ticks:
     .byte   0
 
 __timer_handler:
+    ; Increment tick count.
+    ld      A, (__interrupt_timer_ticks)
+    inc     A
+    ld      (__interrupt_timer_ticks), A
+
     ; Skip timer handler if we are currently executing in kernel space.
     call    _status_is_set_kernel
     cp      #0
     jp      nz, __timer_handler_end
 
-
-
-    ; Increment tick count. We only context-switch
-    ; every 6 ticks so that we don't overload the processor.
+    ; Check tick count.
+    ; We only context-switch a minimum of every 6 ticks
+    ; so that we don't overload the processor.
     ld      A, (__interrupt_timer_ticks)
-    inc     A
-    ld      (__interrupt_timer_ticks), A
-
     cp      #6
-    jp      nz, __timer_handler_end
+    jp      c, __timer_handler_end
 
     ; Reset tick count.
     ld      A, #0
