@@ -26,6 +26,8 @@
 #include <include/memory.h>
 #include <include/scheduler.h>
 
+#include <include/driver_8254.h>
+
 extern SysInfo_T sysinfo;
 
 char input[256];
@@ -102,6 +104,8 @@ void main(void)
 
     int e2 = process_spawn(pd, NULL, 0);
 #endif
+
+    timer_init();
 
     status_clr_kernel();
     interrupt_enable();
