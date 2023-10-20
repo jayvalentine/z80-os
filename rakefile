@@ -515,6 +515,8 @@ class Function
     end
 
     def coverage
+        return 0.0 if num_covered.zero?
+        
         (num_covered.to_f / num_instrs.to_f) * 100
     end
 end
