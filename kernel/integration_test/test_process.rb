@@ -256,7 +256,7 @@ class ProcessTest < IntegrationTest
         #
         # The spawned process runs forever so we are definitely
         # testing for concurrency.
-        @instance.continue 1000000
+        @instance.continue 2000000
         assert !@instance.halted?, "Hit unexpected HALT (bank %d, addr %04x, ret %d)" % [@instance.device("banked_ram").bank, @instance.registers["PC"], @instance.device("banked_ram").contents(0)[val_addr - 0x8000]]
         assert !@instance.break?, "Hit unexpected BREAK"
 
