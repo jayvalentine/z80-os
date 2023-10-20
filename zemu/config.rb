@@ -377,6 +377,14 @@ class Timer8254 < Displayable
         cycles.times do
             @timers.each { |t| t.tick() }
         end
+
+        # All timer OUTs are ORed
+        # to INT.
+        if @timers.any? { |t| t.out == 1 }
+            interrupt(true)
+        else
+            interrupt(false)
+        end
     end
 end
 
