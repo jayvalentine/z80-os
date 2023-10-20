@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <syscall.h>
 
+#include <include/interrupt.h>
 #include <include/status.h>
 #include <include/file.h>
 #include <include/disk.h>
@@ -36,8 +37,6 @@ uint8_t startup_flags;
 
 typedef void (*proc_t)(void);
 
-void interrupt_disable(void);
-void interrupt_enable(void);
 void debug_process_run(void);
 
 extern const char kernel_version;
@@ -45,6 +44,7 @@ extern const char kernel_version;
 void main(void)
 {
     interrupt_disable();
+    interrupt_init();
 
     status_init();
     status_set_kernel();

@@ -1,6 +1,17 @@
     ; Definitions
     .equ    UART_PORT_DATA, 0b00000001
     .equ    UART_PORT_CONTROL, 0b00000000
+
+    ; void interrupt_init(void)
+    ;
+    ; Initializes interrupt system.
+    .globl  _interrupt_init
+_interrupt_init:
+    ld      A, #0
+    ld      (__interrupt_timer_ticks), A
+    ret
+
+
     
     .globl  _interrupt_handler
 
@@ -77,11 +88,34 @@ __serial_read_handler:
     ; These two symbols need to be global for benchmarking.
     .globl  __timer_handler
     .globl  __timer_handler_end
+
+__interrupt_timer_ticks:
+    .byte   0
+
 __timer_handler:
     ; Skip timer handler if we are currently executing in kernel space.
     call    _status_is_set_kernel
     cp      #0
     jp      nz, __timer_handler_end
+
+
+
+    ; Increment tick count. We only context-switch
+    ; every 6 ticks so that we don't overload the processor.
+    ld      A, (__interrupt_timer_ticks)
+    inc     A
+    ld      (__interrupt_timer_ticks), A
+
+    cp      #6
+    jp      nz, __timer_handler_end
+
+    ; Reset tick count.
+    ld      A, #0
+    ld      (__interrupt_timer_ticks), A
+
+
+
+    ; CONTEXT SWITCHING
 
     ; Switch to user register set and stack all registers.
     exx
@@ -170,7 +204,7 @@ __timer_handler_ret_to_process:
 __timer_handler_end:
     ; Reset the timer (clears the interrupt).
     call    _timer_reset
-    
+
     jp      __interrupt_handle_ret
 
 __unknown_interrupt:
