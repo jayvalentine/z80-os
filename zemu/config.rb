@@ -272,7 +272,7 @@ class Timer8254 < Displayable
 
                 msb = val
                 initial_count = (msb << 8) | @lsb
-                @next_count = val
+                @next_count = initial_count
 
                 @lsb = nil
             end
