@@ -234,7 +234,7 @@ class Timer8254 < Displayable
             @device = device
             @id = id
 
-            reset()
+            reset(true)
         end
 
         def mode=(m)
@@ -246,8 +246,8 @@ class Timer8254 < Displayable
             @device.log "Timer #{@id}: #{msg}"
         end
 
-        def reset
-            log "reset"
+        def reset(initial_reset=false)
+            log "reset" unless initial_reset
 
             @mode = MODE_UNDEFINED
             @count = nil
