@@ -24,14 +24,27 @@ class KernelBenchmark
         disk_file_name = "#{binary_name}_disk.bin"
         FileUtils.cp "kernel/integration_test/disk.img", disk_file_name
 
-        conf = zemu_config(binary_name, binary, disk_file_name)
+        conf = zemu_config(binary_name, binary, disk_file_name, "kernel_debug.bin")
 
-        instance = Zemu.start(conf, TEST: 1)
-        instance.device("status").display_off
-        instance.device("timer").display_off
-        instance.device("banked_ram").display_off
+        @instance = Zemu.start(conf, TEST: 1)
+        @instance.device("status").display_off
+        @instance.device("timer").display_off
+        @instance.device("banked_ram").display_off
 
-        return instance
+        # We expect to start executing at 0x8000 (user space)
+        @instance.break 0x8000, :program
+                
+        # Run, and expect to hit the breakpoint.
+        @instance.continue 2000000
+        unless @instance.registers["PC"] == 0x8000
+            raise "Did not hit breakpoint in user space (at %04x)" % @instance.registers["PC"]
+        end
+
+        @instance.remove_break 0x8000, :program
+    end
+
+    def stop_instance()
+        @instance.quit
     end
 
     def compile_test_code(test_files, output_name)
@@ -107,12 +120,12 @@ class KernelBenchmark
             if /^benchmark_/ =~ m
                 compile_test_code([File.join(BENCHMARKS, "#{m}.c")], "#{m}.bin")
 
-                @instance = start_instance("#{m}.bin")
+                start_instance("#{m}.bin")
 
                 print "#{m}: "
                 
                 avg, min, max = send(m)
-                @instance.quit
+                stop_instance()
 
                 table[m] = [avg, min, max]
             end
