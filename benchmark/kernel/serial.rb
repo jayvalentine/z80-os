@@ -12,9 +12,13 @@ class SerialBenchmarks < KernelBenchmark
         @instance.break swrite_start, :program
         @instance.break swrite_end, :program
 
-        bench(1) do
-            @instance.continue 10000
+        bench(40) do
+            @instance.continue 100000
             isr_cycles = @instance.continue 10000
+
+            # Read from serial port so that it's ready
+            # for the next time round.
+            @instance.serial_gets(1)
 
             isr_cycles
         end

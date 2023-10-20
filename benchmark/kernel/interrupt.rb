@@ -1,7 +1,7 @@
 require_relative 'base'
 
 class InterruptBenchmarks < KernelBenchmark
-    TIMES = 20
+    TIMES = 40
 
     def benchmark_interrupt_rx
         # Get symbols.
