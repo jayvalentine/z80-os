@@ -228,18 +228,22 @@ class Timer8254 < Displayable
         MODE_UNDEFINED = -1
         MODE_0 = 0
 
-        attr_accessor :mode
-
         attr_reader :out
 
-        def initialize(id)
+        def initialize(device, id)
+            @device = device
             @id = id
 
             reset()
         end
 
+        def mode=(m)
+            log "mode set: #{m}"
+            @mode = m
+        end
+
         def log(msg)
-            super "Timer #{@id}: #{msg}"
+            @device.log "Timer #{@id}: #{msg}"
         end
 
         def reset
@@ -257,6 +261,8 @@ class Timer8254 < Displayable
         # Loads a byte into the counter.
         # Counter value is loaded LSB-first.
         def load_byte(val)
+            @out = 0
+            
             if @lsb.nil?
                 log "Load lsb: %08x" % val
 
@@ -275,14 +281,16 @@ class Timer8254 < Displayable
         end
 
         def tick
+            return if @mode == MODE_UNDEFINED
+            
             # Mode 0.
             # Decrements the timer if no count has been written.
             # Otherwise, loads the count into the timer.
             if @next_count.nil?
-                if @count.zero?
+                if @count == 0
                     log "count zero"
                     @out = 1
-                else
+                elsif !@count.nil?
                     @count -= 1
                 end
             else
@@ -304,8 +312,8 @@ class Timer8254 < Displayable
         super
 
         @timers = []
-        3.times do
-            @timers << Timer.new
+        3.times do |i|
+            @timers << Timer.new(self, i)
         end
     end
 
@@ -365,8 +373,10 @@ class Timer8254 < Displayable
         end
     end
 
-    def clock
-        @timers.each { |t| t.tick() }
+    def clock(cycles)
+        cycles.times do
+            @timers.each { |t| t.tick() }
+        end
     end
 end
 
