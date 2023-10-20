@@ -3,7 +3,7 @@ require_relative 'base'
 class SerialBenchmarks < KernelBenchmark
     def benchmark_serial_write
         # Get symbols.
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        kernel_symbols = load_map()
 
         swrite_start = kernel_symbols.find_by_name("_driver_6850_tx").address
         swrite_end = kernel_symbols.find_by_name("_driver_6850_tx_done").address

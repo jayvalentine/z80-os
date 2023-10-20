@@ -5,6 +5,18 @@ require_relative '../../../z80-libraries/vars'
 BENCHMARKS = File.join(__dir__, "src")
 
 class KernelBenchmark
+    def load_map
+        Zemu::Debug.load_map("kernel_debug.map") do |s|
+            if /([0-9a-fA-F]+)\s+(\S+)/ =~ s
+                addr = "0x#{$1}"
+                label = $2
+                [label, addr]
+            else
+                nil
+            end
+        end
+    end
+    
     def start_instance(binary)
         binary_name = File.basename(binary, ".bin")
 
@@ -70,12 +82,15 @@ class KernelBenchmark
         max = 0
 
         num.times do
+            print "."
+
             val = yield
             total += val
 
             min = val if val < min
             max = val if val > max
         end
+        print "\n"
 
         avg = total.to_f / num.to_f
         avg = avg.round(2)
@@ -93,6 +108,9 @@ class KernelBenchmark
                 compile_test_code([File.join(BENCHMARKS, "#{m}.c")], "#{m}.bin")
 
                 @instance = start_instance("#{m}.bin")
+
+                print "#{m}: "
+                
                 avg, min, max = send(m)
                 @instance.quit
 

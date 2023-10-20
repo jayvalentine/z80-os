@@ -3,12 +3,12 @@ require_relative 'base'
 class InterruptBenchmarks < KernelBenchmark
     def benchmark_interrupt_rx
         # Get symbols.
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        kernel_symbols = load_map()
 
         int_breakpoint_start = kernel_symbols.find_by_name("_interrupt_handler").address
         int_breakpoint_end = kernel_symbols.find_by_name("__interrupt_handler_end").address
 
-        # We expect to start executing at 0x6000,
+        # We expect to start executing at 0x8000,
         # where the command-processor would reside normally.
         @instance.break 0x8000, :program
         
@@ -36,7 +36,7 @@ class InterruptBenchmarks < KernelBenchmark
 
     def benchmark_scheduler_single
         # Get symbols.
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        kernel_symbols = load_map()
 
         int_breakpoint_start = kernel_symbols.find_by_name("__timer_handler").address
         int_breakpoint_end = kernel_symbols.find_by_name("__timer_handler_end").address
@@ -66,7 +66,7 @@ class InterruptBenchmarks < KernelBenchmark
 
     def benchmark_scheduler_two_tasks
         # Get symbols.
-        kernel_symbols = Zemu::Debug.load_map("kernel_debug.map")
+        kernel_symbols = load_map()
 
         int_breakpoint_start = kernel_symbols.find_by_name("__timer_handler").address
         int_breakpoint_end = kernel_symbols.find_by_name("__timer_handler_end").address
