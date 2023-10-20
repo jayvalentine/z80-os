@@ -646,6 +646,10 @@ namespace 'benchmark' do
     end
 end
 
+task "benchmark" => ["benchmark:kernel"]
+
 task "test" => ["test:kernel:all"] + BUILTINS.map { |_, name| "test:builtin:#{name}" }
 
 task "install", [:path] => ["install:kernel", "install:command"] + Dir.glob("builtin/*").map { |builtin| "install:builtin:#{File.basename(builtin)}" }
+
+task :default => ["test", "benchmark"]
