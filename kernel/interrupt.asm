@@ -9,6 +9,14 @@
 _interrupt_init:
     ld      A, #0
     ld      (__interrupt_timer_ticks), A
+
+    ; Switch to alternate register set and initialize
+    ; pointer registers.
+    exx
+    ld      HL, #__interrupt_timer_ticks
+
+    ; Switch back and return.
+    exx
     ret
 
 
@@ -68,8 +76,10 @@ __interrupt_handler_end:
 
 __serial_read_handler:
     ; Read data from UART and send to terminal.
+    push    HL
     in      A, (UART_PORT_DATA)
     call    _terminal_put
+    pop     HL
     
     jp      __interrupt_handle_ret
 
@@ -90,7 +100,6 @@ __interrupt_timer_ticks:
 
 __timer_handler:
     ; Increment tick count.
-    ld      HL, #__interrupt_timer_ticks
     inc     (HL)
 
     ; Skip timer handler if we are currently executing in kernel space.
