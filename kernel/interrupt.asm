@@ -25,10 +25,6 @@ _interrupt_handler:
 
     call    _status_set_int
 
-    ; Get return address (TOS) into HL.
-    pop     HL
-    push    HL ; Don't forget to restore it!
-
     ; Is this an interrupt from the #6850?
     in      A, (UART_PORT_CONTROL)
     bit     #7, A
@@ -94,9 +90,8 @@ __interrupt_timer_ticks:
 
 __timer_handler:
     ; Increment tick count.
-    ld      A, (__interrupt_timer_ticks)
-    inc     A
-    ld      (__interrupt_timer_ticks), A
+    ld      HL, #__interrupt_timer_ticks
+    inc     (HL)
 
     ; Skip timer handler if we are currently executing in kernel space.
     call    _status_is_set_kernel
@@ -106,13 +101,12 @@ __timer_handler:
     ; Check tick count.
     ; We only context-switch a minimum of every 6 ticks
     ; so that we don't overload the processor.
-    ld      A, (__interrupt_timer_ticks)
+    ld      A, (HL)
     cp      #6
     jp      c, __timer_handler_end
 
     ; Reset tick count.
-    ld      A, #0
-    ld      (__interrupt_timer_ticks), A
+    ld      (HL), #0
 
 
 
