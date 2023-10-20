@@ -1,8 +1,6 @@
     ; Definitions
     .equ    UART_PORT_DATA, 0b00000001
     .equ    UART_PORT_CONTROL, 0b00000000
-
-    .equ    TIMER_CONTROL, 0x10
     
     .globl  _interrupt_handler
 
@@ -23,24 +21,23 @@ _interrupt_handler:
     ; Is this an interrupt from the #6850?
     in      A, (UART_PORT_CONTROL)
     bit     #7, A
-    jp      z, #__interrupt_skip2
+    jp      z, #__interrupt_skip_6850
     
     ; Character received?
     bit     #0, A
     jp      nz, #__serial_read_handler
 
     ; Not a #6850 interrupt.
-__interrupt_skip2:
-    ; Is this a timer interrupt?
-    in      A, (TIMER_CONTROL)
-    cp      #1
-    jp      nz, #__interrupt_skip3
-
+    ; Assume this is a timer interrupt as CURRENTLY
+    ; we do not have any other interrupt sources.
+__interrupt_skip_6850:
     jp      __timer_handler
 
 __interrupt_skip3:
     ; Not any of the known causes.
     jp      __unknown_interrupt
+
+
 
 __interrupt_handle_ret:
     call    _status_clr_int
@@ -75,6 +72,7 @@ __serial_read_handler:
     .globl  _ram_bank_set
     .globl  _signal_get_handler
     .globl  _status_is_set_kernel
+    .globl  _timer_reset
 
     ; These two symbols need to be global for benchmarking.
     .globl  __timer_handler
@@ -170,6 +168,9 @@ __timer_handler_ret_to_process:
 
     ; Return from the interrupt.
 __timer_handler_end:
+    ; Reset the timer (clears the interrupt).
+    call    _timer_reset
+    
     jp      __interrupt_handle_ret
 
 __unknown_interrupt:

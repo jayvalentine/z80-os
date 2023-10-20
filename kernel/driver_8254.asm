@@ -22,10 +22,17 @@ _timer_init:
     ld      A, #0b00110000
     out     (TIMER_CTRL), A
 
-    ; Write initial count.
+    call    _timer_reset
+
+    ret
+
+    ; void timer_reset(void)
+    ;
+    ; Resets timer 0 to initial count.
+    .globl _timer_reset
+_timer_reset:
     ld      C, #TIMER_0
     ld      HL, #TIMER_COUNT
     out     (C), L ; lsb
     out     (C), H ; msb
-
     ret
