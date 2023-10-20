@@ -264,20 +264,18 @@ class Timer8254 < Displayable
             @out = 0
             
             if @lsb.nil?
-                log "Load lsb: %08x" % val
+                log "Load lsb: 0x%02x" % val
 
                 @lsb = val
             else
-                log "Load msb: %08x" % val
+                log "Load msb: 0x%02x" % val
 
                 msb = val
                 initial_count = (msb << 8) | @lsb
                 @next_count = val
-            end
-        end
 
-        def load_count(val)
-            @next_count = val
+                @lsb = nil
+            end
         end
 
         def tick
@@ -288,12 +286,12 @@ class Timer8254 < Displayable
             # Otherwise, loads the count into the timer.
             if @next_count.nil?
                 if @count == 0
-                    log "count zero"
                     @out = 1
                 elsif !@count.nil?
                     @count -= 1
                 end
             else
+                log "load new count: #{@next_count}"
                 @count = @next_count
                 @next_count = nil
             end
