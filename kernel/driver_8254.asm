@@ -3,8 +3,17 @@
     .equ    TIMER_CTRL, 0x13
 
     ; At 3.686400 MHz each cycle is ~0.27us.
-    ; 60,000 cycles is ~16.28ms.
-    .equ    TIMER_COUNT, 60000
+    ;
+    ; Using a count of 61,440 results in a period of:
+    ;     16.6ms
+    ;
+    ; We context-switch every 6 counts, resulting in
+    ; a period of:
+    ;     99.999999959ms
+    ;
+    ; Ideal period is 100ms therefore error is:
+    ;     0.041ns
+    .equ    TIMER_COUNT, 61440
 
     ; void timer_init(void)
     ;
