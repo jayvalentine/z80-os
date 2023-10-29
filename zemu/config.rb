@@ -221,6 +221,171 @@ class Timer < Displayable
     end
 end
 
+# 8254 Timer Simulation
+class Timer8254 < Displayable
+    # An individual timer in the 8254.
+    class Timer
+        MODE_UNDEFINED = -1
+        MODE_0 = 0
+
+        attr_reader :out
+
+        def initialize(device, id)
+            @device = device
+            @id = id
+
+            reset(true)
+        end
+
+        def mode=(m)
+            log "mode set: #{m}"
+            @mode = m
+        end
+
+        def log(msg)
+            @device.log "Timer #{@id}: #{msg}"
+        end
+
+        def reset(initial_reset=false)
+            log "reset" unless initial_reset
+
+            @mode = MODE_UNDEFINED
+            @count = nil
+            @next_count = nil
+
+            @lsb = nil
+
+            @out = 0
+        end
+
+        # Loads a byte into the counter.
+        # Counter value is loaded LSB-first.
+        def load_byte(val)
+            @out = 0
+            
+            if @lsb.nil?
+                log "Load lsb: 0x%02x" % val
+
+                @lsb = val
+            else
+                log "Load msb: 0x%02x" % val
+
+                msb = val
+                initial_count = (msb << 8) | @lsb
+                @next_count = initial_count
+
+                @lsb = nil
+            end
+        end
+
+        def tick
+            return if @mode == MODE_UNDEFINED
+            
+            # Mode 0.
+            # Decrements the timer if no count has been written.
+            # Otherwise, loads the count into the timer.
+            if @next_count.nil?
+                if @count == 0
+                    @out = 1
+                elsif !@count.nil?
+                    @count -= 1
+                end
+            else
+                log "load new count: #{@next_count}"
+                @count = @next_count
+                @next_count = nil
+            end
+        end
+    end
+
+
+
+    # Constructor
+    #
+    # Takes a block used to set parameters.
+    # The following parameters can be set:
+    #
+    # * base_port: Base port of the device.
+    def initialize
+        super
+
+        @timers = []
+        3.times do |i|
+            @timers << Timer.new(self, i)
+        end
+    end
+
+    def params
+        super + %w(base_port)
+    end
+
+    def addressed?(port)
+        port >= base_port && port < (base_port + 4)
+    end
+
+    def write_control(value)
+        bcd = value & 0b0000_0001
+        m = (value & 0b0000_1110) >> 1
+        rw = (value & 0b0011_0000) >> 4
+        sc = (value & 0b1100_0000) >> 6
+
+        # Figure out which timer has been selected.
+        raise "Read-back command not supported" if sc > 2
+        timer = @timers[sc]
+
+        # Figure out which mode has been selected.
+        raise "Unsupported M val: #{m}" if m > 0
+        selected_mode = case m
+        when 0
+            Timer::MODE_0
+        end
+
+        # Figure out BCD or binary mode.
+        raise "BCD mode not supported" unless bcd == 0
+
+        # Figure out r/w mode.
+        # Only two-byte write mode supported currently.
+        raise "Unsupported R/W mode: #{rw}" unless rw == 3
+
+        # Reset the selected timer and select mode.
+        timer.reset()
+        timer.mode = selected_mode
+    end
+
+    def write_timer(addr, value)
+        timer = @timers[addr]
+
+        timer.load_byte(value)
+    end
+
+    def io_write(port, value)
+        return unless addressed?(port)
+
+        addr = port - base_port
+
+        case addr
+        when 0..2
+            write_timer(addr, value)
+        when 3
+            write_control(value)
+        end
+    end
+
+    def clock(cycles)
+        cycles.times do
+            @timers.each { |t| t.tick() }
+        end
+
+        # All timer OUTs are ORed
+        # to INT.
+        if @timers.any? { |t| t.out == 1 }
+            interrupt(true)
+        else
+            interrupt(false)
+        end
+    end
+end
+
 # Serial Input/Output object
 #
 # Represents a serial connection between the emulated CPU
@@ -368,10 +533,9 @@ def zemu_config(instance_name, binary, disk, kernel_bin="kernel.bin")
             contents(0)[0x77f8] = 0x00
         end)
 
-        add_device (Timer.new do
+        add_device (Timer8254.new do
             name "timer"
-            io_port 0x10
-            period 0.02
+            base_port 0x10
         end)
 
         add_io (Serial6850.new do

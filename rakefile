@@ -232,6 +232,8 @@ task 'debug' => ['build:kernel', 'build:command'] + BUILTINS.map{ |b| "build:bui
         FileUtils.cp("#{name}.exe", VIRTDISK)
     end
 
+    sleep(5)
+
     zemu_start()
 end
 
@@ -515,6 +517,8 @@ class Function
     end
 
     def coverage
+        return 0.0 if num_covered.zero?
+        
         (num_covered.to_f / num_instrs.to_f) * 100
     end
 end
@@ -642,6 +646,10 @@ namespace 'benchmark' do
     end
 end
 
+task "benchmark" => ["benchmark:kernel"]
+
 task "test" => ["test:kernel:all"] + BUILTINS.map { |_, name| "test:builtin:#{name}" }
 
 task "install", [:path] => ["install:kernel", "install:command"] + Dir.glob("builtin/*").map { |builtin| "install:builtin:#{File.basename(builtin)}" }
+
+task :default => ["test", "benchmark"]

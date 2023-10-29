@@ -8,7 +8,7 @@ const char other_proc[4] = {
 
 void loop(void);
 
-void main()
+void main(void)
 {
     int fd = syscall_fopen("test.exe", FMODE_WRITE);
     syscall_fwrite(other_proc, 4, fd);

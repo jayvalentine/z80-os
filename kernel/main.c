@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <syscall.h>
 
+#include <include/interrupt.h>
 #include <include/status.h>
 #include <include/file.h>
 #include <include/disk.h>
@@ -25,6 +26,8 @@
 #include <include/process.h>
 #include <include/memory.h>
 #include <include/scheduler.h>
+
+#include <include/driver_8254.h>
 
 extern SysInfo_T sysinfo;
 
@@ -34,8 +37,6 @@ uint8_t startup_flags;
 
 typedef void (*proc_t)(void);
 
-void interrupt_disable(void);
-void interrupt_enable(void);
 void debug_process_run(void);
 
 extern const char kernel_version;
@@ -43,6 +44,7 @@ extern const char kernel_version;
 void main(void)
 {
     interrupt_disable();
+    interrupt_init();
 
     status_init();
     status_set_kernel();
@@ -68,6 +70,11 @@ void main(void)
     terminal_init();
 
 #ifndef DEBUG
+    for (int i = 0; i < sysinfo.numbanks; i++)
+    {
+        puts(".");
+    }
+    puts("\r\n");
     //printf("Z80-OS KERNEL v%s\r\n", &kernel_version);
     //printf("Memory: %d banks\r\n", (int)sysinfo.numbanks);
 
@@ -102,6 +109,8 @@ void main(void)
 
     int e2 = process_spawn(pd, NULL, 0);
 #endif
+
+    timer_init();
 
     status_clr_kernel();
     interrupt_enable();
