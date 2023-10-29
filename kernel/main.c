@@ -70,6 +70,11 @@ void main(void)
     terminal_init();
 
 #ifndef DEBUG
+    for (int i = 0; i < sysinfo.numbanks; i++)
+    {
+        puts(".");
+    }
+    puts("\r\n");
     //printf("Z80-OS KERNEL v%s\r\n", &kernel_version);
     //printf("Memory: %d banks\r\n", (int)sysinfo.numbanks);
 
