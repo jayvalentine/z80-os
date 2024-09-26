@@ -19,9 +19,9 @@ void terminal_init(void)
 }
 
 /* Gets terminal status of the current process. */
-termstatus_t terminal_status(void)
+inline termstatus_t terminal_status(void)
 {
-    ProcessDescriptor_T * p = process_current();
+    ProcessDescriptor_T * const p = process_current();
     return p->termstatus;
 }
 

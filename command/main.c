@@ -125,8 +125,8 @@ void user_main(void)
     /* Clear screen, cursor to top-left. */
     puts("\033[2J\033[1;1H");
 
-    /* Green text on black background. */
-    puts("\033[32m");
+    /* Green text for that retro feel. */
+    puts("\033[0m\033[32m");
 
     puts("ZEBRA Command Processor (v0.1.2)\n\r");
     printf("ZEBRA Kernel version: v%s\r\n", sysinfo->version);

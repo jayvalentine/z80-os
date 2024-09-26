@@ -2,7 +2,24 @@
     .equ    UART_PORT_DATA, 0b00000001
     .equ    UART_PORT_CONTROL, 0b00000000
 
-    .equ    TIMER_CONTROL, 0x10
+    ; void interrupt_init(void)
+    ;
+    ; Initializes interrupt system.
+    .globl  _interrupt_init
+_interrupt_init:
+    ld      A, #0
+    ld      (__interrupt_timer_ticks), A
+
+    ; Switch to alternate register set and initialize
+    ; pointer registers.
+    exx
+    ld      HL, #__interrupt_timer_ticks
+
+    ; Switch back and return.
+    exx
+    ret
+
+
     
     .globl  _interrupt_handler
 
@@ -16,31 +33,26 @@ _interrupt_handler:
 
     call    _status_set_int
 
-    ; Get return address (TOS) into HL.
-    pop     HL
-    push    HL ; Don't forget to restore it!
-
     ; Is this an interrupt from the #6850?
     in      A, (UART_PORT_CONTROL)
     bit     #7, A
-    jp      z, #__interrupt_skip2
+    jp      z, #__interrupt_skip_6850
     
     ; Character received?
     bit     #0, A
     jp      nz, #__serial_read_handler
 
     ; Not a #6850 interrupt.
-__interrupt_skip2:
-    ; Is this a timer interrupt?
-    in      A, (TIMER_CONTROL)
-    cp      #1
-    jp      nz, #__interrupt_skip3
-
+    ; Assume this is a timer interrupt as CURRENTLY
+    ; we do not have any other interrupt sources.
+__interrupt_skip_6850:
     jp      __timer_handler
 
 __interrupt_skip3:
     ; Not any of the known causes.
     jp      __unknown_interrupt
+
+
 
 __interrupt_handle_ret:
     call    _status_clr_int
@@ -64,8 +76,10 @@ __interrupt_handler_end:
 
 __serial_read_handler:
     ; Read data from UART and send to terminal.
+    push    HL
     in      A, (UART_PORT_DATA)
     call    _terminal_put
+    pop     HL
     
     jp      __interrupt_handle_ret
 
@@ -75,15 +89,37 @@ __serial_read_handler:
     .globl  _ram_bank_set
     .globl  _signal_get_handler
     .globl  _status_is_set_kernel
+    .globl  _timer_reset
 
     ; These two symbols need to be global for benchmarking.
     .globl  __timer_handler
     .globl  __timer_handler_end
+
+__interrupt_timer_ticks:
+    .byte   0
+
 __timer_handler:
+    ; Increment tick count.
+    inc     (HL)
+
     ; Skip timer handler if we are currently executing in kernel space.
     call    _status_is_set_kernel
     cp      #0
     jp      nz, __timer_handler_end
+
+    ; Check tick count.
+    ; We only context-switch a minimum of every 6 ticks
+    ; so that we don't overload the processor.
+    ld      A, (HL)
+    cp      #6
+    jp      c, __timer_handler_end
+
+    ; Reset tick count.
+    ld      (HL), #0
+
+
+
+    ; CONTEXT SWITCHING
 
     ; Switch to user register set and stack all registers.
     exx
@@ -170,6 +206,9 @@ __timer_handler_ret_to_process:
 
     ; Return from the interrupt.
 __timer_handler_end:
+    ; Reset the timer (clears the interrupt).
+    call    _timer_reset
+
     jp      __interrupt_handle_ret
 
 __unknown_interrupt:

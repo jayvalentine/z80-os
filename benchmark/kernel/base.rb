@@ -5,6 +5,18 @@ require_relative '../../../z80-libraries/vars'
 BENCHMARKS = File.join(__dir__, "src")
 
 class KernelBenchmark
+    def load_map
+        Zemu::Debug.load_map("kernel_debug.map") do |s|
+            if /([0-9a-fA-F]+)\s+(\S+)/ =~ s
+                addr = "0x#{$1}"
+                label = $2
+                [label, addr]
+            else
+                nil
+            end
+        end
+    end
+    
     def start_instance(binary)
         binary_name = File.basename(binary, ".bin")
 
@@ -12,14 +24,27 @@ class KernelBenchmark
         disk_file_name = "#{binary_name}_disk.bin"
         FileUtils.cp "kernel/integration_test/disk.img", disk_file_name
 
-        conf = zemu_config(binary_name, binary, disk_file_name)
+        conf = zemu_config(binary_name, binary, disk_file_name, "kernel_debug.bin")
 
-        instance = Zemu.start(conf, TEST: 1)
-        instance.device("status").display_off
-        instance.device("timer").display_off
-        instance.device("banked_ram").display_off
+        @instance = Zemu.start(conf, TEST: 1)
+        @instance.device("status").display_off
+        @instance.device("timer").display_off
+        @instance.device("banked_ram").display_off
 
-        return instance
+        # We expect to start executing at 0x8000 (user space)
+        @instance.break 0x8000, :program
+                
+        # Run, and expect to hit the breakpoint.
+        @instance.continue 2000000
+        unless @instance.registers["PC"] == 0x8000
+            raise "Did not hit breakpoint in user space (at %04x)" % @instance.registers["PC"]
+        end
+
+        @instance.remove_break 0x8000, :program
+    end
+
+    def stop_instance()
+        @instance.quit
     end
 
     def compile_test_code(test_files, output_name)
@@ -70,12 +95,15 @@ class KernelBenchmark
         max = 0
 
         num.times do
+            print "."
+
             val = yield
             total += val
 
             min = val if val < min
             max = val if val > max
         end
+        print "\n"
 
         avg = total.to_f / num.to_f
         avg = avg.round(2)
@@ -92,9 +120,12 @@ class KernelBenchmark
             if /^benchmark_/ =~ m
                 compile_test_code([File.join(BENCHMARKS, "#{m}.c")], "#{m}.bin")
 
-                @instance = start_instance("#{m}.bin")
+                start_instance("#{m}.bin")
+
+                print "#{m}: "
+                
                 avg, min, max = send(m)
-                @instance.quit
+                stop_instance()
 
                 table[m] = [avg, min, max]
             end

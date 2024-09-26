@@ -30,6 +30,7 @@ void scheduler_init(void)
 #ifdef DEBUG
     schedule_table[0].state = TASK_READY;
     schedule_table[0].pid = 0;
+    current_scheduled = 0;
     num_scheduled = 1;
 #endif
 }
@@ -128,6 +129,14 @@ int scheduler_current_pid(void)
 
 int scheduler_next(void)
 {
+    /* Special case - if there is only one scheduled process
+     * and it is running, then nothing needs to change.
+     */
+    if (num_scheduled == 1 && current_scheduled >= 0 && schedule_table[current_scheduled].state == TASK_RUNNING)
+    {
+        return schedule_current_pid;
+    }
+
     if (current_scheduled >= 0 && schedule_table[current_scheduled].state == TASK_RUNNING)
     {
         schedule_table[current_scheduled].state = TASK_READY;
@@ -151,9 +160,9 @@ int scheduler_next(void)
 
 uint8_t scheduler_tick(void)
 {
-    int pid = scheduler_next();
+    scheduler_next();
 
-    const ProcessDescriptor_T * p = process_info(pid);
+    const ProcessDescriptor_T * p = process_current();
 
     return p->bank;
 }

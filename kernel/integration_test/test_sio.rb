@@ -97,7 +97,7 @@ class SIOTest < IntegrationTest
         @instance.serial_puts(0x18.chr)
 
         # Now run and expect to halt on the next scheduler tick.
-        @instance.continue 200000
+        @instance.continue 400000
         assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
 
         # Check return value.
@@ -115,7 +115,7 @@ class SIOTest < IntegrationTest
         @instance.serial_puts(0x18.chr)
 
         # Now run and expect to halt on the next scheduler tick.
-        @instance.continue 200000
+        @instance.continue 400000
         assert @instance.halted?, "Program did not halt when expected (at address %04x)" % @instance.registers["PC"]
 
         # Check return value.
@@ -135,29 +135,34 @@ class SIOTest < IntegrationTest
         # Run for some time - we expect not to halt.
         # It takes a while to write the child process to disk.
         assert_running(cycles: 10000000)
+        assert_equal 1, @instance.device("banked_ram").bank
 
         # Send a character to the serial terminal.
         # This should be received by the child process.
         @instance.serial_puts('A')
-        assert_running(cycles: 200000)
+        assert_running(cycles: 400000)
+        assert_equal 1, @instance.device("banked_ram").bank
 
         # Send break character - 0x18.
         @instance.serial_puts(0x18.chr)
 
         # Now run and expect not to halt.
         # We should have returned to the parent process.
-        assert_running(cycles: 200000)
+        assert_running(cycles: 1000000)
+        assert_equal 0, @instance.device("banked_ram").bank
 
         # Send a character to the serial terminal.
         # This should be received by the parent process.
         @instance.serial_puts('B')
-        assert_running(cycles: 200000)
+        assert_running(cycles: 400000)
+        assert_equal 0, @instance.device("banked_ram").bank
 
         # Send another break character.
         @instance.serial_puts(0x18.chr)
 
         # Continue - program should continue until completion.
-        @instance.continue 200000
+        @instance.continue 10000000
+        assert_equal 0, @instance.device("banked_ram").bank
         assert_program_finished
 
         # Check return value.
@@ -184,18 +189,18 @@ class SIOTest < IntegrationTest
 
         # Now run and expect not to halt.
         # We should have returned to the parent process.
-        assert_running(cycles: 200000)
+        assert_running(cycles: 1000000)
 
         # Send a character to the serial terminal.
         # This should be received by the parent process.
         @instance.serial_puts('C')
-        assert_running(cycles: 200000)
+        assert_running(cycles: 1000000)
 
         # Send another break character.
         @instance.serial_puts(0x18.chr)
 
         # Continue - program should continue until completion.
-        @instance.continue 200000
+        @instance.continue 4000000
         assert_program_finished
 
         # Check return value.

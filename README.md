@@ -10,6 +10,10 @@ This software is licensed under GPLv3. For the full license terms, see [here](LI
 
 If you are interested in getting the OS set up for your own system please get in touch!
 
+## Prerequisites
+
+* SDCC v4.3.2
+
 ## Overview
 
 The operating system targets my custom Z80 modular computer.
